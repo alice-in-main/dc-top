@@ -18,8 +18,6 @@ const (
 
 var focusedWindow windowType = windowType(containers)
 
-var windows map[windowType]*Window = make(map[windowType]*Window)
-
 func Draw() {
 	s, err := tcell.NewScreen()
 	if err != nil {
@@ -37,20 +35,18 @@ func Draw() {
 
 	ContainersWindowInit(s)
 	ContainersWindowDrawNext()
-	windows[windowType(containers)] = ContainersWindowsGet()
 
 	DockerInfoWindowInit(s)
 	DockerInfoWindowDraw()
-	windows[windowType(info)] = DockerInfoWindowsGet()
 
 	go func() {
 		for {
-			time.Sleep(2000 * time.Millisecond)
+			time.Sleep(1000 * time.Millisecond)
 			var tick timedEvent
 			s.PostEvent(tick)
 		}
 	}()
-
+	// TODO split key presses and drawing to different goroutines
 	for {
 		ev := s.PollEvent()
 		switch ev := ev.(type) {

@@ -35,19 +35,19 @@ func ContainersWindowDrawCurr() {
 	containers_window.DrawContents(dockerStatsDrawerGenerator(false))
 }
 
-func ContainersWindowsGet() *Window {
-	return &containers_window
-}
-
 func ContainersWindowNext() {
 	if focused_container_index < len(containers_data)-1 {
 		focused_container_index++
+	} else {
+		focused_container_index = 0
 	}
 }
 
 func ContainersWindowPrev() {
 	if focused_container_index > 0 {
 		focused_container_index--
+	} else {
+		focused_container_index = len(containers_data) - 1
 	}
 }
 
