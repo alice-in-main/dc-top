@@ -28,6 +28,7 @@ func ContainersWindowInit(s tcell.Screen) {
 func ContainersWindowDrawNext() {
 	containers_window.DrawBorders(containers_border_style)
 	containers_window.DrawContents(dockerStatsDrawerGenerator(true))
+	go fetchNewContainerData()
 }
 
 func ContainersWindowDrawCurr() {
@@ -51,9 +52,15 @@ func ContainersWindowPrev() {
 	}
 }
 
+func fetchNewContainerData() {
+	for _, datum := range containers_data {
+		datum.Close()
+	}
+	containers_data = docker.GetContainers()
+}
+
 func dockerStatsDrawerGenerator(is_next bool) func(x, y int) (rune, tcell.Style) {
 	if is_next {
-		containers_data = docker.GetContainers()
 		parsed_containers_data = make([]string, len(containers_data))
 		for i := 0; i < len(containers_data); i++ {
 			parsed_containers_data[i] = containers_data[i].String()

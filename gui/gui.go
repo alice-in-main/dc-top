@@ -39,14 +39,7 @@ func Draw() {
 	DockerInfoWindowInit(s)
 	DockerInfoWindowDraw()
 
-	go func() {
-		for {
-			time.Sleep(1000 * time.Millisecond)
-			var tick timedEvent
-			s.PostEvent(tick)
-		}
-	}()
-	// TODO split key presses and drawing to different goroutines
+	go startTicking(s)
 	for {
 		ev := s.PollEvent()
 		switch ev := ev.(type) {
@@ -64,18 +57,21 @@ func Draw() {
 				ContainersWindowDrawCurr()
 				s.Show()
 			}
-		case timedEvent:
+		default:
 			ContainersWindowDrawNext()
 			DockerInfoWindowDraw()
 			s.Show()
+			time.Sleep(time.Second)
 		}
 	}
 }
 
-type timedEvent struct{}
-
-func (timedEvent) When() time.Time {
-	return time.Now()
+func startTicking(screen tcell.Screen) {
+	for {
+		time.Sleep(1000 * time.Millisecond)
+		var tick tickEvent
+		screen.PostEvent(tick)
+	}
 }
 
 func handleKeyPress(key tcell.Key) {

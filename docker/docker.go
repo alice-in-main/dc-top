@@ -19,7 +19,7 @@ func Init() {
 }
 
 func GetContainers() []ContainerData {
-	containers, err := docker_cli.ContainerList(context.Background(), types.ContainerListOptions{})
+	containers, err := docker_cli.ContainerList(context.Background(), types.ContainerListOptions{All: true})
 	if err != nil {
 		panic(err)
 	}
