@@ -1,6 +1,8 @@
 package gui
 
 import (
+	"log"
+
 	"github.com/gdamore/tcell/v2"
 )
 
@@ -22,6 +24,7 @@ func BarDrawer(min_val float64, max_val float64, curr_val float64, bar_len int) 
 		case float64(i)*notch >= 0:
 			return loading_bar_rune, tcell.StyleDefault.Foreground(tcell.ColorGreen)
 		}
-		panic("Illegal bar state")
+		log.Printf("Illegal bar state")
+		panic(1)
 	}
 }

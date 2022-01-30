@@ -28,7 +28,7 @@ func ContainersWindowInit(s tcell.Screen) {
 func ContainersWindowDrawNext() {
 	containers_window.DrawBorders(containers_border_style)
 	containers_window.DrawContents(dockerStatsDrawerGenerator(true))
-	go fetchNewContainerData()
+	fetchNewContainerData()
 }
 
 func ContainersWindowDrawCurr() {

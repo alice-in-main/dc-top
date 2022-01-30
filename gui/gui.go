@@ -21,10 +21,12 @@ var focusedWindow windowType = windowType(containers)
 func Draw() {
 	s, err := tcell.NewScreen()
 	if err != nil {
-		log.Panicf("%+v", err)
+		log.Printf("%+v", err)
+		panic(1)
 	}
 	if err := s.Init(); err != nil {
-		log.Panicf("%+v", err)
+		log.Printf("%+v", err)
+		panic(1)
 	}
 
 	quit := func() {
@@ -54,14 +56,12 @@ func Draw() {
 				quit()
 			default:
 				handleKeyPress(key)
-				ContainersWindowDrawCurr()
 				s.Show()
 			}
 		default:
 			ContainersWindowDrawNext()
 			DockerInfoWindowDraw()
 			s.Show()
-			time.Sleep(time.Second)
 		}
 	}
 }
@@ -77,9 +77,14 @@ func startTicking(screen tcell.Screen) {
 func handleKeyPress(key tcell.Key) {
 	switch focusedWindow {
 	case windowType(metadata):
-		break
+		{
+			break
+		}
 	case windowType(containers):
-		handleContainersWindowKeyPress(key)
+		{
+			handleContainersWindowKeyPress(key)
+			break
+		}
 	}
 }
 
@@ -90,4 +95,5 @@ func handleContainersWindowKeyPress(key tcell.Key) {
 	case tcell.KeyDown:
 		ContainersWindowNext()
 	}
+	ContainersWindowDrawCurr()
 }

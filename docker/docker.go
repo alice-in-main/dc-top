@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"io"
 	"log"
 
 	"github.com/docker/docker/api/types"
@@ -14,14 +15,14 @@ func Init() {
 	var err error
 	docker_cli, err = client.NewClientWithOpts(client.FromEnv)
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 }
 
 func GetContainers() []ContainerData {
 	containers, err := docker_cli.ContainerList(context.Background(), types.ContainerListOptions{All: true})
 	if err != nil {
-		panic(err)
+		log.Fatal(err)
 	}
 
 	num_containers := len(containers)
@@ -30,8 +31,9 @@ func GetContainers() []ContainerData {
 	for i, container := range containers {
 		container_id := container.ID
 		container_stats, err := docker_cli.ContainerStats(context.Background(), container_id, true)
-		if err != nil {
-			panic(err)
+		if err != nil && err != io.EOF {
+			log.Println(container_stats)
+			log.Fatal(err)
 		}
 		container_data[i] = NewContainerData(container, container_stats)
 	}
@@ -42,7 +44,7 @@ func GetContainers() []ContainerData {
 func GetDockerInfo() DockerInfo {
 	docker_info, err := docker_cli.Info(context.Background())
 	if err != nil {
-		log.Panicln("Failed to get docker info")
+		log.Fatal(err)
 	}
 	return NewDockerInfo(docker_info)
 }

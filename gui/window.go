@@ -16,7 +16,8 @@ type Window struct {
 
 func NewWindow(screen tcell.Screen, x1, y1, x2, y2 int) Window {
 	if x1 >= x2 || y1 >= y2 {
-		log.Panicf("Bad window coordinates:\ntop left:(%d,%d), buttom right:(%d,%d)\n", x1, y1, x2, y2)
+		log.Printf("Bad window coordinates:\ntop left:(%d,%d), buttom right:(%d,%d)\n", x1, y1, x2, y2)
+		panic(1)
 	}
 	return Window{
 		screen:   screen,
