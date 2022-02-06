@@ -2,10 +2,8 @@ package docker
 
 import (
 	"context"
-	"io"
 	"log"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/client"
 )
 
@@ -19,26 +17,14 @@ func Init() {
 	}
 }
 
-func GetContainers() []ContainerData {
-	containers, err := docker_cli.ContainerList(context.Background(), types.ContainerListOptions{All: true})
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	num_containers := len(containers)
-	container_data := make([]ContainerData, num_containers)
-
-	for i, container := range containers {
-		container_id := container.ID
-		container_stats, err := docker_cli.ContainerStats(context.Background(), container_id, true)
-		if err != nil && err != io.EOF {
-			log.Println(container_stats)
-			log.Fatal(err)
+func GetContainers(old_data *ContainerData) ContainerData {
+	if old_data != nil {
+		for _, datum := range old_data.data {
+			datum.Close()
 		}
-		container_data[i] = NewContainerData(container, container_stats)
 	}
 
-	return container_data
+	return NewContainerData(SortType(Name))
 }
 
 func GetDockerInfo() DockerInfo {

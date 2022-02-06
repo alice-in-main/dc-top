@@ -13,3 +13,7 @@ func NewDockerInfo(docker_info types.Info) DockerInfo {
 		Info: docker_info,
 	}
 }
+
+func (lhs *DockerInfo) ContainersEquals(rhs *DockerInfo) bool {
+	return lhs.Info.Containers == rhs.Info.Containers
+}

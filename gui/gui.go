@@ -3,7 +3,6 @@ package gui
 import (
 	"log"
 	"os"
-	"time"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -36,12 +35,15 @@ func Draw() {
 	defer quit()
 
 	ContainersWindowInit(s)
-	ContainersWindowDrawNext()
-
 	DockerInfoWindowInit(s)
-	DockerInfoWindowDraw()
 
-	go startTicking(s)
+	go func() {
+		for {
+			ContainersWindowDrawNext()
+			DockerInfoWindowDraw()
+			s.Show()
+		}
+	}()
 	for {
 		ev := s.PollEvent()
 		switch ev := ev.(type) {
@@ -59,18 +61,8 @@ func Draw() {
 				s.Show()
 			}
 		default:
-			ContainersWindowDrawNext()
-			DockerInfoWindowDraw()
-			s.Show()
+			log.Printf("GUI got event %s and ignored it\n", ev)
 		}
-	}
-}
-
-func startTicking(screen tcell.Screen) {
-	for {
-		time.Sleep(1000 * time.Millisecond)
-		var tick tickEvent
-		screen.PostEvent(tick)
 	}
 }
 
@@ -94,6 +86,8 @@ func handleContainersWindowKeyPress(key tcell.Key) {
 		ContainersWindowPrev()
 	case tcell.KeyDown:
 		ContainersWindowNext()
+	default:
+		return
 	}
 	ContainersWindowDrawCurr()
 }

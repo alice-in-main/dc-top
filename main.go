@@ -9,10 +9,10 @@ import (
 func main() {
 	logger.Init()
 	docker.Init()
-	// data := docker.GetContainers()
-	// fmt.Println(data[0].String())
-	// fmt.Println(data[1].String())
-	// fmt.Println(data[2].String())
 
+	// a := docker.GetContainers(nil)
+	// for _, c := range a.GetData() {
+	// 	c.Stats()
+	// }
 	gui.Draw()
 }
