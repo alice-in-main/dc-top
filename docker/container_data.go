@@ -36,7 +36,6 @@ func NewContainerData(sort_type SortType) ContainerData {
 	container_init_ch := make(chan interface{}, num_containers)
 	defer close(container_init_ch)
 
-	log.Printf("Num containers:%d\n", num_containers)
 	for index, container := range containers {
 		go func(i int, c types.Container) {
 			container_id := c.ID
@@ -47,7 +46,6 @@ func NewContainerData(sort_type SortType) ContainerData {
 			}
 			container_data[i] = NewContainerDatum(c, container_stats)
 			container_init_ch <- i
-			log.Printf("Finished %d\n", i)
 		}(index, container)
 	}
 	for range container_data {

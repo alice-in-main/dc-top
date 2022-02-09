@@ -9,6 +9,13 @@ import (
 
 type stringStyler func(x int) (rune, tcell.Style)
 
+func StrikeThrough(orig_styler stringStyler) stringStyler {
+	return func(i int) (rune, tcell.Style) {
+		r, s := orig_styler(i)
+		return r, s.Background(tcell.ColorDarkRed).Foreground(tcell.ColorDarkGray)
+	}
+}
+
 func TextDrawer(str string, style tcell.Style) stringStyler {
 	return func(i int) (rune, tcell.Style) {
 		if i < len(str) {

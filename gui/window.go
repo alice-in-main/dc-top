@@ -28,6 +28,13 @@ func NewWindow(screen tcell.Screen, x1, y1, x2, y2 int) Window {
 	}
 }
 
+func (window *Window) Resize(x1, y1, x2, y2 int) {
+	window.left_x = x1
+	window.top_y = y1
+	window.right_x = x2
+	window.buttom_y = y2
+}
+
 func (window *Window) DrawBorders(style tcell.Style) {
 	for col := window.left_x; col <= window.right_x; col++ {
 		window.screen.SetContent(col, window.top_y, tcell.RuneHLine, nil, style)

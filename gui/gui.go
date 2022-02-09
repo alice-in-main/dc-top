@@ -48,7 +48,10 @@ func Draw() {
 		ev := s.PollEvent()
 		switch ev := ev.(type) {
 		case *tcell.EventResize:
+			s.Clear()
 			s.Sync()
+			ContainersWindowResize(s)
+			DockerInfoWindowResize(s)
 		case *tcell.EventKey:
 			key := ev.Key()
 			switch key {

@@ -14,7 +14,13 @@ var (
 )
 
 func DockerInfoWindowInit(s tcell.Screen) {
-	docker_info_window = NewWindow(s, 1, 32, 220, 50)
+	x1, y1, x2, y2 := dockerInfoWindowSize(s)
+	docker_info_window = NewWindow(s, x1, y1, x2, y2)
+}
+
+func DockerInfoWindowResize(s tcell.Screen) {
+	x1, y1, x2, y2 := dockerInfoWindowSize(s)
+	docker_info_window.Resize(x1, y1, x2, y2)
 }
 
 func DockerInfoWindowDraw() {
