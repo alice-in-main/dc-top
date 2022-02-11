@@ -10,9 +10,5 @@ func main() {
 	logger.Init()
 	docker.Init()
 
-	// a := docker.GetContainers(nil)
-	// for _, c := range a.GetData() {
-	// 	c.Stats()
-	// }
 	gui.Draw()
 }

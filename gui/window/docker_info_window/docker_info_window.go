@@ -1,4 +1,4 @@
-package gui
+package dockerinfowindow
 
 import (
 	"dc-top/docker"

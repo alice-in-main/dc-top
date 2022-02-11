@@ -1,4 +1,4 @@
-package gui
+package window
 
 import (
 	"log"
@@ -12,6 +12,11 @@ type Window struct {
 	right_x  int
 	top_y    int
 	buttom_y int
+
+	init     func()
+	resize   func(*Window)
+	quit     func()
+	keypress func(tcell.Key)
 }
 
 func NewWindow(screen tcell.Screen, x1, y1, x2, y2 int) Window {

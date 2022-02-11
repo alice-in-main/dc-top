@@ -1,4 +1,4 @@
-package gui
+package string_styler
 
 import (
 	"log"

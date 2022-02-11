@@ -23,12 +23,14 @@ func Draw() {
 		log.Printf("%+v", err)
 		panic(1)
 	}
-	if err := s.Init(); err != nil {
+	if err = s.Init(); err != nil {
 		log.Printf("%+v", err)
 		panic(1)
 	}
+	s.EnableMouse(tcell.MouseButtonEvents)
 
 	quit := func() {
+		ContainersWindowQuit()
 		s.Fini()
 		os.Exit(0)
 	}
@@ -37,20 +39,13 @@ func Draw() {
 	ContainersWindowInit(s)
 	DockerInfoWindowInit(s)
 
-	go func() {
-		for {
-			ContainersWindowDrawNext()
-			DockerInfoWindowDraw()
-			s.Show()
-		}
-	}()
 	for {
 		ev := s.PollEvent()
 		switch ev := ev.(type) {
 		case *tcell.EventResize:
 			s.Clear()
 			s.Sync()
-			ContainersWindowResize(s)
+			ContainersWindowResize()
 			DockerInfoWindowResize(s)
 		case *tcell.EventKey:
 			key := ev.Key()
@@ -88,9 +83,9 @@ func handleContainersWindowKeyPress(key tcell.Key) {
 	case tcell.KeyUp:
 		ContainersWindowPrev()
 	case tcell.KeyDown:
+		log.Printf("Asking for next index")
 		ContainersWindowNext()
 	default:
 		return
 	}
-	ContainersWindowDrawCurr()
 }

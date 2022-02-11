@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/filters"
 )
 
 type ContainerData struct {
@@ -102,4 +103,45 @@ func (containers *ContainerData) GetData() []ContainerDatum {
 func (containers *ContainerData) SortData(sort_type SortType) {
 	containers.sorted_by = sort_type
 	sort.Stable(containers)
+}
+
+func (containers *ContainerData) UpdateStats() {
+	for i, datum := range containers.GetData() {
+		datum, err := UpdatedDatum(datum)
+		if err != nil {
+			log.Printf("Got error %s while fetching new data", err)
+		}
+		containers.data[i] = datum
+	}
+}
+
+func (containers *ContainerData) AreIdsUpToDate() bool {
+	var filtered_ids filters.Args = filters.NewArgs()
+	for _, c := range containers.data {
+		filtered_ids.Add("id", c.base.ID)
+	}
+
+	var err error
+	updated_containers_ids, err := docker_cli.ContainerList(context.Background(), types.ContainerListOptions{All: true, Quiet: true})
+	if err != nil {
+		log.Fatal(err)
+	}
+	preserved_containers, err := docker_cli.ContainerList(context.Background(), types.ContainerListOptions{All: true, Quiet: true, Filters: filtered_ids})
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	prev_num_containers := containers.Len()
+	new_num_containers := len(updated_containers_ids)
+
+	return len(preserved_containers) == prev_num_containers && prev_num_containers == new_num_containers
+}
+
+func (containers *ContainerData) Contains(id string) bool {
+	for _, c := range containers.data {
+		if c.base.ID == id {
+			return true
+		}
+	}
+	return false
 }
