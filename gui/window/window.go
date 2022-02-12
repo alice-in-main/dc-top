@@ -7,12 +7,11 @@ import (
 )
 
 type WindowState struct {
-	Screen    tcell.Screen
-	LeftX     int
-	RightX    int
-	TopY      int
-	ButtomY   int
-	IsFocused bool
+	Screen  tcell.Screen
+	LeftX   int
+	RightX  int
+	TopY    int
+	ButtomY int
 }
 
 type Window interface {
@@ -29,12 +28,11 @@ func NewWindow(screen tcell.Screen, x1, y1, x2, y2 int) WindowState {
 		panic(1)
 	}
 	return WindowState{
-		Screen:    screen,
-		LeftX:     x1,
-		RightX:    x2,
-		TopY:      y1,
-		ButtomY:   y2,
-		IsFocused: false,
+		Screen:  screen,
+		LeftX:   x1,
+		RightX:  x2,
+		TopY:    y1,
+		ButtomY: y2,
 	}
 }
 

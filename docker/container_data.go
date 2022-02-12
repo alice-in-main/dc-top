@@ -6,6 +6,7 @@ import (
 	"log"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
@@ -73,6 +74,11 @@ func (containers *ContainerData) Len() int {
 }
 
 func (containers *ContainerData) Less(i, j int) bool {
+	if containers.GetData()[i].ID() == containers.GetData()[j].ID() {
+		log.Fatal("Shouldn't get here")
+	}
+	// return j < i
+	// return containers.GetData()[i].ID() < containers.GetData()[j].ID()
 	if lessAux(containers.main_sort_type, &containers.GetData()[i], &containers.GetData()[j]) {
 		return true
 	}
@@ -90,20 +96,50 @@ func (containers *ContainerData) GetData() []ContainerDatum {
 	return containers.data
 }
 
+func assertNoDuplicates(containers_data ContainerData, message string) {
+	for i, c1 := range containers_data.GetData()[:containers_data.Len()-1] {
+		for _, c2 := range containers_data.GetData()[i+1:] {
+			if c1.ID() == c2.ID() {
+				log.Printf("%s: Found duplicate ids", message)
+				//log.Fatal(c1, c2)
+			}
+		}
+	}
+}
+
 func (containers *ContainerData) SortData(main_sort_type, secondary_sort_type SortType) {
+	start := time.Now()
+
 	containers.main_sort_type = main_sort_type
 	containers.secondary_sort_type = secondary_sort_type
 	sort.Stable(containers)
+
+	assertNoDuplicates(*containers, "inside sort data")
+
+	elapsed := time.Since(start)
+	log.Printf("It took %dmicrosecconds to sort data", elapsed.Microseconds())
 }
 
 func (containers *ContainerData) UpdateStats() {
-	for i, datum := range containers.GetData() {
-		datum, err := UpdatedDatum(datum)
+	var set_of_ids map[string]ContainerDatum = make(map[string]ContainerDatum)
+	assertNoDuplicates(*containers, "Inside update stats, before loop")
+	data := containers.GetData()
+	for i, datum := range data {
+		if d, ok := set_of_ids[datum.ID()]; ok {
+			log.Println(d, datum)
+			//log.Fatalf("%s already exists", datum.ID())
+		} else {
+			log.Printf("Didnt find %s", datum.ID())
+		}
+		new_datum, err := UpdatedDatum(datum)
 		if err != nil {
 			log.Printf("Got error %s while fetching new data", err)
 		}
-		containers.data[i] = datum
+		set_of_ids[datum.ID()] = datum
+
+		containers.data[i] = new_datum
 	}
+	assertNoDuplicates(*containers, "Inside update stats, after loop")
 }
 
 func (containers *ContainerData) AreIdsUpToDate() bool {
@@ -133,18 +169,6 @@ func (containers *ContainerData) Contains(id string) bool {
 	}
 	return false
 }
-
-// func containersEqual(new_containers []types.Container, old_data []ContainerDatum) bool {
-// 	for i := range new_containers {
-// 		if new_containers[i].ID != old_data[i].base.ID ||
-// 			new_containers[i].State != old_data[i].State() {
-// 			log.Printf("ids: %s ==? %s", new_containers[i].ID, old_data[i].base.ID)
-// 			log.Printf("state: %s ==? %s", new_containers[i].State, old_data[i].State())
-// 			return false
-// 		}
-// 	}
-// 	return true
-// }
 
 var docker_state_priority = map[string]uint8{
 	"running":    0,
@@ -195,8 +219,4 @@ func lessAux(sort_by SortType, i, j *ContainerDatum) bool {
 		log.Println("Unimplemented sort type")
 		panic(1)
 	}
-}
-
-func equalsAux(sort_by SortType, i, j *ContainerDatum) bool {
-	return !lessAux(sort_by, i, j) && !lessAux(sort_by, j, i)
 }

@@ -1,9 +1,8 @@
-package containers_window
+package window
 
 import (
 	"dc-top/docker"
 	"dc-top/gui/elements"
-	"dc-top/gui/window"
 	"fmt"
 	"log"
 	"math"
@@ -28,7 +27,7 @@ type ContainersWindow struct {
 }
 
 type tableState struct {
-	window_state        window.WindowState
+	window_state        WindowState
 	index_of_top        int
 	table_height        int
 	focused_id          string
@@ -98,20 +97,25 @@ func updateIndices(state *tableState, curr_index int) {
 	log.Printf("CURR: %d, TOP: %d, BUTTOM: %d\n", curr_index, state.index_of_top, index_of_buttom)
 }
 
+func assertNoDuplicates(containers_data docker.ContainerData, message string) {
+	for i, c1 := range containers_data.GetData()[:containers_data.Len()-1] {
+		for _, c2 := range containers_data.GetData()[i+1:] {
+			if c1.ID() == c2.ID() {
+				log.Printf("%s: Found duplicate ids", message)
+				//log.Fatal(c1, c2)
+			}
+		}
+	}
+}
+
 func (w *ContainersWindow) drawer() {
 	for {
 		state := <-w.draw_queue
 		log.Printf("Drawing new state...\n")
-		for i, c1 := range state.containers_data.GetData()[:state.containers_data.Len()-1] {
-			for _, c2 := range state.containers_data.GetData()[i+1:] {
-				if c1.ID() == c2.ID() {
-					log.Fatal(c1, c2, state.containers_data)
-				}
-			}
-		}
-		state.containers_data.SortData(state.main_sort_type, state.secondary_sort_type)
-		window.DrawBorders(&state.window_state, w.containers_border_style)
-		window.DrawContents(&state.window_state, dockerStatsDrawerGenerator(state))
+		// assertNoDuplicates(state.containers_data, "drawer")
+		// state.containers_data.SortData(state.main_sort_type, state.secondary_sort_type)
+		DrawBorders(&state.window_state, w.containers_border_style)
+		DrawContents(&state.window_state, dockerStatsDrawerGenerator(state))
 		state.window_state.Screen.Show()
 		log.Printf("Done drawing\n")
 	}
@@ -125,9 +129,13 @@ func (w *ContainersWindow) dockerDataStreamer() {
 		if !state.containers_data.AreIdsUpToDate() {
 			log.Printf("Ids changed, getting new container stats")
 			new_data = docker.GetContainers(&state.containers_data)
+			assertNoDuplicates(new_data, "inside streamer, GetContainers")
 		} else {
+			assertNoDuplicates(state.containers_data, "inside streamer, before running UpdateStats")
 			state.containers_data.UpdateStats()
 			new_data = state.containers_data
+			// new_data = state.containers_data.GetUpdatedStats()
+			assertNoDuplicates(new_data, "inside streamer, after UpdateStats")
 		}
 		log.Printf("Sending back new data")
 		w.new_container_data_chan <- new_data
@@ -135,8 +143,8 @@ func (w *ContainersWindow) dockerDataStreamer() {
 }
 
 func (w *ContainersWindow) main(s tcell.Screen) {
-	x1, y1, x2, y2 := window.ContainerWindowSize(s)
-	window_state := window.NewWindow(s, x1, y1, x2, y2)
+	x1, y1, x2, y2 := ContainerWindowSize(s)
+	window_state := NewWindow(s, x1, y1, x2, y2)
 	state := tableState{
 		containers_data:     docker.GetContainers(nil),
 		index_of_top:        0,
@@ -149,13 +157,13 @@ func (w *ContainersWindow) main(s tcell.Screen) {
 	go w.drawer()
 	go w.dockerDataStreamer()
 	log.Printf("Requesting new data\n")
-	go func() { w.data_request_chan <- state }()
+	go func(s tableState) { w.data_request_chan <- s }(state)
 	for {
 		select {
 		case <-w.resize_chan:
 			{
 				log.Printf("Resize request\n")
-				x1, y1, x2, y2 := window.ContainerWindowSize(s)
+				x1, y1, x2, y2 := ContainerWindowSize(s)
 				state.table_height = y2 - y1 - 4 + 1
 				log.Printf("table height is %d\n", state.table_height)
 				for i, datum := range state.containers_data.GetData() {
@@ -165,7 +173,7 @@ func (w *ContainersWindow) main(s tcell.Screen) {
 					}
 				}
 				state.window_state.SetBorders(x1, y1, x2, y2)
-				w.draw_queue <- state
+				go func(s tableState) { w.draw_queue <- s }(state)
 			}
 		case new_data := <-w.new_container_data_chan:
 			{
@@ -175,13 +183,14 @@ func (w *ContainersWindow) main(s tcell.Screen) {
 				if !new_data.Contains(state.focused_id) {
 					state.focused_id = ""
 				}
-				go func() {
-					if state.containers_data.Len() == 0 {
+				go func(s tableState) {
+					if s.containers_data.Len() == 0 {
 						time.Sleep(300 * time.Millisecond)
 					}
-					w.data_request_chan <- state
-				}()
-				w.draw_queue <- state
+					assertNoDuplicates(s.containers_data, "before requesting new data")
+					w.data_request_chan <- s
+				}(state)
+				go func(s tableState) { w.draw_queue <- s }(state)
 			}
 		case <-w.next_index_chan:
 			{
@@ -205,7 +214,7 @@ func (w *ContainersWindow) main(s tcell.Screen) {
 						}
 					}
 				}
-				w.draw_queue <- state
+				go func(s tableState) { w.draw_queue <- s }(state)
 			}
 		case <-w.prev_index_chan:
 			{
@@ -227,13 +236,13 @@ func (w *ContainersWindow) main(s tcell.Screen) {
 						}
 					}
 				}
-				w.draw_queue <- state
+				go func(s tableState) { w.draw_queue <- s }(state)
 			}
 		case index := <-w.new_index_chan:
 			{
 				state.focused_id = state.containers_data.GetData()[index].ID()
 				updateIndices(&state, index)
-				w.draw_queue <- state
+				go func(s tableState) { w.draw_queue <- s }(state)
 			}
 		case ev := <-w.mouse_chan:
 			{
@@ -241,8 +250,12 @@ func (w *ContainersWindow) main(s tcell.Screen) {
 			}
 		case sort_type := <-w.sort_chan:
 			if state.main_sort_type != sort_type {
-				state.secondary_sort_type = state.main_sort_type
-				state.main_sort_type = sort_type
+				var new_state = state
+				new_state.secondary_sort_type = state.main_sort_type
+				new_state.main_sort_type = sort_type
+				new_state.containers_data.SortData(state.main_sort_type, state.secondary_sort_type)
+				// assertNoDuplicates(state.containers_data, "before sort queue")
+				go func(s tableState) { w.new_container_data_chan <- s }(state)
 			}
 		case <-w.stop_chan:
 			log.Printf("Stopped\n")
@@ -264,10 +277,10 @@ func handleMouseEvent(state tableState, ev *tcell.EventMouse, w *ContainersWindo
 	case y == 1:
 		var sort_type docker.SortType = getSortTypeFromMousePress(total_width, x)
 		if sort_type != docker.None {
-			go func() { w.sort_chan <- sort_type }()
+			go func(st docker.SortType) { w.sort_chan <- st }(sort_type)
 		}
 	case y > 2 && y < state.containers_data.Len()+3:
-		go func() { w.new_index_chan <- y - 3 }()
+		go func(index int) { w.new_index_chan <- index }(y - 3)
 	}
 }
 

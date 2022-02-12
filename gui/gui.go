@@ -1,30 +1,17 @@
 package gui
 
 import (
-	"dc-top/gui/window/containers_window"
-	"dc-top/gui/window/docker_info_window"
+	"dc-top/gui/window"
 	"log"
 	"os"
 
 	"github.com/gdamore/tcell/v2"
 )
 
-type windowType int8
-
-const (
-	metadata   windowType = 0
-	containers windowType = 1
-	info       windowType = 2
-)
-
 type guiState struct {
-	screen             tcell.Screen
-	focused_window     windowType
-	docker_info_window docker_info_window.DockerInfoWindow
-	containers_window  containers_window.ContainersWindow
+	screen        tcell.Screen
+	windowManager window.WindowManager
 }
-
-var focusedWindow windowType = windowType(containers)
 
 func Draw() {
 	s, err := tcell.NewScreen()
@@ -39,18 +26,16 @@ func Draw() {
 	s.EnableMouse(tcell.MouseButtonEvents)
 
 	state := guiState{
-		screen:             s,
-		focused_window:     windowType(containers),
-		docker_info_window: docker_info_window.NewDockerInfoWindow(),
-		containers_window:  containers_window.NewContainersWindow(),
+		screen:        s,
+		windowManager: window.InitWindowManager(),
 	}
 
-	state.docker_info_window.Open(s)
-	state.containers_window.Open(s)
+	state.windowManager.GetWindow(window.ContainersHolder).Open(s)
+	state.windowManager.GetWindow(window.Info).Open(s)
 
 	quit := func() {
-		state.docker_info_window.Close()
-		state.containers_window.Close()
+		state.windowManager.GetWindow(window.ContainersHolder).Close()
+		state.windowManager.GetWindow(window.Info).Close()
 		s.Fini()
 		os.Exit(0)
 	}
@@ -61,8 +46,8 @@ func Draw() {
 		switch ev := ev.(type) {
 		case *tcell.EventResize:
 			s.Clear()
-			state.containers_window.Resize()
-			state.docker_info_window.Resize()
+			state.windowManager.GetWindow(window.ContainersHolder).Resize()
+			state.windowManager.GetWindow(window.Info).Resize()
 			s.Sync()
 		case *tcell.EventKey:
 			key := ev.Key()
@@ -83,40 +68,30 @@ func Draw() {
 }
 
 func handleKeyPress(state guiState, key tcell.Key) {
-	switch focusedWindow {
-	case windowType(metadata):
+	switch state.windowManager.GetFocusedWindow() {
+	case window.WindowType(window.Info):
 		{
 			log.Fatal("shouldnt be here")
 			break
 		}
-	case windowType(info):
+	case window.WindowType(window.ContainersHolder):
 		{
-			log.Fatal("shouldnt be here")
-			break
-		}
-	case windowType(containers):
-		{
-			state.containers_window.KeyPress(key)
+			state.windowManager.GetWindow(window.ContainersHolder).KeyPress(key)
 			break
 		}
 	}
 }
 
 func handleMouseEvent(state guiState, ev *tcell.EventMouse) {
-	switch focusedWindow {
-	case windowType(metadata):
+	switch state.windowManager.GetFocusedWindow() {
+	case window.WindowType(window.Info):
 		{
 			log.Fatal("shouldnt be here")
 			break
 		}
-	case windowType(info):
+	case window.WindowType(window.ContainersHolder):
 		{
-			log.Fatal("shouldnt be here")
-			break
-		}
-	case windowType(containers):
-		{
-			state.containers_window.MousePress(*ev)
+			state.windowManager.GetWindow(window.ContainersHolder).MousePress(*ev)
 			break
 		}
 	}

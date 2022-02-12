@@ -1,9 +1,8 @@
-package docker_info_window
+package window
 
 import (
 	"dc-top/docker"
 	"dc-top/gui/elements"
-	"dc-top/gui/window"
 	"fmt"
 	"log"
 	"time"
@@ -17,7 +16,7 @@ type DockerInfoWindow struct {
 }
 
 type dockerInfoState struct {
-	window_state window.WindowState
+	window_state WindowState
 }
 
 func NewDockerInfoWindow() DockerInfoWindow {
@@ -48,15 +47,15 @@ func (w *DockerInfoWindow) Close() {
 }
 
 func (w *DockerInfoWindow) main(s tcell.Screen) {
-	x1, y1, x2, y2 := window.DockerInfoWindowSize(s)
+	x1, y1, x2, y2 := DockerInfoWindowSize(s)
 	var state dockerInfoState = dockerInfoState{
-		window_state: window.NewWindow(s, x1, y1, x2, y2),
+		window_state: NewWindow(s, x1, y1, x2, y2),
 	}
 	tick := time.NewTicker(1000 * time.Millisecond)
 	for {
 		select {
 		case <-w.resize_chan:
-			x1, y1, x2, y2 := window.DockerInfoWindowSize(s)
+			x1, y1, x2, y2 := DockerInfoWindowSize(s)
 			state.window_state.SetBorders(x1, y1, x2, y2)
 			dockerInfoWindowDraw(state)
 		case <-w.stop_chan:
@@ -69,8 +68,8 @@ func (w *DockerInfoWindow) main(s tcell.Screen) {
 }
 
 func dockerInfoWindowDraw(state dockerInfoState) {
-	window.DrawBorders(&state.window_state, tcell.StyleDefault.Background(tcell.ColorDarkRed).Foreground(tcell.Color103))
-	window.DrawContents(&state.window_state, dockerInfoDrawerGenerator())
+	DrawBorders(&state.window_state, tcell.StyleDefault.Background(tcell.ColorDarkRed).Foreground(tcell.Color103))
+	DrawContents(&state.window_state, dockerInfoDrawerGenerator())
 }
 
 func dockerInfoDrawerGenerator() func(x, y int) (rune, tcell.Style) {
