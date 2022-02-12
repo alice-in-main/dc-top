@@ -50,7 +50,7 @@ func GetContainers(old_data *ContainerData) ContainerData {
 		}
 	}
 
-	return NewContainerData(SortType(Name))
+	return NewContainerData()
 }
 
 func GetDockerInfo() DockerInfo {

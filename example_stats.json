@@ -1,0 +1,110 @@
+{
+    "read": "2022-02-12T06:48:54.896492739Z",
+    "preread": "2022-02-12T06:48:53.858735476Z",
+    "pids_stats": {
+        "current": 4
+    },
+    "blkio_stats": {
+        "io_service_bytes_recursive": [],
+        "io_serviced_recursive": [],
+        "io_queue_recursive": [],
+        "io_service_time_recursive": [],
+        "io_wait_time_recursive": [],
+        "io_merged_recursive": [],
+        "io_time_recursive": [],
+        "sectors_recursive": []
+    },
+    "num_procs": 0,
+    "storage_stats": {},
+    "cpu_stats": {
+        "cpu_usage": {
+            "total_usage": 56593100,
+            "percpu_usage": [
+                15303900,
+                21124500,
+                20164700
+            ],
+            "usage_in_kernelmode": 30000000,
+            "usage_in_usermode": 20000000
+        },
+        "system_cpu_usage": 361788890000000,
+        "online_cpus": 3,
+        "throttling_data": {
+            "periods": 4,
+            "throttled_periods": 0,
+            "throttled_time": 0
+        }
+    },
+    "precpu_stats": {
+        "cpu_usage": {
+            "total_usage": 56593100,
+            "percpu_usage": [
+                15303900,
+                21124500,
+                20164700
+            ],
+            "usage_in_kernelmode": 30000000,
+            "usage_in_usermode": 20000000
+        },
+        "system_cpu_usage": 361785820000000,
+        "online_cpus": 3,
+        "throttling_data": {
+            "periods": 4,
+            "throttled_periods": 0,
+            "throttled_time": 0
+        }
+    },
+    "memory_stats": {
+        "usage": 3457024,
+        "max_usage": 9011200,
+        "stats": {
+            "active_anon": 0,
+            "active_file": 0,
+            "cache": 0,
+            "dirty": 0,
+            "hierarchical_memory_limit": 9223372036854771712,
+            "hierarchical_memsw_limit": 9223372036854771712,
+            "inactive_anon": 2703360,
+            "inactive_file": 0,
+            "mapped_file": 0,
+            "pgfault": 4488,
+            "pgmajfault": 0,
+            "pgpgin": 2211,
+            "pgpgout": 1529,
+            "rss": 2572288,
+            "rss_huge": 0,
+            "total_active_anon": 0,
+            "total_active_file": 0,
+            "total_cache": 0,
+            "total_dirty": 0,
+            "total_inactive_anon": 2703360,
+            "total_inactive_file": 0,
+            "total_mapped_file": 0,
+            "total_pgfault": 4488,
+            "total_pgmajfault": 0,
+            "total_pgpgin": 2211,
+            "total_pgpgout": 1529,
+            "total_rss": 2572288,
+            "total_rss_huge": 0,
+            "total_unevictable": 0,
+            "total_writeback": 0,
+            "unevictable": 0,
+            "writeback": 0
+        },
+        "limit": 8344051712
+    },
+    "name": "/zealous_jennings",
+    "id": "c8e3a4e9a9d806b4a2799505ceb64d475f6abbfa16fa4782b51ffcde051671b3",
+    "networks": {
+        "eth0": {
+            "rx_bytes": 586,
+            "rx_packets": 7,
+            "rx_errors": 0,
+            "rx_dropped": 0,
+            "tx_bytes": 0,
+            "tx_packets": 0,
+            "tx_errors": 0,
+            "tx_dropped": 0
+        }
+    }
+}

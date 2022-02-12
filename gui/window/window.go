@@ -7,18 +7,19 @@ import (
 )
 
 type WindowState struct {
-	Screen  tcell.Screen
-	LeftX   int
-	RightX  int
-	TopY    int
-	ButtomY int
+	Screen    tcell.Screen
+	LeftX     int
+	RightX    int
+	TopY      int
+	ButtomY   int
+	IsFocused bool
 }
 
 type Window interface {
 	Open(tcell.Screen)
 	Resize()
 	KeyPress(tcell.Key)
-	MousePress(tcell.Key)
+	MousePress(tcell.EventMouse)
 	Close()
 }
 
@@ -28,12 +29,27 @@ func NewWindow(screen tcell.Screen, x1, y1, x2, y2 int) WindowState {
 		panic(1)
 	}
 	return WindowState{
-		Screen:  screen,
-		LeftX:   x1,
-		RightX:  x2,
-		TopY:    y1,
-		ButtomY: y2,
+		Screen:    screen,
+		LeftX:     x1,
+		RightX:    x2,
+		TopY:      y1,
+		ButtomY:   y2,
+		IsFocused: false,
 	}
+}
+
+func (window_state *WindowState) Select() {
+
+}
+
+func (window_state *WindowState) RelativeMousePosition(ev *tcell.EventMouse) (int, int) {
+	abs_x, abs_y := ev.Position()
+	return abs_x - window_state.LeftX, abs_y - window_state.TopY
+}
+
+func (window_state *WindowState) IsOutbounds(ev *tcell.EventMouse) bool {
+	abs_x, abs_y := ev.Position()
+	return abs_x < window_state.LeftX || abs_x > window_state.RightX || abs_y < window_state.TopY || abs_y > window_state.ButtomY
 }
 
 func (window_state *WindowState) SetBorders(x1, y1, x2, y2 int) {

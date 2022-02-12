@@ -39,7 +39,7 @@ func (w *DockerInfoWindow) KeyPress(key tcell.Key) {
 	log.Fatal("docker info key press isn't implemented")
 }
 
-func (w *DockerInfoWindow) MousePress(tcell.Key) {
+func (w *DockerInfoWindow) MousePress(tcell.EventMouse) {
 	log.Fatal("docker info mouse press isn't implemented")
 }
 

@@ -12,8 +12,9 @@ import (
 )
 
 type ContainerData struct {
-	data      []ContainerDatum
-	sorted_by SortType
+	data                []ContainerDatum
+	main_sort_type      SortType
+	secondary_sort_type SortType
 }
 
 type SortType int8
@@ -24,9 +25,10 @@ const (
 	Cpu
 	Image
 	State
+	None
 )
 
-func NewContainerData(sort_type SortType) ContainerData {
+func NewContainerData() ContainerData {
 	containers, err := docker_cli.ContainerList(context.Background(), types.ContainerListOptions{All: true})
 	if err != nil {
 		log.Fatal(err)
@@ -43,8 +45,8 @@ func NewContainerData(sort_type SortType) ContainerData {
 			container_stats, err := docker_cli.ContainerStats(context.Background(), container_id, true)
 			for err != nil && err != io.EOF {
 				log.Println(err)
-				log.Println(containers)
 				if !strings.HasPrefix(err.Error(), "Error response from daemon: No such container") {
+					log.Println(containers)
 					panic(1)
 				}
 				container_stats, err = docker_cli.ContainerStats(context.Background(), container_id, true)
@@ -58,10 +60,10 @@ func NewContainerData(sort_type SortType) ContainerData {
 	}
 
 	new_containers_data := ContainerData{
-		data:      container_data,
-		sorted_by: sort_type,
+		data:                container_data,
+		main_sort_type:      State,
+		secondary_sort_type: Name,
 	}
-	new_containers_data.SortData(sort_type)
 
 	return new_containers_data
 }
@@ -71,29 +73,13 @@ func (containers *ContainerData) Len() int {
 }
 
 func (containers *ContainerData) Less(i, j int) bool {
-	switch containers.sorted_by {
-	case Name:
-		{
-			name_i := containers.data[i].CachedStats().Name
-			name_j := containers.data[j].CachedStats().Name
-			return strings.Compare(name_i, name_j) == -1
-		}
-	case Memory:
-		{
-			memory_i := containers.data[i].CachedStats().Memory
-			usage_i := float64(memory_i.Usage) / float64(memory_i.Limit)
-			memory_j := containers.data[j].CachedStats().Memory
-			usage_j := float64(memory_j.Usage) / float64(memory_j.Limit)
-			return usage_i < usage_j
-		}
-	case State:
-		{
-			return containers.data[i].base.State == "running" && containers.data[j].base.State != "running"
-		}
-	default:
-		log.Println("Unimplemented sort type")
-		panic(1)
+	if lessAux(containers.main_sort_type, &containers.GetData()[i], &containers.GetData()[j]) {
+		return true
 	}
+	if lessAux(containers.main_sort_type, &containers.GetData()[j], &containers.GetData()[i]) {
+		return false
+	}
+	return lessAux(containers.secondary_sort_type, &containers.GetData()[i], &containers.GetData()[j])
 }
 
 func (containers *ContainerData) Swap(i, j int) {
@@ -104,8 +90,9 @@ func (containers *ContainerData) GetData() []ContainerDatum {
 	return containers.data
 }
 
-func (containers *ContainerData) SortData(sort_type SortType) {
-	containers.sorted_by = sort_type
+func (containers *ContainerData) SortData(main_sort_type, secondary_sort_type SortType) {
+	containers.main_sort_type = main_sort_type
+	containers.secondary_sort_type = secondary_sort_type
 	sort.Stable(containers)
 }
 
@@ -126,19 +113,16 @@ func (containers *ContainerData) AreIdsUpToDate() bool {
 	}
 
 	var err error
-	updated_containers_ids, err := docker_cli.ContainerList(context.Background(), types.ContainerListOptions{All: true, Quiet: true})
-	if err != nil {
-		log.Fatal(err)
-	}
 	preserved_containers, err := docker_cli.ContainerList(context.Background(), types.ContainerListOptions{All: true, Quiet: true, Filters: filtered_ids})
 	if err != nil {
 		log.Fatal(err)
 	}
+	all_containers, err := docker_cli.ContainerList(context.Background(), types.ContainerListOptions{All: true, Quiet: true})
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	prev_num_containers := containers.Len()
-	new_num_containers := len(updated_containers_ids)
-
-	return len(preserved_containers) == prev_num_containers && prev_num_containers == new_num_containers
+	return len(preserved_containers) == containers.Len() && len(all_containers) == containers.Len()
 }
 
 func (containers *ContainerData) Contains(id string) bool {
@@ -148,4 +132,71 @@ func (containers *ContainerData) Contains(id string) bool {
 		}
 	}
 	return false
+}
+
+// func containersEqual(new_containers []types.Container, old_data []ContainerDatum) bool {
+// 	for i := range new_containers {
+// 		if new_containers[i].ID != old_data[i].base.ID ||
+// 			new_containers[i].State != old_data[i].State() {
+// 			log.Printf("ids: %s ==? %s", new_containers[i].ID, old_data[i].base.ID)
+// 			log.Printf("state: %s ==? %s", new_containers[i].State, old_data[i].State())
+// 			return false
+// 		}
+// 	}
+// 	return true
+// }
+
+var docker_state_priority = map[string]uint8{
+	"running":    0,
+	"created":    1,
+	"restarting": 2,
+	"paused":     3,
+	"dead":       4,
+	"exited":     5,
+}
+
+func lessAux(sort_by SortType, i, j *ContainerDatum) bool {
+	switch sort_by {
+	case Name:
+		{
+			stats_i := i.CachedStats()
+			stats_j := j.CachedStats()
+			name_i := stats_i.Name
+			name_j := stats_j.Name
+			return name_i < name_j
+		}
+	case Image:
+		{
+			image_i := i.Image()
+			image_j := j.Image()
+			return image_i < image_j
+		}
+	case Memory:
+		{
+			stats_i := i.CachedStats()
+			stats_j := j.CachedStats()
+			usage_i := MemoryUsagePercentage(&stats_i.Memory)
+			usage_j := MemoryUsagePercentage(&stats_j.Memory)
+			return usage_i < usage_j
+		}
+	case Cpu:
+		{
+			stats_i := i.CachedStats()
+			stats_j := j.CachedStats()
+			usage_i := CpuUsagePercentage(&stats_i.Cpu, &stats_i.PreCpu)
+			usage_j := CpuUsagePercentage(&stats_j.Cpu, &stats_j.PreCpu)
+			return usage_i < usage_j
+		}
+	case State:
+		{
+			return docker_state_priority[i.base.State] < docker_state_priority[j.base.State]
+		}
+	default:
+		log.Println("Unimplemented sort type")
+		panic(1)
+	}
+}
+
+func equalsAux(sort_by SortType, i, j *ContainerDatum) bool {
+	return !lessAux(sort_by, i, j) && !lessAux(sort_by, j, i)
 }

@@ -74,6 +74,8 @@ func Draw() {
 			default:
 				handleKeyPress(state, key)
 			}
+		case *tcell.EventMouse:
+			handleMouseEvent(state, ev)
 		default:
 			log.Printf("GUI got event %s and ignored it\n", ev)
 		}
@@ -95,6 +97,26 @@ func handleKeyPress(state guiState, key tcell.Key) {
 	case windowType(containers):
 		{
 			state.containers_window.KeyPress(key)
+			break
+		}
+	}
+}
+
+func handleMouseEvent(state guiState, ev *tcell.EventMouse) {
+	switch focusedWindow {
+	case windowType(metadata):
+		{
+			log.Fatal("shouldnt be here")
+			break
+		}
+	case windowType(info):
+		{
+			log.Fatal("shouldnt be here")
+			break
+		}
+	case windowType(containers):
+		{
+			state.containers_window.MousePress(*ev)
 			break
 		}
 	}

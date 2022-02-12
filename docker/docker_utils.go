@@ -31,3 +31,15 @@ func isExisting(id string, filters filters.Args) bool {
 	log.Println(c)
 	return len(c) > 0
 }
+
+func UsagePercentage(usage int64, limit int64) float64 {
+	return 100.0 * float64(usage) / float64(limit)
+}
+
+func CpuUsagePercentage(cpu *CpuStats, precpu *CpuStats) float64 {
+	return UsagePercentage(cpu.ContainerUsage.TotalUsage-precpu.ContainerUsage.TotalUsage, cpu.SystemUsage-precpu.SystemUsage)
+}
+
+func MemoryUsagePercentage(mem *MemoryStats) float64 {
+	return UsagePercentage(mem.Usage, mem.Limit)
+}

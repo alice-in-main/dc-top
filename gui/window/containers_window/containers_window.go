@@ -8,6 +8,7 @@ import (
 	"log"
 	"math"
 	"strings"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -17,19 +18,23 @@ type ContainersWindow struct {
 	resize_chan             chan interface{}
 	next_index_chan         chan interface{}
 	prev_index_chan         chan interface{}
-	stop_chan               chan interface{}
+	new_index_chan          chan int
+	mouse_chan              chan tcell.EventMouse
+	sort_chan               chan docker.SortType
 	new_container_data_chan chan docker.ContainerData
 	data_request_chan       chan tableState
+	stop_chan               chan interface{}
 	draw_queue              chan tableState
 }
 
 type tableState struct {
-	window_state    window.WindowState
-	index_of_top    int
-	table_height    int
-	focused_id      string
-	containers_data docker.ContainerData
-	sort_type       docker.SortType
+	window_state        window.WindowState
+	index_of_top        int
+	table_height        int
+	focused_id          string
+	containers_data     docker.ContainerData
+	main_sort_type      docker.SortType
+	secondary_sort_type docker.SortType
 }
 
 func NewContainersWindow() ContainersWindow {
@@ -38,9 +43,12 @@ func NewContainersWindow() ContainersWindow {
 		resize_chan:             make(chan interface{}),
 		next_index_chan:         make(chan interface{}),
 		prev_index_chan:         make(chan interface{}),
-		stop_chan:               make(chan interface{}),
+		new_index_chan:          make(chan int),
+		mouse_chan:              make(chan tcell.EventMouse),
+		sort_chan:               make(chan docker.SortType),
 		new_container_data_chan: make(chan docker.ContainerData),
 		data_request_chan:       make(chan tableState),
+		stop_chan:               make(chan interface{}),
 		draw_queue:              make(chan tableState),
 	}
 }
@@ -64,8 +72,8 @@ func (w *ContainersWindow) KeyPress(key tcell.Key) {
 	}
 }
 
-func (w *ContainersWindow) MousePress(tcell.Key) {
-	// TODO: implement
+func (w *ContainersWindow) MousePress(ev tcell.EventMouse) {
+	w.mouse_chan <- ev
 }
 
 func (w *ContainersWindow) Close() {
@@ -94,6 +102,14 @@ func (w *ContainersWindow) drawer() {
 	for {
 		state := <-w.draw_queue
 		log.Printf("Drawing new state...\n")
+		for i, c1 := range state.containers_data.GetData()[:state.containers_data.Len()-1] {
+			for _, c2 := range state.containers_data.GetData()[i+1:] {
+				if c1.ID() == c2.ID() {
+					log.Fatal(c1, c2, state.containers_data)
+				}
+			}
+		}
+		state.containers_data.SortData(state.main_sort_type, state.secondary_sort_type)
 		window.DrawBorders(&state.window_state, w.containers_border_style)
 		window.DrawContents(&state.window_state, dockerStatsDrawerGenerator(state))
 		state.window_state.Screen.Show()
@@ -113,7 +129,6 @@ func (w *ContainersWindow) dockerDataStreamer() {
 			state.containers_data.UpdateStats()
 			new_data = state.containers_data
 		}
-		new_data.SortData(state.sort_type)
 		log.Printf("Sending back new data")
 		w.new_container_data_chan <- new_data
 	}
@@ -123,11 +138,12 @@ func (w *ContainersWindow) main(s tcell.Screen) {
 	x1, y1, x2, y2 := window.ContainerWindowSize(s)
 	window_state := window.NewWindow(s, x1, y1, x2, y2)
 	state := tableState{
-		containers_data: docker.GetContainers(nil),
-		index_of_top:    0,
-		table_height:    y2 - y1 - 4 + 1,
-		window_state:    window_state,
-		sort_type:       docker.Name,
+		containers_data:     docker.GetContainers(nil),
+		index_of_top:        0,
+		table_height:        y2 - y1 - 4 + 1,
+		window_state:        window_state,
+		main_sort_type:      docker.State,
+		secondary_sort_type: docker.Name,
 	}
 	log.Printf("table height is %d\n", state.table_height)
 	go w.drawer()
@@ -149,6 +165,7 @@ func (w *ContainersWindow) main(s tcell.Screen) {
 					}
 				}
 				state.window_state.SetBorders(x1, y1, x2, y2)
+				w.draw_queue <- state
 			}
 		case new_data := <-w.new_container_data_chan:
 			{
@@ -156,10 +173,15 @@ func (w *ContainersWindow) main(s tcell.Screen) {
 				state.containers_data = new_data
 				log.Printf("Requesting new data\n")
 				if !new_data.Contains(state.focused_id) {
-					log.Printf("Requesting new data\n")
 					state.focused_id = ""
 				}
-				go func() { w.data_request_chan <- state }()
+				go func() {
+					if state.containers_data.Len() == 0 {
+						time.Sleep(300 * time.Millisecond)
+					}
+					w.data_request_chan <- state
+				}()
+				w.draw_queue <- state
 			}
 		case <-w.next_index_chan:
 			{
@@ -183,6 +205,7 @@ func (w *ContainersWindow) main(s tcell.Screen) {
 						}
 					}
 				}
+				w.draw_queue <- state
 			}
 		case <-w.prev_index_chan:
 			{
@@ -204,12 +227,47 @@ func (w *ContainersWindow) main(s tcell.Screen) {
 						}
 					}
 				}
+				w.draw_queue <- state
+			}
+		case index := <-w.new_index_chan:
+			{
+				state.focused_id = state.containers_data.GetData()[index].ID()
+				updateIndices(&state, index)
+				w.draw_queue <- state
+			}
+		case ev := <-w.mouse_chan:
+			{
+				handleMouseEvent(state, &ev, w)
+			}
+		case sort_type := <-w.sort_chan:
+			if state.main_sort_type != sort_type {
+				state.secondary_sort_type = state.main_sort_type
+				state.main_sort_type = sort_type
 			}
 		case <-w.stop_chan:
 			log.Printf("Stopped\n")
 			return
 		}
-		w.draw_queue <- state
+	}
+}
+
+func handleMouseEvent(state tableState, ev *tcell.EventMouse, w *ContainersWindow) {
+	if state.window_state.IsOutbounds(ev) {
+		x, y := ev.Position()
+		log.Printf("outbounds mouse event %d,%d", x, y)
+		return
+	}
+	x, y := state.window_state.RelativeMousePosition(ev)
+	total_width := state.window_state.RightX - state.window_state.LeftX
+	log.Printf("Handling mouse event that happened on %d, %d", x, y)
+	switch {
+	case y == 1:
+		var sort_type docker.SortType = getSortTypeFromMousePress(total_width, x)
+		if sort_type != docker.None {
+			go func() { w.sort_chan <- sort_type }()
+		}
+	case y > 2 && y < state.containers_data.Len()+3:
+		go func() { w.new_index_chan <- y - 3 }()
 	}
 }
 
@@ -220,7 +278,11 @@ func generateTableCell(column_width int, content interface{}) elements.StringSty
 		if len(typed_content) < column_width {
 			cell = []rune(typed_content + strings.Repeat(" ", column_width-len(typed_content)))
 		} else {
-			cell = []rune(typed_content[:column_width-3] + "...")
+			num_dots := (column_width - 1) / 3
+			if num_dots > 3 {
+				num_dots = 3
+			}
+			cell = []rune(typed_content[:column_width-num_dots] + strings.Repeat(".", num_dots))
 		}
 		return func(i int) (rune, tcell.Style) {
 			if i >= len(cell) {
@@ -238,31 +300,64 @@ func generateTableCell(column_width int, content interface{}) elements.StringSty
 }
 
 const (
-	id_cell_percent     = 0.05
+	id_cell_percent     = 0.04
+	state_cell_percent  = 0.04
 	name_cell_percent   = 0.12
-	image_cell_percent  = 0.23
-	memory_cell_percent = 0.3
-	cpu_cell_percent    = 0.3
+	image_cell_percent  = 0.24
+	memory_cell_percent = 0.28
+	cpu_cell_percent    = 0.28
 )
+
+var (
+	cell_to_sort_type = map[int]docker.SortType{
+		0: docker.None,
+		1: docker.State,
+		2: docker.Name,
+		3: docker.Image,
+		4: docker.Memory,
+		5: docker.Cpu,
+	}
+)
+
+func getCellWidths(total_width int) []int {
+	return []int{
+		int(id_cell_percent * float64(total_width)),
+		int(state_cell_percent * float64(total_width)),
+		int(name_cell_percent * float64(total_width)),
+		int(image_cell_percent * float64(total_width)),
+		int(memory_cell_percent * float64(total_width)),
+		int(cpu_cell_percent * float64(total_width)),
+	}
+}
+
+func getSortTypeFromMousePress(total_width, x int) docker.SortType {
+	widths := getCellWidths(total_width)
+	for i, cummulative_size := 0, 0; i < len(widths); i++ {
+		next_cummulative_size := cummulative_size + widths[i]
+		if x > cummulative_size && x < next_cummulative_size {
+			return cell_to_sort_type[i]
+		}
+		cummulative_size = next_cummulative_size
+	}
+	return docker.None
+}
 
 func generateGenericTableRow(total_width int, cells ...elements.StringStyler) elements.StringStyler {
 	const (
 		vertical_line_rune = '\u2502'
 	)
 	var (
-		cell_sizes      = []float64{id_cell_percent, name_cell_percent, image_cell_percent, memory_cell_percent, cpu_cell_percent}
+		cell_sizes      = getCellWidths(total_width)
 		num_columns     = len(cell_sizes)
 		curr_cell_index = 0
 		inner_index     = 0
-		sum_curr_cells  = 0.0
 	)
+
 	return func(i int) (rune, tcell.Style) {
 		if i == 0 {
 			inner_index = 0
 			curr_cell_index = 0
-			sum_curr_cells = 0.0
-		} else if curr_cell_index < num_columns-1 && float64(i)/float64(total_width) >= sum_curr_cells+cell_sizes[curr_cell_index] {
-			sum_curr_cells += cell_sizes[curr_cell_index]
+		} else if curr_cell_index < num_columns-1 && inner_index == cell_sizes[curr_cell_index] {
 			curr_cell_index++
 			inner_index = 0
 			return vertical_line_rune, tcell.StyleDefault
@@ -280,6 +375,7 @@ func generateTableHeader(total_width int) elements.StringStyler {
 	return generateGenericTableRow(
 		total_width,
 		generateTableCell(calc_cell_width(id_cell_percent, total_width), "ID"),
+		generateTableCell(calc_cell_width(state_cell_percent, total_width), "State"),
 		generateTableCell(calc_cell_width(name_cell_percent, total_width), "Name"),
 		generateTableCell(calc_cell_width(image_cell_percent, total_width), "Image"),
 		generateTableCell(calc_cell_width(memory_cell_percent, total_width), "Memory Usage"),
@@ -289,14 +385,15 @@ func generateTableHeader(total_width int) elements.StringStyler {
 
 func generateDataRow(total_width int, datum *docker.ContainerDatum) (elements.StringStyler, error) {
 	stats := datum.CachedStats()
-	cpu_usage_percentage := 100.0 * (float64(stats.Cpu.ContainerUsage.TotalUsage) - float64(stats.PreCpu.ContainerUsage.TotalUsage)) / (float64(stats.Cpu.SystemUsage) - float64(stats.PreCpu.SystemUsage))
-	memory_usage_percentage := float64(stats.Memory.Usage) / float64(stats.Memory.Limit) * 100.0
+	cpu_usage_percentage := docker.CpuUsagePercentage(&stats.Cpu, &stats.PreCpu)
+	memory_usage_percentage := docker.MemoryUsagePercentage(&stats.Memory)
 	resource_formatter := func(use, limit int64, unit string) string {
 		return fmt.Sprintf("%.2f%s/%.2f%s ", float64(use)/float64(1<<30), unit, float64(limit)/float64(1<<30), unit)
 	}
 	return generateGenericTableRow(
 		total_width,
 		generateTableCell(calc_cell_width(id_cell_percent, total_width), datum.ID()),
+		generateTableCell(calc_cell_width(id_cell_percent, total_width), datum.State()),
 		generateTableCell(calc_cell_width(name_cell_percent, total_width), stats.Name),
 		generateTableCell(calc_cell_width(image_cell_percent, total_width), datum.Image()),
 		elements.PercentageBarDrawer(
@@ -308,10 +405,7 @@ func generateDataRow(total_width int, datum *docker.ContainerDatum) (elements.St
 			calc_cell_width(memory_cell_percent, total_width),
 		),
 		elements.PercentageBarDrawer(
-			resource_formatter(
-				stats.Cpu.ContainerUsage.TotalUsage-stats.PreCpu.ContainerUsage.TotalUsage,
-				stats.Cpu.SystemUsage-stats.PreCpu.SystemUsage,
-				"GHz"),
+			fmt.Sprintf("%.2f%% ", cpu_usage_percentage),
 			cpu_usage_percentage,
 			calc_cell_width(cpu_cell_percent, total_width),
 		),

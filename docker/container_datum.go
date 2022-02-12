@@ -3,6 +3,7 @@ package docker
 import (
 	"dc-top/utils"
 	"encoding/json"
+	"io"
 	"log"
 	"strings"
 
@@ -21,7 +22,7 @@ func NewContainerDatum(base types.Container, stats_stream types.ContainerStats) 
 	if err != nil {
 		log.Println("1 Failed to get new container stats:")
 		log.Println(err)
-		if strings.HasPrefix(err.Error(), "invalid character") || isBeingRemoved(base.ID) || isDeleted(base.ID) {
+		if strings.HasPrefix(err.Error(), "invalid character") || err == io.EOF || isBeingRemoved(base.ID) || isDeleted(base.ID) {
 			return ContainerDatum{
 				base:         base,
 				stats_stream: stats_stream,
@@ -44,7 +45,7 @@ func UpdatedDatum(old_datum ContainerDatum) (ContainerDatum, error) {
 	if err != nil {
 		log.Println("2 Failed to get new container stats:")
 		log.Println(err)
-		if strings.HasPrefix(err.Error(), "invalid character") || isBeingRemoved(old_datum.base.ID) || isDeleted(old_datum.base.ID) {
+		if strings.HasPrefix(err.Error(), "invalid character") || err == io.EOF || isBeingRemoved(old_datum.base.ID) || isDeleted(old_datum.base.ID) {
 			return ContainerDatum{
 				base:         old_datum.base,
 				stats_stream: old_datum.stats_stream,
@@ -64,6 +65,14 @@ func UpdatedDatum(old_datum ContainerDatum) (ContainerDatum, error) {
 
 func (datum *ContainerDatum) ID() string {
 	return datum.base.ID
+}
+
+func (datum *ContainerDatum) State() string {
+	return datum.base.State
+}
+
+func (datum *ContainerDatum) Status() string {
+	return datum.base.Status
 }
 
 func (datum *ContainerDatum) Image() string {
