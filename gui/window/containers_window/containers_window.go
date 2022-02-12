@@ -1,7 +1,9 @@
-package containerswindow
+package containers_window
 
 import (
 	"dc-top/docker"
+	"dc-top/gui/elements"
+	"dc-top/gui/window"
 	"fmt"
 	"log"
 	"math"
@@ -10,41 +12,72 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-var (
-	containers_border_style             = tcell.StyleDefault.Foreground(tcell.Color103)
-	regular_container_style tcell.Style = tcell.StyleDefault.Background(tcell.ColorBlack).Foreground(tcell.ColorWhite)
-	resize_chan                         = make(chan interface{})
-	next_index_chan                     = make(chan interface{})
-	prev_index_chan                     = make(chan interface{})
-	stop_chan                           = make(chan interface{})
-	new_container_data_chan             = make(chan docker.ContainerData)
-	data_request_chan                   = make(chan tableState)
-	draw_queue                          = make(chan tableState)
-)
+type ContainersWindow struct {
+	containers_border_style tcell.Style
+	resize_chan             chan interface{}
+	next_index_chan         chan interface{}
+	prev_index_chan         chan interface{}
+	stop_chan               chan interface{}
+	new_container_data_chan chan docker.ContainerData
+	data_request_chan       chan tableState
+	draw_queue              chan tableState
+}
 
 type tableState struct {
-	containers_window Window
-	index_of_top      int
-	table_height      int
-	focused_id        string
-	containers_data   docker.ContainerData
-	sort_type         docker.SortType
+	window_state    window.WindowState
+	index_of_top    int
+	table_height    int
+	focused_id      string
+	containers_data docker.ContainerData
+	sort_type       docker.SortType
 }
 
-func ContainersWindowResize() {
-	resize_chan <- nil
+func NewContainersWindow() ContainersWindow {
+	return ContainersWindow{
+		containers_border_style: tcell.StyleDefault.Foreground(tcell.Color103),
+		resize_chan:             make(chan interface{}),
+		next_index_chan:         make(chan interface{}),
+		prev_index_chan:         make(chan interface{}),
+		stop_chan:               make(chan interface{}),
+		new_container_data_chan: make(chan docker.ContainerData),
+		data_request_chan:       make(chan tableState),
+		draw_queue:              make(chan tableState),
+	}
 }
 
-func ContainersWindowNext() {
-	next_index_chan <- nil
+func (w *ContainersWindow) Open(s tcell.Screen) {
+	go w.main(s)
 }
 
-func ContainersWindowPrev() {
-	prev_index_chan <- nil
+func (w *ContainersWindow) Resize() {
+	w.resize_chan <- nil
 }
 
-func ContainersWindowQuit() {
-	stop_chan <- nil
+func (w *ContainersWindow) KeyPress(key tcell.Key) {
+	switch key {
+	case tcell.KeyUp:
+		w.prev()
+	case tcell.KeyDown:
+		w.next()
+	default:
+		return
+	}
+}
+
+func (w *ContainersWindow) MousePress(tcell.Key) {
+	// TODO: implement
+}
+
+func (w *ContainersWindow) Close() {
+	w.stop_chan <- nil
+}
+
+func (w *ContainersWindow) next() {
+	w.next_index_chan <- nil
+}
+
+func (w *ContainersWindow) prev() {
+	w.prev_index_chan <- nil
 }
 
 func updateIndices(state *tableState, curr_index int) {
@@ -57,23 +90,24 @@ func updateIndices(state *tableState, curr_index int) {
 	log.Printf("CURR: %d, TOP: %d, BUTTOM: %d\n", curr_index, state.index_of_top, index_of_buttom)
 }
 
-func drawer() {
+func (w *ContainersWindow) drawer() {
 	for {
-		state := <-draw_queue
+		state := <-w.draw_queue
 		log.Printf("Drawing new state...\n")
-		state.containers_window.DrawBorders(containers_border_style)
-		state.containers_window.DrawContents(dockerStatsDrawerGenerator(state))
-		state.containers_window.screen.Show()
+		window.DrawBorders(&state.window_state, w.containers_border_style)
+		window.DrawContents(&state.window_state, dockerStatsDrawerGenerator(state))
+		state.window_state.Screen.Show()
 		log.Printf("Done drawing\n")
 	}
 }
 
-func dockerDataStreamer() {
+func (w *ContainersWindow) dockerDataStreamer() {
 	for {
-		state := <-data_request_chan
+		state := <-w.data_request_chan
 		log.Printf("Got request for new data")
 		var new_data docker.ContainerData
 		if !state.containers_data.AreIdsUpToDate() {
+			log.Printf("Ids changed, getting new container stats")
 			new_data = docker.GetContainers(&state.containers_data)
 		} else {
 			state.containers_data.UpdateStats()
@@ -81,30 +115,31 @@ func dockerDataStreamer() {
 		}
 		new_data.SortData(state.sort_type)
 		log.Printf("Sending back new data")
-		new_container_data_chan <- new_data
+		w.new_container_data_chan <- new_data
 	}
 }
 
-func windowLoop(s tcell.Screen) {
-	x1, y1, x2, y2 := containerWindowSize(s)
+func (w *ContainersWindow) main(s tcell.Screen) {
+	x1, y1, x2, y2 := window.ContainerWindowSize(s)
+	window_state := window.NewWindow(s, x1, y1, x2, y2)
 	state := tableState{
-		containers_data:   docker.GetContainers(nil),
-		index_of_top:      0,
-		table_height:      y2 - y1 - 4 + 1,
-		containers_window: NewWindow(s, x1, y1, x2, y2),
-		sort_type:         docker.Name,
+		containers_data: docker.GetContainers(nil),
+		index_of_top:    0,
+		table_height:    y2 - y1 - 4 + 1,
+		window_state:    window_state,
+		sort_type:       docker.Name,
 	}
 	log.Printf("table height is %d\n", state.table_height)
-	go drawer()
-	go dockerDataStreamer()
+	go w.drawer()
+	go w.dockerDataStreamer()
 	log.Printf("Requesting new data\n")
-	go func() { data_request_chan <- state }()
+	go func() { w.data_request_chan <- state }()
 	for {
 		select {
-		case <-resize_chan:
+		case <-w.resize_chan:
 			{
 				log.Printf("Resize request\n")
-				x1, y1, x2, y2 := containerWindowSize(s)
+				x1, y1, x2, y2 := window.ContainerWindowSize(s)
 				state.table_height = y2 - y1 - 4 + 1
 				log.Printf("table height is %d\n", state.table_height)
 				for i, datum := range state.containers_data.GetData() {
@@ -113,9 +148,9 @@ func windowLoop(s tcell.Screen) {
 						break
 					}
 				}
-				state.containers_window.Resize(x1, y1, x2, y2)
+				state.window_state.SetBorders(x1, y1, x2, y2)
 			}
-		case new_data := <-new_container_data_chan:
+		case new_data := <-w.new_container_data_chan:
 			{
 				log.Printf("Got new data\n")
 				state.containers_data = new_data
@@ -124,9 +159,9 @@ func windowLoop(s tcell.Screen) {
 					log.Printf("Requesting new data\n")
 					state.focused_id = ""
 				}
-				go func() { data_request_chan <- state }()
+				go func() { w.data_request_chan <- state }()
 			}
-		case <-next_index_chan:
+		case <-w.next_index_chan:
 			{
 				log.Printf("Requesting next index\n")
 				if state.focused_id == "" && state.containers_data.Len() > 0 {
@@ -149,7 +184,7 @@ func windowLoop(s tcell.Screen) {
 					}
 				}
 			}
-		case <-prev_index_chan:
+		case <-w.prev_index_chan:
 			{
 				if state.focused_id == "" && state.containers_data.Len() > 0 {
 					state.focused_id = state.containers_data.GetData()[state.containers_data.Len()-1].ID()
@@ -170,19 +205,15 @@ func windowLoop(s tcell.Screen) {
 					}
 				}
 			}
-		case <-stop_chan:
+		case <-w.stop_chan:
 			log.Printf("Stopped\n")
 			return
 		}
-		draw_queue <- state
+		w.draw_queue <- state
 	}
 }
 
-func ContainersWindowInit(s tcell.Screen) {
-	go windowLoop(s)
-}
-
-func generateTableCell(column_width int, content interface{}) stringStyler {
+func generateTableCell(column_width int, content interface{}) elements.StringStyler {
 	switch typed_content := content.(type) {
 	case string:
 		var cell []rune
@@ -198,7 +229,7 @@ func generateTableCell(column_width int, content interface{}) stringStyler {
 				return cell[i], tcell.StyleDefault
 			}
 		}
-	case stringStyler:
+	case elements.StringStyler:
 		return typed_content
 	default:
 		log.Println("tried to generate table cell from unknown type")
@@ -214,7 +245,7 @@ const (
 	cpu_cell_percent    = 0.3
 )
 
-func generateGenericTableRow(total_width int, cells ...stringStyler) stringStyler {
+func generateGenericTableRow(total_width int, cells ...elements.StringStyler) elements.StringStyler {
 	const (
 		vertical_line_rune = '\u2502'
 	)
@@ -245,7 +276,7 @@ func calc_cell_width(relative_size float64, total_width int) int {
 	return int(math.Ceil(relative_size * float64(total_width)))
 }
 
-func generateTableHeader(total_width int) stringStyler {
+func generateTableHeader(total_width int) elements.StringStyler {
 	return generateGenericTableRow(
 		total_width,
 		generateTableCell(calc_cell_width(id_cell_percent, total_width), "ID"),
@@ -256,7 +287,7 @@ func generateTableHeader(total_width int) stringStyler {
 	)
 }
 
-func generateDataRow(total_width int, datum *docker.ContainerDatum) (stringStyler, error) {
+func generateDataRow(total_width int, datum *docker.ContainerDatum) (elements.StringStyler, error) {
 	stats := datum.CachedStats()
 	cpu_usage_percentage := 100.0 * (float64(stats.Cpu.ContainerUsage.TotalUsage) - float64(stats.PreCpu.ContainerUsage.TotalUsage)) / (float64(stats.Cpu.SystemUsage) - float64(stats.PreCpu.SystemUsage))
 	memory_usage_percentage := float64(stats.Memory.Usage) / float64(stats.Memory.Limit) * 100.0
@@ -268,7 +299,7 @@ func generateDataRow(total_width int, datum *docker.ContainerDatum) (stringStyle
 		generateTableCell(calc_cell_width(id_cell_percent, total_width), datum.ID()),
 		generateTableCell(calc_cell_width(name_cell_percent, total_width), stats.Name),
 		generateTableCell(calc_cell_width(image_cell_percent, total_width), datum.Image()),
-		PercentageBarDrawer(
+		elements.PercentageBarDrawer(
 			resource_formatter(
 				stats.Memory.Usage,
 				stats.Memory.Limit,
@@ -276,7 +307,7 @@ func generateDataRow(total_width int, datum *docker.ContainerDatum) (stringStyle
 			memory_usage_percentage,
 			calc_cell_width(memory_cell_percent, total_width),
 		),
-		PercentageBarDrawer(
+		elements.PercentageBarDrawer(
 			resource_formatter(
 				stats.Cpu.ContainerUsage.TotalUsage-stats.PreCpu.ContainerUsage.TotalUsage,
 				stats.Cpu.SystemUsage-stats.PreCpu.SystemUsage,
@@ -287,12 +318,12 @@ func generateDataRow(total_width int, datum *docker.ContainerDatum) (stringStyle
 	), nil
 }
 
-func generateTable(state *tableState) []stringStyler {
-	total_width := (state.containers_window.right_x - 1) - (state.containers_window.left_x + 1)
+func generateTable(state *tableState) []elements.StringStyler {
+	total_width := (state.window_state.RightX - 1) - (state.window_state.LeftX + 1)
 	underline_rune := '\u2500'
-	table := make([]stringStyler, state.containers_data.Len()+2)
+	table := make([]elements.StringStyler, state.containers_data.Len()+2)
 	table[0] = generateTableHeader(total_width)
-	table[1] = RuneRepeater(underline_rune, tcell.StyleDefault.Foreground(tcell.ColorRebeccaPurple))
+	table[1] = elements.RuneRepeater(underline_rune, tcell.StyleDefault.Foreground(tcell.ColorRebeccaPurple))
 	offset := 2
 	row_ready_ch := make(chan interface{}, state.containers_data.Len())
 	defer close(row_ready_ch)
@@ -301,13 +332,13 @@ func generateTable(state *tableState) []stringStyler {
 			row, err := generateDataRow(total_width, &d)
 			if err == nil {
 				if d.IsDeleted() {
-					table[i+offset] = StrikeThrough(row)
+					table[i+offset] = elements.StrikeThrough(row)
 				} else {
 					table[i+offset] = row
 				}
 			} else {
 				log.Printf("Got error while generating row: %s\n", err)
-				table[i+offset] = RuneRepeater(underline_rune, tcell.StyleDefault)
+				table[i+offset] = elements.RuneRepeater(underline_rune, tcell.StyleDefault)
 			}
 			row_ready_ch <- i
 		}(index, datum)
@@ -332,7 +363,7 @@ func dockerStatsDrawerGenerator(state tableState) func(x, y int) (rune, tcell.St
 			}
 			return r, s
 		} else {
-			return rune('\x00'), regular_container_style
+			return rune('\x00'), tcell.StyleDefault
 		}
 	}
 }

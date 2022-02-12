@@ -41,9 +41,13 @@ func NewContainerData(sort_type SortType) ContainerData {
 		go func(i int, c types.Container) {
 			container_id := c.ID
 			container_stats, err := docker_cli.ContainerStats(context.Background(), container_id, true)
-			if err != nil && err != io.EOF {
-				log.Println(container_stats)
-				log.Fatal(err)
+			for err != nil && err != io.EOF {
+				log.Println(err)
+				log.Println(containers)
+				if !strings.HasPrefix(err.Error(), "Error response from daemon: No such container") {
+					panic(1)
+				}
+				container_stats, err = docker_cli.ContainerStats(context.Background(), container_id, true)
 			}
 			container_data[i] = NewContainerDatum(c, container_stats)
 			container_init_ch <- i

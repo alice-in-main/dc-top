@@ -1,13 +1,12 @@
 package docker
 
 import (
-	"context"
 	"dc-top/utils"
 	"encoding/json"
 	"log"
+	"strings"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/filters"
 )
 
 type ContainerDatum struct {
@@ -18,9 +17,19 @@ type ContainerDatum struct {
 }
 
 func NewContainerDatum(base types.Container, stats_stream types.ContainerStats) ContainerDatum {
-	_cached_stats, err := getNewStats(&stats_stream)
+	_cached_stats, err := getNewStats(stats_stream)
 	if err != nil {
-		log.Fatal("Failed to get new container stats")
+		log.Println("1 Failed to get new container stats:")
+		log.Println(err)
+		if strings.HasPrefix(err.Error(), "invalid character") || isBeingRemoved(base.ID) || isDeleted(base.ID) {
+			return ContainerDatum{
+				base:         base,
+				stats_stream: stats_stream,
+				cached_stats: ContainerMainStats{},
+				is_deleted:   true,
+			}
+		}
+		log.Fatalf("1 Failed to get stats and container %s wasnt deleted", base.ID)
 	}
 	return ContainerDatum{
 		base:         base,
@@ -31,15 +40,20 @@ func NewContainerDatum(base types.Container, stats_stream types.ContainerStats) 
 }
 
 func UpdatedDatum(old_datum ContainerDatum) (ContainerDatum, error) {
-	if isDeleted(old_datum.base.ID) {
-		return ContainerDatum{
-			base:         old_datum.base,
-			stats_stream: old_datum.stats_stream,
-			cached_stats: old_datum.cached_stats,
-			is_deleted:   true,
-		}, nil
+	new_stats, err := getNewStats(old_datum.stats_stream)
+	if err != nil {
+		log.Println("2 Failed to get new container stats:")
+		log.Println(err)
+		if strings.HasPrefix(err.Error(), "invalid character") || isBeingRemoved(old_datum.base.ID) || isDeleted(old_datum.base.ID) {
+			return ContainerDatum{
+				base:         old_datum.base,
+				stats_stream: old_datum.stats_stream,
+				cached_stats: old_datum.cached_stats,
+				is_deleted:   true,
+			}, err
+		}
+		log.Fatalf("2 Failed to get stats and container %s wasn't deleted", old_datum.base.ID)
 	}
-	new_stats, err := getNewStats(&old_datum.stats_stream)
 	return ContainerDatum{
 		base:         old_datum.base,
 		stats_stream: old_datum.stats_stream,
@@ -68,7 +82,7 @@ func (datum *ContainerDatum) IsDeleted() bool {
 	return datum.is_deleted
 }
 
-func getNewStats(stats_stream *types.ContainerStats) (ContainerMainStats, error) {
+func getNewStats(stats_stream types.ContainerStats) (ContainerMainStats, error) {
 	const max_container_stats_data_len = 1 << 14
 	container_stats_json_data := make([]byte, max_container_stats_data_len)
 	_, err := stats_stream.Body.Read(container_stats_json_data)
@@ -85,13 +99,4 @@ func getNewStats(stats_stream *types.ContainerStats) (ContainerMainStats, error)
 		return ContainerMainStats{}, err
 	}
 	return container_stats_data, nil
-}
-
-func isDeleted(id string) bool {
-	var filtered_id filters.Args = filters.NewArgs(filters.Arg("id", id))
-	c, err := docker_cli.ContainerList(context.Background(), types.ContainerListOptions{All: true, Quiet: true, Filters: filtered_id})
-	if err != nil {
-		log.Fatal(err)
-	}
-	return len(c) == 0
 }

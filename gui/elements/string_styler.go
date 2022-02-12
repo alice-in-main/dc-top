@@ -1,4 +1,4 @@
-package string_styler
+package elements
 
 import (
 	"log"
@@ -7,16 +7,16 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-type stringStyler func(x int) (rune, tcell.Style)
+type StringStyler func(x int) (rune, tcell.Style)
 
-func StrikeThrough(orig_styler stringStyler) stringStyler {
+func StrikeThrough(orig_styler StringStyler) StringStyler {
 	return func(i int) (rune, tcell.Style) {
 		r, s := orig_styler(i)
-		return r, s.Background(tcell.ColorDarkRed).Foreground(tcell.ColorDarkGray)
+		return r, s.Background(tcell.ColorDarkRed)
 	}
 }
 
-func TextDrawer(str string, style tcell.Style) stringStyler {
+func TextDrawer(str string, style tcell.Style) StringStyler {
 	return func(i int) (rune, tcell.Style) {
 		if i < len(str) {
 			return rune(str[i]), style
@@ -26,11 +26,11 @@ func TextDrawer(str string, style tcell.Style) stringStyler {
 	}
 }
 
-func RuneRepeater(r rune, s tcell.Style) stringStyler {
+func RuneRepeater(r rune, s tcell.Style) StringStyler {
 	return func(_ int) (rune, tcell.Style) { return r, s }
 }
 
-func PercentageBarDrawer(description string, percentage float64, bar_len int) stringStyler {
+func PercentageBarDrawer(description string, percentage float64, bar_len int) StringStyler {
 	var high_percentage float64 = 80.0
 	var mid_percentage float64 = 50.0
 	var low_percentage float64 = 2.0
@@ -62,7 +62,7 @@ func PercentageBarDrawer(description string, percentage float64, bar_len int) st
 	}
 }
 
-func ValuesBarDrawer(description string, min_val float64, max_val float64, curr_val float64, bar_len int) stringStyler {
+func ValuesBarDrawer(description string, min_val float64, max_val float64, curr_val float64, bar_len int) StringStyler {
 	normalized_max := max_val - min_val
 	normalized_curr := curr_val - min_val
 	return PercentageBarDrawer(description, 100.0*normalized_curr/normalized_max, bar_len)

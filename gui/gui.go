@@ -1,6 +1,8 @@
 package gui
 
 import (
+	"dc-top/gui/window/containers_window"
+	"dc-top/gui/window/docker_info_window"
 	"log"
 	"os"
 
@@ -14,6 +16,13 @@ const (
 	containers windowType = 1
 	info       windowType = 2
 )
+
+type guiState struct {
+	screen             tcell.Screen
+	focused_window     windowType
+	docker_info_window docker_info_window.DockerInfoWindow
+	containers_window  containers_window.ContainersWindow
+}
 
 var focusedWindow windowType = windowType(containers)
 
@@ -29,24 +38,32 @@ func Draw() {
 	}
 	s.EnableMouse(tcell.MouseButtonEvents)
 
+	state := guiState{
+		screen:             s,
+		focused_window:     windowType(containers),
+		docker_info_window: docker_info_window.NewDockerInfoWindow(),
+		containers_window:  containers_window.NewContainersWindow(),
+	}
+
+	state.docker_info_window.Open(s)
+	state.containers_window.Open(s)
+
 	quit := func() {
-		ContainersWindowQuit()
+		state.docker_info_window.Close()
+		state.containers_window.Close()
 		s.Fini()
 		os.Exit(0)
 	}
 	defer quit()
-
-	ContainersWindowInit(s)
-	DockerInfoWindowInit(s)
 
 	for {
 		ev := s.PollEvent()
 		switch ev := ev.(type) {
 		case *tcell.EventResize:
 			s.Clear()
+			state.containers_window.Resize()
+			state.docker_info_window.Resize()
 			s.Sync()
-			ContainersWindowResize()
-			DockerInfoWindowResize(s)
 		case *tcell.EventKey:
 			key := ev.Key()
 			switch key {
@@ -55,8 +72,7 @@ func Draw() {
 			case tcell.KeyCtrlC:
 				quit()
 			default:
-				handleKeyPress(key)
-				s.Show()
+				handleKeyPress(state, key)
 			}
 		default:
 			log.Printf("GUI got event %s and ignored it\n", ev)
@@ -64,28 +80,22 @@ func Draw() {
 	}
 }
 
-func handleKeyPress(key tcell.Key) {
+func handleKeyPress(state guiState, key tcell.Key) {
 	switch focusedWindow {
 	case windowType(metadata):
 		{
+			log.Fatal("shouldnt be here")
+			break
+		}
+	case windowType(info):
+		{
+			log.Fatal("shouldnt be here")
 			break
 		}
 	case windowType(containers):
 		{
-			handleContainersWindowKeyPress(key)
+			state.containers_window.KeyPress(key)
 			break
 		}
-	}
-}
-
-func handleContainersWindowKeyPress(key tcell.Key) {
-	switch key {
-	case tcell.KeyUp:
-		ContainersWindowPrev()
-	case tcell.KeyDown:
-		log.Printf("Asking for next index")
-		ContainersWindowNext()
-	default:
-		return
 	}
 }

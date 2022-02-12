@@ -6,65 +6,68 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-type Window struct {
-	screen   tcell.Screen
-	left_x   int
-	right_x  int
-	top_y    int
-	buttom_y int
-
-	init     func()
-	resize   func(*Window)
-	quit     func()
-	keypress func(tcell.Key)
+type WindowState struct {
+	Screen  tcell.Screen
+	LeftX   int
+	RightX  int
+	TopY    int
+	ButtomY int
 }
 
-func NewWindow(screen tcell.Screen, x1, y1, x2, y2 int) Window {
+type Window interface {
+	Open(tcell.Screen)
+	Resize()
+	KeyPress(tcell.Key)
+	MousePress(tcell.Key)
+	Close()
+}
+
+func NewWindow(screen tcell.Screen, x1, y1, x2, y2 int) WindowState {
 	if x1 >= x2 || y1 >= y2 {
 		log.Printf("Bad window coordinates:\ntop left:(%d,%d), buttom right:(%d,%d)\n", x1, y1, x2, y2)
 		panic(1)
 	}
-	return Window{
-		screen:   screen,
-		left_x:   x1,
-		right_x:  x2,
-		top_y:    y1,
-		buttom_y: y2,
+	return WindowState{
+		Screen:  screen,
+		LeftX:   x1,
+		RightX:  x2,
+		TopY:    y1,
+		ButtomY: y2,
 	}
 }
 
-func (window *Window) Resize(x1, y1, x2, y2 int) {
-	window.left_x = x1
-	window.top_y = y1
-	window.right_x = x2
-	window.buttom_y = y2
+func (window_state *WindowState) SetBorders(x1, y1, x2, y2 int) {
+	window_state.LeftX = x1
+	window_state.TopY = y1
+	window_state.RightX = x2
+	window_state.ButtomY = y2
 }
 
-func (window *Window) DrawBorders(style tcell.Style) {
-	for col := window.left_x; col <= window.right_x; col++ {
-		window.screen.SetContent(col, window.top_y, tcell.RuneHLine, nil, style)
-		window.screen.SetContent(col, window.buttom_y, tcell.RuneHLine, nil, style)
+func DrawBorders(window_state *WindowState, style tcell.Style) {
+	for col := window_state.LeftX; col <= window_state.RightX; col++ {
+		window_state.Screen.SetContent(col, window_state.TopY, tcell.RuneHLine, nil, style)
+		window_state.Screen.SetContent(col, window_state.ButtomY, tcell.RuneHLine, nil, style)
 	}
-	for row := window.top_y; row < window.buttom_y; row++ {
-		window.screen.SetContent(window.left_x, row, tcell.RuneVLine, nil, style)
-		window.screen.SetContent(window.right_x, row, tcell.RuneVLine, nil, style)
+	for row := window_state.TopY; row < window_state.ButtomY; row++ {
+		window_state.Screen.SetContent(window_state.LeftX, row, tcell.RuneVLine, nil, style)
+		window_state.Screen.SetContent(window_state.RightX, row, tcell.RuneVLine, nil, style)
 	}
 
-	window.screen.SetContent(window.left_x, window.top_y, tcell.RuneULCorner, nil, style)
-	window.screen.SetContent(window.right_x, window.top_y, tcell.RuneURCorner, nil, style)
-	window.screen.SetContent(window.left_x, window.buttom_y, tcell.RuneLLCorner, nil, style)
-	window.screen.SetContent(window.right_x, window.buttom_y, tcell.RuneLRCorner, nil, style)
+	window_state.Screen.SetContent(window_state.LeftX, window_state.TopY, tcell.RuneULCorner, nil, style)
+	window_state.Screen.SetContent(window_state.RightX, window_state.TopY, tcell.RuneURCorner, nil, style)
+	window_state.Screen.SetContent(window_state.LeftX, window_state.ButtomY, tcell.RuneLLCorner, nil, style)
+	window_state.Screen.SetContent(window_state.RightX, window_state.ButtomY, tcell.RuneLRCorner, nil, style)
 }
 
-func (window *Window) DrawContents(contents_generator func(int, int) (rune, tcell.Style)) {
-	width := window.right_x - window.left_x - 1
-	height := window.buttom_y - window.top_y - 1
-	offset_x := window.left_x + 1
-	offset_y := window.top_y + 1
+func DrawContents(window_state *WindowState, contents_generator func(int, int) (rune, tcell.Style)) {
+	width := window_state.RightX - window_state.LeftX - 1
+	height := window_state.ButtomY - window_state.TopY - 1
+	offset_x := window_state.LeftX + 1
+	offset_y := window_state.TopY + 1
 	for i := 0; i < width; i++ {
 		for j := 0; j < height; j++ {
 			r, s := contents_generator(i, j)
-			window.screen.SetContent(offset_x+i, offset_y+j, r, nil, s)
+			window_state.Screen.SetContent(offset_x+i, offset_y+j, r, nil, s)
 		}
 	}
 }
