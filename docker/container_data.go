@@ -96,16 +96,16 @@ func (containers *ContainerData) GetData() []ContainerDatum {
 	return containers.data
 }
 
-func assertNoDuplicates(containers_data ContainerData, message string) {
-	for i, c1 := range containers_data.GetData()[:containers_data.Len()-1] {
-		for _, c2 := range containers_data.GetData()[i+1:] {
-			if c1.ID() == c2.ID() {
-				log.Printf("%s: Found duplicate ids", message)
-				//log.Fatal(c1, c2)
-			}
-		}
-	}
-}
+// func assertNoDuplicates(containers_data ContainerData, message string) {
+// 	for i, c1 := range containers_data.GetData()[:containers_data.Len()-1] {
+// 		for _, c2 := range containers_data.GetData()[i+1:] {
+// 			if c1.ID() == c2.ID() {
+// 				log.Printf("%s: Found duplicate ids", message)
+// 				//log.Fatal(c1, c2)
+// 			}
+// 		}
+// 	}
+// }
 
 func (containers *ContainerData) SortData(main_sort_type, secondary_sort_type SortType) {
 	start := time.Now()
@@ -114,7 +114,7 @@ func (containers *ContainerData) SortData(main_sort_type, secondary_sort_type So
 	containers.secondary_sort_type = secondary_sort_type
 	sort.Stable(containers)
 
-	assertNoDuplicates(*containers, "inside sort data")
+	// assertNoDuplicates(*containers, "inside sort data")
 
 	elapsed := time.Since(start)
 	log.Printf("It took %dmicrosecconds to sort data", elapsed.Microseconds())
@@ -122,14 +122,12 @@ func (containers *ContainerData) SortData(main_sort_type, secondary_sort_type So
 
 func (containers *ContainerData) UpdateStats() {
 	var set_of_ids map[string]ContainerDatum = make(map[string]ContainerDatum)
-	assertNoDuplicates(*containers, "Inside update stats, before loop")
+	// assertNoDuplicates(*containers, "Inside update stats, before loop")
 	data := containers.GetData()
 	for i, datum := range data {
 		if d, ok := set_of_ids[datum.ID()]; ok {
 			log.Println(d, datum)
 			//log.Fatalf("%s already exists", datum.ID())
-		} else {
-			log.Printf("Didnt find %s", datum.ID())
 		}
 		new_datum, err := UpdatedDatum(datum)
 		if err != nil {
@@ -139,7 +137,7 @@ func (containers *ContainerData) UpdateStats() {
 
 		containers.data[i] = new_datum
 	}
-	assertNoDuplicates(*containers, "Inside update stats, after loop")
+	// assertNoDuplicates(*containers, "Inside update stats, after loop")
 }
 
 func (containers *ContainerData) AreIdsUpToDate() bool {

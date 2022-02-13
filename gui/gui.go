@@ -53,6 +53,7 @@ func Draw() {
 			key := ev.Key()
 			switch key {
 			case tcell.KeyEscape:
+				log.Printf("Escaping")
 				quit()
 			case tcell.KeyCtrlC:
 				quit()
