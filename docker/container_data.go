@@ -18,7 +18,7 @@ type ContainerData struct {
 	secondary_sort_type SortType
 }
 
-type SortType int8
+type SortType uint8
 
 const (
 	Name SortType = iota
@@ -77,8 +77,6 @@ func (containers *ContainerData) Less(i, j int) bool {
 	if containers.GetData()[i].ID() == containers.GetData()[j].ID() {
 		log.Fatal("Shouldn't get here")
 	}
-	// return j < i
-	// return containers.GetData()[i].ID() < containers.GetData()[j].ID()
 	if lessAux(containers.main_sort_type, &containers.GetData()[i], &containers.GetData()[j]) {
 		return true
 	}
@@ -96,17 +94,6 @@ func (containers *ContainerData) GetData() []ContainerDatum {
 	return containers.data
 }
 
-// func assertNoDuplicates(containers_data ContainerData, message string) {
-// 	for i, c1 := range containers_data.GetData()[:containers_data.Len()-1] {
-// 		for _, c2 := range containers_data.GetData()[i+1:] {
-// 			if c1.ID() == c2.ID() {
-// 				log.Printf("%s: Found duplicate ids", message)
-// 				//log.Fatal(c1, c2)
-// 			}
-// 		}
-// 	}
-// }
-
 func (containers *ContainerData) SortData(main_sort_type, secondary_sort_type SortType) {
 	start := time.Now()
 
@@ -114,30 +101,20 @@ func (containers *ContainerData) SortData(main_sort_type, secondary_sort_type So
 	containers.secondary_sort_type = secondary_sort_type
 	sort.Stable(containers)
 
-	// assertNoDuplicates(*containers, "inside sort data")
-
 	elapsed := time.Since(start)
 	log.Printf("It took %dmicrosecconds to sort data", elapsed.Microseconds())
 }
 
 func (containers *ContainerData) UpdateStats() {
-	var set_of_ids map[string]ContainerDatum = make(map[string]ContainerDatum)
-	// assertNoDuplicates(*containers, "Inside update stats, before loop")
 	data := containers.GetData()
 	for i, datum := range data {
-		if d, ok := set_of_ids[datum.ID()]; ok {
-			log.Println(d, datum)
-			//log.Fatalf("%s already exists", datum.ID())
-		}
 		new_datum, err := UpdatedDatum(datum)
 		if err != nil {
 			log.Printf("Got error %s while fetching new data", err)
 		}
-		set_of_ids[datum.ID()] = datum
 
 		containers.data[i] = new_datum
 	}
-	// assertNoDuplicates(*containers, "Inside update stats, after loop")
 }
 
 func (containers *ContainerData) AreIdsUpToDate() bool {
@@ -199,7 +176,7 @@ func lessAux(sort_by SortType, i, j *ContainerDatum) bool {
 			stats_j := j.CachedStats()
 			usage_i := MemoryUsagePercentage(&stats_i.Memory)
 			usage_j := MemoryUsagePercentage(&stats_j.Memory)
-			return usage_i < usage_j
+			return usage_i > usage_j
 		}
 	case Cpu:
 		{
@@ -207,7 +184,7 @@ func lessAux(sort_by SortType, i, j *ContainerDatum) bool {
 			stats_j := j.CachedStats()
 			usage_i := CpuUsagePercentage(&stats_i.Cpu, &stats_i.PreCpu)
 			usage_j := CpuUsagePercentage(&stats_j.Cpu, &stats_j.PreCpu)
-			return usage_i < usage_j
+			return usage_i > usage_j
 		}
 	case State:
 		{

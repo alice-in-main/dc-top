@@ -2,12 +2,13 @@ package window
 
 import (
 	"dc-top/docker"
+	"dc-top/errors"
 	"dc-top/gui/elements"
+	"dc-top/gui/gui_events"
 	"fmt"
 	"log"
 	"math"
 	"strings"
-	"time"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -18,12 +19,12 @@ type ContainersWindow struct {
 	next_index_chan         chan interface{}
 	prev_index_chan         chan interface{}
 	new_index_chan          chan int
+	delete_chan             chan interface{}
+	switch_to_logs_chan     chan interface{}
 	mouse_chan              chan tcell.EventMouse
-	sort_chan               chan docker.SortType
 	new_container_data_chan chan docker.ContainerData
 	data_request_chan       chan tableState
 	draw_queue              chan tableState
-	state_update_chan       chan interface{}
 	stop_chan               chan interface{}
 }
 
@@ -44,17 +45,18 @@ func NewContainersWindow() ContainersWindow {
 		next_index_chan:         make(chan interface{}),
 		prev_index_chan:         make(chan interface{}),
 		new_index_chan:          make(chan int),
+		delete_chan:             make(chan interface{}),
+		switch_to_logs_chan:     make(chan interface{}),
 		mouse_chan:              make(chan tcell.EventMouse),
-		sort_chan:               make(chan docker.SortType),
 		new_container_data_chan: make(chan docker.ContainerData),
 		data_request_chan:       make(chan tableState),
 		stop_chan:               make(chan interface{}),
-		state_update_chan:       make(chan interface{}),
 		draw_queue:              make(chan tableState),
 	}
 }
 
 func (w *ContainersWindow) Open(s tcell.Screen) {
+	s.EnableMouse(tcell.MouseButtonEvents)
 	go w.main(s)
 }
 
@@ -62,12 +64,20 @@ func (w *ContainersWindow) Resize() {
 	w.resize_chan <- nil
 }
 
-func (w *ContainersWindow) KeyPress(key tcell.Key) {
+func (w *ContainersWindow) KeyPress(ev tcell.EventKey) {
+	key := ev.Key()
 	switch key {
 	case tcell.KeyUp:
 		w.prev()
 	case tcell.KeyDown:
 		w.next()
+	case tcell.KeyDelete:
+		w.delFocused()
+	case tcell.KeyRune:
+		switch ev.Rune() {
+		case 'l':
+			w.switchToLogsWindow()
+		}
 	default:
 		return
 	}
@@ -89,6 +99,14 @@ func (w *ContainersWindow) prev() {
 	w.prev_index_chan <- nil
 }
 
+func (w *ContainersWindow) delFocused() {
+	w.delete_chan <- nil
+}
+
+func (w *ContainersWindow) switchToLogsWindow() {
+	w.switch_to_logs_chan <- nil
+}
+
 func updateIndices(state *tableState, curr_index int) {
 	index_of_buttom := state.index_of_top + state.table_height - 1
 	if curr_index < state.index_of_top {
@@ -99,112 +117,145 @@ func updateIndices(state *tableState, curr_index int) {
 	log.Printf("CURR: %d, TOP: %d, BUTTOM: %d\n", curr_index, state.index_of_top, index_of_buttom)
 }
 
-func (w *ContainersWindow) drawer() {
+func (w *ContainersWindow) drawer(stop_drawing chan interface{}) {
 	for {
-		state := <-w.draw_queue
-		log.Printf("Drawing new state...\n")
-		DrawBorders(&state.window_state, w.containers_border_style)
-		DrawContents(&state.window_state, dockerStatsDrawerGenerator(state))
-		state.window_state.Screen.Show()
-		log.Printf("Done drawing\n")
-	}
-}
-
-func (w *ContainersWindow) dockerDataStreamer() {
-	for {
-		state := <-w.data_request_chan
-		log.Printf("Got request for new data")
-		var new_data docker.ContainerData
-		if !state.containers_data.AreIdsUpToDate() {
-			log.Printf("Ids changed, getting new container stats")
-			new_data = docker.GetContainers(&state.containers_data)
-		} else {
-			state.containers_data.UpdateStats()
-			new_data = state.containers_data
+		select {
+		case state := <-w.draw_queue:
+			log.Printf("Drawing new state...\n")
+			DrawBorders(&state.window_state, w.containers_border_style)
+			DrawContents(&state.window_state, dockerStatsDrawerGenerator(state))
+			state.window_state.Screen.Show()
+			log.Printf("Done drawing\n")
+		case <-stop_drawing:
+			return
 		}
-		state.containers_data.SortData(state.main_sort_type, state.secondary_sort_type)
-		log.Printf("Sending back new data")
-		w.new_container_data_chan <- new_data
 	}
 }
 
-func handleResize(window *ContainersWindow, table_state *tableState) {
+func (w *ContainersWindow) dockerDataStreamer(stop_streaming chan interface{}) {
+	for {
+		select {
+		case state := <-w.data_request_chan:
+			log.Printf("Got request for new data")
+			var new_data docker.ContainerData
+			if !state.containers_data.AreIdsUpToDate() {
+				log.Printf("Ids changed, getting new container stats")
+				new_data = docker.GetContainers(&state.containers_data)
+			} else {
+				state.containers_data.UpdateStats()
+				new_data = state.containers_data
+			}
+			log.Printf("Sending back new data")
+			w.new_container_data_chan <- new_data
+		case <-stop_streaming:
+			return
+		}
+	}
+}
+
+func handleResize(w *ContainersWindow, table_state tableState) tableState {
 	log.Printf("Resize request\n")
 	x1, y1, x2, y2 := ContainerWindowSize(table_state.window_state.Screen)
 	table_state.table_height = y2 - y1 - 4 + 1
 	log.Printf("table height is %d\n", table_state.table_height)
 	for i, datum := range table_state.containers_data.GetData() {
 		if datum.ID() == table_state.focused_id {
-			updateIndices(table_state, i)
+			updateIndices(&table_state, i)
 			break
 		}
 	}
 	table_state.window_state.SetBorders(x1, y1, x2, y2)
-	go func(s tableState) { window.draw_queue <- s }(*table_state)
+	return table_state
 }
 
-func handleNewData(new_data *docker.ContainerData, w *ContainersWindow, table_state *tableState) {
+func handleNewData(new_data *docker.ContainerData, w *ContainersWindow, table_state tableState) tableState {
 	log.Printf("Got new data\n")
 	table_state.containers_data = *new_data
 	log.Printf("Requesting new data\n")
 	if !new_data.Contains(table_state.focused_id) {
 		table_state.focused_id = ""
 	}
-	go func(s tableState) {
-		if s.containers_data.Len() == 0 {
-			time.Sleep(300 * time.Millisecond)
-		}
-		w.data_request_chan <- s
-	}(*table_state)
-	go func(s tableState) { w.draw_queue <- s }(*table_state)
+	return table_state
 }
 
-func findIndexOfId(data *docker.ContainerData, id string) int {
+func findIndexOfId(data *docker.ContainerData, id string) (int, error) {
 	for i, datum := range data.GetData() {
 		if datum.ID() == id {
-			return i
+			return i, nil
 		}
 	}
-	return -1
+	return -1, errors.NewNotFoundError("index of id")
 }
 
-func handleNewIndex(new_index int, w *ContainersWindow, table_state *tableState) {
+func handleNewIndex(new_index int, w *ContainersWindow, table_state tableState) tableState {
 	if new_index < 0 {
 		new_index = table_state.containers_data.Len() - 1
 	} else if new_index >= table_state.containers_data.Len() {
 		new_index = 0
 	}
 	table_state.focused_id = table_state.containers_data.GetData()[new_index].ID()
-	updateIndices(table_state, new_index)
-	go func(s tableState) { w.draw_queue <- s }(*table_state)
+	updateIndices(&table_state, new_index)
+	return table_state
 }
 
-func handleMouseEvent(ev *tcell.EventMouse, w *ContainersWindow, table_state *tableState) {
+func handleChangeIndex(is_next bool, w *ContainersWindow, table_state tableState) tableState {
+	var new_index int
+	log.Printf("Requesting change index\n")
+	if table_state.focused_id == "" && table_state.containers_data.Len() > 0 {
+		if is_next {
+			new_index = 0
+		} else {
+			new_index = table_state.containers_data.Len() - 1
+		}
+	} else {
+		index, err := findIndexOfId(&table_state.containers_data, table_state.focused_id)
+		if err != nil {
+			return table_state
+		}
+		if is_next {
+			new_index = index + 1
+		} else {
+			new_index = index - 1
+		}
+	}
+	return handleNewIndex(new_index, w, table_state)
+}
+
+func handleDelete(w *ContainersWindow, table_state tableState) tableState {
+	if err := docker.DeleteContainer(table_state.focused_id); err != nil {
+		log.Printf("Got error %s when trying to container delete %s", err, table_state.focused_id)
+		return table_state
+	}
+	index, err := findIndexOfId(&table_state.containers_data, table_state.focused_id)
+	if err != nil {
+		log.Printf("Didn't find id %s in current state after deleting it", table_state.focused_id)
+		return table_state
+	}
+	change_to_next := index != (table_state.containers_data.Len() - 1)
+	return handleChangeIndex(change_to_next, w, table_state)
+}
+
+func handleMouseEvent(ev *tcell.EventMouse, w *ContainersWindow, table_state tableState) tableState {
 	if table_state.window_state.IsOutbounds(ev) {
 		x, y := ev.Position()
 		log.Printf("outbounds mouse event %d,%d", x, y)
-		return
+		return table_state
 	}
 	x, y := table_state.window_state.RelativeMousePosition(ev)
 	total_width := table_state.window_state.RightX - table_state.window_state.LeftX
 	log.Printf("Handling mouse event that happened on %d, %d", x, y)
 	switch {
 	case y == 1:
-		var sort_type docker.SortType = getSortTypeFromMousePress(total_width, x)
-		if sort_type != docker.None {
-			go func(st docker.SortType) { w.sort_chan <- st }(sort_type)
+		var new_sort_type docker.SortType = getSortTypeFromMousePress(total_width, x)
+		if new_sort_type != docker.None && table_state.main_sort_type != new_sort_type {
+			table_state.secondary_sort_type = table_state.main_sort_type
+			table_state.main_sort_type = new_sort_type
 		}
 	case y > 2 && y < table_state.containers_data.Len()+3:
-		go func() { w.new_index_chan <- y - 3 }()
+		updateIndices(&table_state, y-3)
+		table_state.focused_id = table_state.containers_data.GetData()[y-3].ID()
 	}
-}
-
-func handleSort(new_sort_type docker.SortType, w *ContainersWindow, table_state *tableState) {
-	if table_state.main_sort_type != new_sort_type {
-		table_state.secondary_sort_type = table_state.main_sort_type
-		table_state.main_sort_type = new_sort_type
-		w.data_request_chan <- *table_state
-	}
+	return table_state
 }
 
 func (w *ContainersWindow) main(s tcell.Screen) {
@@ -218,53 +269,42 @@ func (w *ContainersWindow) main(s tcell.Screen) {
 		main_sort_type:      docker.State,
 		secondary_sort_type: docker.Name,
 	}
-	log.Printf("table height is %d\n", state.table_height)
-	go w.drawer()
-	go w.dockerDataStreamer()
-	log.Printf("Requesting new data\n")
-	go func(s tableState) { w.data_request_chan <- s }(state)
+	state.containers_data.SortData(state.main_sort_type, state.secondary_sort_type)
+	drawer_stop_chan := make(chan interface{})
+	go w.drawer(drawer_stop_chan)
+	streamer_stop_chan := make(chan interface{})
+	go w.dockerDataStreamer(streamer_stop_chan)
+	go func() { w.new_container_data_chan <- state.containers_data }()
 	for {
 		select {
 		case <-w.resize_chan:
-			handleResize(w, &state)
+			state = handleResize(w, state)
 		case new_data := <-w.new_container_data_chan:
-			handleNewData(&new_data, w, &state)
+			state = handleNewData(&new_data, w, state)
+			state.containers_data.SortData(state.main_sort_type, state.secondary_sort_type)
+			w.data_request_chan <- state
 		case <-w.next_index_chan:
-			var new_index int
-			log.Printf("Requesting next index\n")
-			if state.focused_id == "" && state.containers_data.Len() > 0 {
-				new_index = 0
-			} else {
-				new_index = findIndexOfId(&state.containers_data, state.focused_id)
-				if new_index == -1 {
-					go func(s tableState) { w.draw_queue <- state }(state)
-					break
-				}
-			}
-			handleNewIndex(new_index+1, w, &state)
+			state = handleChangeIndex(true, w, state)
 		case <-w.prev_index_chan:
-			var new_index int
-			log.Printf("Requesting next index\n")
-			if state.focused_id == "" && state.containers_data.Len() > 0 {
-				new_index = state.containers_data.Len() - 1
-			} else {
-				new_index = findIndexOfId(&state.containers_data, state.focused_id)
-				if new_index == -1 {
-					go func(s tableState) { w.draw_queue <- state }(state)
-					break
-				}
-			}
-			handleNewIndex(new_index-1, w, &state)
+			state = handleChangeIndex(false, w, state)
 		case index := <-w.new_index_chan:
-			handleNewIndex(index, w, &state)
+			state = handleNewIndex(index, w, state)
+		case <-w.delete_chan:
+			state = handleDelete(w, state)
+		case <-w.switch_to_logs_chan:
+			if state.focused_id != "" {
+				state.window_state.Screen.PostEvent(gui_events.NewChangeToLogsWindowEvent(state.focused_id))
+			}
+			continue
 		case mouse_event := <-w.mouse_chan:
-			handleMouseEvent(&mouse_event, w, &state)
-		case sort_type := <-w.sort_chan:
-			handleSort(sort_type, w, &state)
+			state = handleMouseEvent(&mouse_event, w, state)
 		case <-w.stop_chan:
+			drawer_stop_chan <- nil
+			streamer_stop_chan <- nil
 			log.Printf("Containers window stopped\n")
 			return
 		}
+		w.draw_queue <- state
 	}
 }
 
@@ -331,7 +371,7 @@ func getSortTypeFromMousePress(total_width, x int) docker.SortType {
 	widths := getCellWidths(total_width)
 	for i, cummulative_size := 0, 0; i < len(widths); i++ {
 		next_cummulative_size := cummulative_size + widths[i]
-		if x > cummulative_size && x < next_cummulative_size {
+		if x >= cummulative_size && x < next_cummulative_size {
 			return cell_to_sort_type[i]
 		}
 		cummulative_size = next_cummulative_size

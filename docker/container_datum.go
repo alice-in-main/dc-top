@@ -1,6 +1,7 @@
 package docker
 
 import (
+	"context"
 	"dc-top/utils"
 	"encoding/json"
 	"io"
@@ -8,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/filters"
 )
 
 type ContainerDatum struct {
@@ -55,8 +57,14 @@ func UpdatedDatum(old_datum ContainerDatum) (ContainerDatum, error) {
 		}
 		log.Fatalf("2 Failed to get stats and container %s wasn't deleted", old_datum.base.ID)
 	}
+	var filters filters.Args = filters.NewArgs(filters.Arg("id", old_datum.ID()))
+	containers, err := docker_cli.ContainerList(context.Background(), types.ContainerListOptions{All: true, Filters: filters})
+	if len(containers) != 1 {
+		log.Println(containers)
+		log.Fatal("Got more than 1 filtered image from id")
+	}
 	return ContainerDatum{
-		base:         old_datum.base,
+		base:         containers[0], // TODO: put new base
 		stats_stream: old_datum.stats_stream,
 		cached_stats: new_stats,
 		is_deleted:   false,

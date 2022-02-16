@@ -34,7 +34,7 @@ func (w *DockerInfoWindow) Resize() {
 	w.resize_chan <- nil
 }
 
-func (w *DockerInfoWindow) KeyPress(key tcell.Key) {
+func (w *DockerInfoWindow) KeyPress(key tcell.EventKey) {
 	log.Fatal("docker info key press isn't implemented")
 }
 
@@ -59,6 +59,8 @@ func (w *DockerInfoWindow) main(s tcell.Screen) {
 			state.window_state.SetBorders(x1, y1, x2, y2)
 			dockerInfoWindowDraw(state)
 		case <-w.stop_chan:
+			tick.Stop()
+			log.Println("Docker info stopped drawing")
 			return
 		case <-tick.C:
 			dockerInfoWindowDraw(state)

@@ -1,17 +1,13 @@
 package gui
 
 import (
+	"dc-top/gui/gui_events"
 	"dc-top/gui/window"
 	"log"
 	"os"
 
 	"github.com/gdamore/tcell/v2"
 )
-
-type guiState struct {
-	screen        tcell.Screen
-	windowManager window.WindowManager
-}
 
 func Draw() {
 	s, err := tcell.NewScreen()
@@ -25,17 +21,11 @@ func Draw() {
 	}
 	s.EnableMouse(tcell.MouseButtonEvents)
 
-	state := guiState{
-		screen:        s,
-		windowManager: window.InitWindowManager(),
-	}
-
-	state.windowManager.GetWindow(window.ContainersHolder).Open(s)
-	state.windowManager.GetWindow(window.Info).Open(s)
+	windowManager := window.InitWindowManager(s)
+	windowManager.OpenAll()
 
 	quit := func() {
-		state.windowManager.GetWindow(window.ContainersHolder).Close()
-		state.windowManager.GetWindow(window.Info).Close()
+		windowManager.CloseAll()
 		s.Fini()
 		os.Exit(0)
 	}
@@ -46,54 +36,54 @@ func Draw() {
 		switch ev := ev.(type) {
 		case *tcell.EventResize:
 			s.Clear()
-			state.windowManager.GetWindow(window.ContainersHolder).Resize()
-			state.windowManager.GetWindow(window.Info).Resize()
+			windowManager.ResizeAll()
 			s.Sync()
 		case *tcell.EventKey:
 			key := ev.Key()
 			switch key {
 			case tcell.KeyEscape:
-				log.Printf("Escaping")
+				log.Printf("escaping")
 				quit()
 			case tcell.KeyCtrlC:
 				quit()
 			default:
-				handleKeyPress(state, key)
+				handleKeyPress(windowManager, ev)
 			}
 		case *tcell.EventMouse:
-			handleMouseEvent(state, ev)
+			handleMouseEvent(windowManager, ev)
+		case gui_events.ChangeToLogsWindowEvent:
+			windowManager.SetFocusedWindow(window.ContainerLogs)
+			windowManager.CloseAll()
+			log.Printf("Changing to logs window of %s", ev.ContainerId)
+			s.Clear()
+			s.Show()
+			new_window := window.NewContainerLogWindow(ev.ContainerId)
+			windowManager.Open(window.WindowType(window.ContainerLogs), &new_window)
 		default:
+			log.Printf("%T", ev)
 			log.Printf("GUI got event %s and ignored it\n", ev)
 		}
 	}
 }
 
-func handleKeyPress(state guiState, key tcell.Key) {
-	switch state.windowManager.GetFocusedWindow() {
-	case window.WindowType(window.Info):
-		{
-			log.Fatal("shouldnt be here")
-			break
-		}
-	case window.WindowType(window.ContainersHolder):
-		{
-			state.windowManager.GetWindow(window.ContainersHolder).KeyPress(key)
-			break
-		}
+func handleKeyPress(wm window.WindowManager, key *tcell.EventKey) {
+	switch wm.GetFocusedWindow() {
+	case window.Info:
+		log.Fatal("shouldnt be here")
+	case window.ContainersHolder:
+		wm.GetWindow(window.ContainersHolder).KeyPress(*key)
+	case window.ContainerLogs:
+		wm.GetWindow(window.ContainerLogs).KeyPress(*key)
 	}
 }
 
-func handleMouseEvent(state guiState, ev *tcell.EventMouse) {
-	switch state.windowManager.GetFocusedWindow() {
-	case window.WindowType(window.Info):
-		{
-			log.Fatal("shouldnt be here")
-			break
-		}
-	case window.WindowType(window.ContainersHolder):
-		{
-			state.windowManager.GetWindow(window.ContainersHolder).MousePress(*ev)
-			break
-		}
+func handleMouseEvent(wm window.WindowManager, ev *tcell.EventMouse) {
+	switch wm.GetFocusedWindow() {
+	case window.Info:
+		log.Fatal("shouldnt be here")
+	case window.ContainersHolder:
+		wm.GetWindow(window.ContainersHolder).MousePress(*ev)
+	case window.ContainerLogs:
+		wm.GetWindow(window.ContainerLogs).MousePress(*ev)
 	}
 }

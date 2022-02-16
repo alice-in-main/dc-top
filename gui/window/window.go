@@ -17,7 +17,7 @@ type WindowState struct {
 type Window interface {
 	Open(tcell.Screen)
 	Resize()
-	KeyPress(tcell.Key)
+	KeyPress(tcell.EventKey)
 	MousePress(tcell.EventMouse)
 	Close()
 }
@@ -34,10 +34,6 @@ func NewWindow(screen tcell.Screen, x1, y1, x2, y2 int) WindowState {
 		TopY:    y1,
 		ButtomY: y2,
 	}
-}
-
-func (window_state *WindowState) Select() {
-
 }
 
 func (window_state *WindowState) RelativeMousePosition(ev *tcell.EventMouse) (int, int) {
