@@ -1,5 +1,9 @@
 package utils
 
+import (
+	"math"
+)
+
 func FindByte(needle byte, haystack []byte) int {
 	for index, item := range haystack {
 		if item == needle {
@@ -20,4 +24,23 @@ func ConcatRuneArrays(slices [][]rune) []rune {
 		i += copy(tmp[i:], s)
 	}
 	return tmp
+}
+
+func CutString(arr []byte, len_line int) [][]byte {
+	num_new_strings := int(math.Ceil(float64(len(arr)) / float64(len_line)))
+	if len_line > 0 && num_new_strings > 0 {
+		remaining_arr := arr[:]
+		ret := make([][]byte, num_new_strings)
+		for i := 0; i < num_new_strings; i++ {
+			if len_line < len(remaining_arr) {
+				ret[i] = remaining_arr[:len_line]
+				remaining_arr = remaining_arr[len_line:]
+			} else {
+				ret[i] = remaining_arr[:]
+			}
+		}
+		return ret
+	} else {
+		return [][]byte{}
+	}
 }

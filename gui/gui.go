@@ -41,11 +41,16 @@ func Draw() {
 		case *tcell.EventKey:
 			key := ev.Key()
 			switch key {
-			case tcell.KeyEscape:
-				log.Printf("escaping")
-				quit()
 			case tcell.KeyCtrlC:
 				quit()
+			case tcell.KeyEscape:
+				quit()
+			case tcell.KeyRune:
+				if ev.Rune() == 'q' {
+					quit()
+				} else {
+					handleKeyPress(windowManager, ev)
+				}
 			default:
 				handleKeyPress(windowManager, ev)
 			}
@@ -55,13 +60,20 @@ func Draw() {
 			windowManager.SetFocusedWindow(window.ContainerLogs)
 			windowManager.CloseAll()
 			log.Printf("Changing to logs window of %s", ev.ContainerId)
-			s.Clear()
-			s.Show()
 			new_window := window.NewContainerLogWindow(ev.ContainerId)
 			windowManager.Open(window.WindowType(window.ContainerLogs), &new_window)
+		case gui_events.ChangeToDefaultViewEvent:
+			log.Printf("Changing back to default")
+			windowManager.CloseAll()
+			windowManager = window.InitWindowManager(s)
+			windowManager.OpenAll()
+			windowManager.SetFocusedWindow(window.ContainersHolder)
+		case nil:
+			log.Printf("Recieved nil event, exitting")
+			return
 		default:
 			log.Printf("%T", ev)
-			log.Printf("GUI got event %s and ignored it\n", ev)
+			log.Printf("GUI got event '%s' and ignored it\n", ev)
 		}
 	}
 }

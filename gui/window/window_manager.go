@@ -1,6 +1,10 @@
 package window
 
-import "github.com/gdamore/tcell/v2"
+import (
+	"log"
+
+	"github.com/gdamore/tcell/v2"
+)
 
 type WindowType int8
 
@@ -65,6 +69,7 @@ func (wm *WindowManager) ResizeAll() {
 
 func (wm *WindowManager) CloseAll() {
 	for _, win := range wm.windows {
+		log.Printf("Closing %s", win)
 		win.Close()
 	}
 	wm.windows = make(map[WindowType]Window)

@@ -4,117 +4,117 @@ import (
 	"context"
 	"dc-top/docker"
 	"dc-top/gui/elements"
+	"dc-top/gui/gui_events"
 	"dc-top/utils"
+	"fmt"
 	"log"
 
+	"github.com/eiannone/keyboard"
 	"github.com/gdamore/tcell/v2"
 )
 
 type ContainerLogWindow struct {
-	id          string
-	resize_chan chan interface{}
-	stop_chan   chan interface{}
+	id      string
+	context context.Context
+	cancel  context.CancelFunc
 }
-
-type logWindowState struct {
-	window_state WindowState
-}
-
 type logsWriter struct {
-	logs              [docker.NumSavedLogs][]byte
-	screen            tcell.Screen
-	cached_state      logWindowState
-	state_updates     chan logWindowState
-	inner_write_index int
+	draw_queue chan []byte
+	screen     tcell.Screen
 }
 
 func (writer *logsWriter) Write(logs_batch []byte) (int, error) {
 	var nl_index int
 	for offset := 0; nl_index != -1 && offset < len(logs_batch); offset += (nl_index + 1) {
 		nl_index = utils.FindByte('\n', []byte(logs_batch[offset:]))
+		var log_line []byte
 		if nl_index != -1 {
-			writer.logs[writer.inner_write_index] = logs_batch[offset : offset+nl_index]
+			log_line = logs_batch[offset : offset+nl_index]
 		} else {
-			writer.logs[writer.inner_write_index] = logs_batch[offset:]
+			log_line = logs_batch[offset:]
 		}
-		log_line := writer.logs[writer.inner_write_index]
-		writer.writeSingleLogLine(log_line)
-		writer.inner_write_index = (writer.inner_write_index + 1) % docker.NumSavedLogs
+		writer.writeSingleLog(log_line)
 	}
 	return len(logs_batch), nil
 }
 
-func (writer *logsWriter) writeSingleLogLine(log_line []byte) {
+func (writer *logsWriter) writeSingleLog(single_log []byte) {
 	const metadata_len = 8
-	log_line_metadata := log_line[:metadata_len]
+	log_line_metadata := single_log[:metadata_len]
 	var log_line_text string
-	if len(log_line) > metadata_len {
-		log_line_text = string(log_line[metadata_len:])
-	} else {
-		log_line_text = "<empty>"
+	if len(single_log) > metadata_len {
+		log_line_text = string(single_log[metadata_len:])
 	}
 	is_stdout := log_line_metadata[0] == 1
-	line_style := tcell.StyleDefault
 	if !is_stdout {
-		line_style = line_style.Background(tcell.ColorDarkOrchid)
+		log_line_text = elements.Colorize(log_line_text, elements.Red)
 	}
-	line := elements.TextDrawer(log_line_text, line_style)
-	for i := 0; i < 100; i++ {
-		r, s := line(i)
-		log.Print(string(r))
-		writer.screen.SetContent(i, writer.inner_write_index, r, nil, s)
-	}
-	writer.screen.Show()
+	fmt.Println(string(log_line_text))
 }
 
 func newLogsWriter(screen tcell.Screen) logsWriter {
-	return logsWriter{
-		inner_write_index: 0,
-		screen:            screen,
+	new_writer := logsWriter{
+		draw_queue: make(chan []byte),
+		screen:     screen,
 	}
+	return new_writer
 }
 
 func NewContainerLogWindow(id string) ContainerLogWindow {
+	container_log_window_context, cancel := context.WithCancel(context.TODO())
 	return ContainerLogWindow{
-		id:          id,
-		resize_chan: make(chan interface{}),
-		stop_chan:   make(chan interface{}),
+		id:      id,
+		context: container_log_window_context,
+		cancel:  cancel,
 	}
 }
 
 func (w *ContainerLogWindow) Open(s tcell.Screen) {
-	s.DisableMouse()
 	go w.main(s)
 }
 
-func (w *ContainerLogWindow) Resize() {
-	w.resize_chan <- nil
-}
+func (w *ContainerLogWindow) Resize() {}
 
-func (w *ContainerLogWindow) KeyPress(key tcell.EventKey) {}
+func (w *ContainerLogWindow) KeyPress(_ tcell.EventKey) {}
 
-func (w *ContainerLogWindow) MousePress(ev tcell.EventMouse) {}
+func (w *ContainerLogWindow) MousePress(_ tcell.EventMouse) {}
 
 func (w *ContainerLogWindow) Close() {
-	w.stop_chan <- nil
+	w.cancel()
 }
 
-func (w *ContainerLogWindow) main(screen tcell.Screen) {
-	width, height := screen.Size()
-	state := logWindowState{
-		window_state: NewWindow(screen, 0, 0, width, height),
+func logStopper(cancel context.CancelFunc) {
+
+	if err := keyboard.Open(); err != nil {
+		log.Fatal("Failed to start keyboard in container log window")
 	}
-	logs_writer := newLogsWriter(screen)
-	container_log_window_context, cancel := context.WithCancel(context.Background())
-	go docker.StreamContainerLogs(w.id, &logs_writer, container_log_window_context)
+	defer keyboard.Close()
+
 	for {
-		select {
-		case <-w.resize_chan:
-			width, height = screen.Size()
-			state.window_state.SetBorders(0, 0, width, height)
-		case <-w.stop_chan:
+		char, key, err := keyboard.GetSingleKey()
+		if err != nil {
+			log.Fatalf("Got error while waiting for key '%s'", err.Error())
+		}
+		if key == keyboard.KeyEsc || key == keyboard.KeyCtrlC || char == 'q' || char == 'l' {
 			cancel()
 			return
 		}
 	}
+}
+
+func (w *ContainerLogWindow) main(screen tcell.Screen) {
+	screen.Suspend()
+	_, height := screen.Size()
+	for i := 0; i < height; i++ {
+		fmt.Println()
+	}
+	container_log_window_context, cancel := context.WithCancel(context.TODO())
+	logs_writer := newLogsWriter(screen)
+	go logStopper(cancel)
+	go docker.StreamContainerLogs(w.id, &logs_writer, container_log_window_context)
+	<-container_log_window_context.Done()
+	cancel()
+	screen.Resume()
+	log.Println("Switcing back...")
+	screen.PostEvent(gui_events.NewChangeToDefaultViewEvent())
 }

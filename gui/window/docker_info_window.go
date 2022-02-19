@@ -58,12 +58,12 @@ func (w *DockerInfoWindow) main(s tcell.Screen) {
 			x1, y1, x2, y2 := DockerInfoWindowSize(s)
 			state.window_state.SetBorders(x1, y1, x2, y2)
 			dockerInfoWindowDraw(state)
+		case <-tick.C:
+			dockerInfoWindowDraw(state)
 		case <-w.stop_chan:
 			tick.Stop()
 			log.Println("Docker info stopped drawing")
 			return
-		case <-tick.C:
-			dockerInfoWindowDraw(state)
 		}
 		s.Show()
 	}
@@ -84,18 +84,18 @@ func dockerInfoDrawerGenerator() func(x, y int) (rune, tcell.Style) {
 	info_mapper[4] = elements.TextDrawer(fmt.Sprintf("NCPU: %d", docker_info_data.Info.NCPU), tcell.StyleDefault)
 	info_mapper[5] = elements.TextDrawer(fmt.Sprintf("NCPU: %d", docker_info_data.Info.NCPU), tcell.StyleDefault)
 	info_mapper[6] = elements.TextDrawer(fmt.Sprintf("MemTotal: %.2fGB", float64(docker_info_data.Info.MemTotal)/float64(1<<30)), tcell.StyleDefault)
-	info_mapper[7] = elements.ValuesBarDrawer("", 3.0, 6.4, 6.35, 15)
-	info_mapper[8] = elements.ValuesBarDrawer("", 3.0, 6.4, 6.1, 15)
-	info_mapper[9] = elements.ValuesBarDrawer("", 3.0, 6.4, 5.3, 15)
-	info_mapper[10] = elements.ValuesBarDrawer("", 3.0, 6.4, 3.1, 15)
-	info_mapper[11] = elements.ValuesBarDrawer("", 3.0, 6.4, 3.0, 15)
-	info_mapper[12] = elements.ValuesBarDrawer("", 3.0, 6.4, 3.5, 15)
-	info_mapper[13] = elements.PercentageBarDrawer("", 0.0, 15)
-	info_mapper[14] = elements.PercentageBarDrawer("", 0.1, 15)
-	info_mapper[15] = elements.PercentageBarDrawer("", 3.0, 15)
-	info_mapper[16] = elements.PercentageBarDrawer("", 16, 15)
-	info_mapper[17] = elements.PercentageBarDrawer("", 40, 15)
-	info_mapper[18] = elements.PercentageBarDrawer("", 70, 15)
+	info_mapper[7] = elements.ValuesBarDrawer("", 3.0, 6.4, 6.35, 15, []rune{})
+	info_mapper[8] = elements.ValuesBarDrawer("", 3.0, 6.4, 6.1, 15, []rune{})
+	info_mapper[9] = elements.ValuesBarDrawer("", 3.0, 6.4, 5.3, 15, []rune{})
+	info_mapper[10] = elements.ValuesBarDrawer("", 3.0, 6.4, 3.1, 15, []rune{})
+	info_mapper[11] = elements.ValuesBarDrawer("", 3.0, 6.4, 3.0, 15, []rune{})
+	info_mapper[12] = elements.ValuesBarDrawer("", 3.0, 6.4, 3.5, 15, []rune{})
+	info_mapper[13] = elements.PercentageBarDrawer("", 0.0, 15, []rune{})
+	info_mapper[14] = elements.PercentageBarDrawer("", 0.1, 15, []rune{})
+	info_mapper[15] = elements.PercentageBarDrawer("", 3.0, 15, []rune{})
+	info_mapper[16] = elements.PercentageBarDrawer("", 16, 15, []rune{})
+	info_mapper[17] = elements.PercentageBarDrawer("", 40, 15, []rune{})
+	info_mapper[18] = elements.PercentageBarDrawer("", 70, 15, []rune{})
 
 	return func(x, y int) (rune, tcell.Style) {
 		if val, ok := info_mapper[y]; ok {

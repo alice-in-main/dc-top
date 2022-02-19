@@ -26,25 +26,31 @@ func TextDrawer(str string, style tcell.Style) StringStyler {
 	}
 }
 
+func EmptyDrawer() StringStyler {
+	return func(_ int) (rune, tcell.Style) { return ' ', tcell.StyleDefault }
+}
+
 func RuneRepeater(r rune, s tcell.Style) StringStyler {
 	return func(_ int) (rune, tcell.Style) { return r, s }
 }
 
-func PercentageBarDrawer(description string, percentage float64, bar_len int) StringStyler {
+func PercentageBarDrawer(description string, percentage float64, bar_len int, extra_info []rune) StringStyler {
 	var high_percentage float64 = 80.0
 	var mid_percentage float64 = 50.0
 	var low_percentage float64 = 2.0
 	loading_bar_rune := '\u2584'
 	desc_len := len(description)
-	bar_len -= desc_len
+	extra_info_len := len(extra_info)
 	return func(i int) (rune, tcell.Style) {
 		if i < desc_len {
 			return rune(description[i]), tcell.StyleDefault
 		}
-		i -= desc_len
-		bar_percentage := 100.0 * float64(i) / float64(bar_len)
+		bar_percentage := 100.0 * float64(i-desc_len) / float64(bar_len)
 		switch {
-		case i > bar_len-1:
+		case i > bar_len+len(description)-1:
+			if i < extra_info_len+bar_len+desc_len {
+				return extra_info[i-desc_len-bar_len], tcell.StyleDefault
+			}
 			return '\x00', tcell.StyleDefault
 		case bar_percentage > percentage || percentage < low_percentage:
 			return loading_bar_rune, tcell.StyleDefault.Foreground(tcell.ColorDarkGray)
@@ -62,8 +68,8 @@ func PercentageBarDrawer(description string, percentage float64, bar_len int) St
 	}
 }
 
-func ValuesBarDrawer(description string, min_val float64, max_val float64, curr_val float64, bar_len int) StringStyler {
+func ValuesBarDrawer(description string, min_val float64, max_val float64, curr_val float64, bar_len int, extra_info []rune) StringStyler {
 	normalized_max := max_val - min_val
 	normalized_curr := curr_val - min_val
-	return PercentageBarDrawer(description, 100.0*normalized_curr/normalized_max, bar_len)
+	return PercentageBarDrawer(description, 100.0*normalized_curr/normalized_max, bar_len, extra_info)
 }

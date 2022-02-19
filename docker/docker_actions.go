@@ -18,8 +18,8 @@ func DeleteContainer(id string) error {
 		types.ContainerRemoveOptions{RemoveVolumes: true, RemoveLinks: false, Force: true})
 }
 
-func StreamContainerLogs(id string, writer io.Writer, window context.Context) error {
-	reader, err := docker_cli.ContainerLogs(context.Background(), id, types.ContainerLogsOptions{
+func StreamContainerLogs(id string, writer io.Writer, c context.Context) error {
+	reader, err := docker_cli.ContainerLogs(c, id, types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
 		Tail:       fmt.Sprintf("%d", NumSavedLogs),
@@ -28,11 +28,20 @@ func StreamContainerLogs(id string, writer io.Writer, window context.Context) er
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer reader.Close()
 
 	_, err = io.Copy(writer, reader)
-	if err != nil && err != io.EOF {
+	if err != nil && err != io.EOF && err.Error() != "context canceled" {
 		log.Fatal(err)
 	}
-	reader.Close()
+
 	return nil
+}
+
+func InspectContainer(id string) types.ContainerJSON {
+	j, err := docker_cli.ContainerInspect(context.Background(), id)
+	if err != nil {
+		log.Fatalf("Got error '%s' when inspecting '%s'", err, id)
+	}
+	return j
 }

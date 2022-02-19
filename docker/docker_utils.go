@@ -2,6 +2,7 @@ package docker
 
 import (
 	"context"
+	"encoding/json"
 	"log"
 
 	"github.com/docker/docker/api/types"
@@ -17,11 +18,6 @@ func isDeleted(id string) bool {
 	var only_id_filter filters.Args = filters.NewArgs(filters.Arg("id", id))
 	return !isExisting(id, only_id_filter)
 }
-
-// func isBeingCreated(id string) bool {
-// 	var id_and_status_created_filter = filters.NewArgs(filters.Arg("id", id), filters.Arg("status", "created"))
-// 	return isExisting(id, id_and_status_created_filter)
-// }
 
 func isExisting(id string, filters filters.Args) bool {
 	c, err := docker_cli.ContainerList(context.Background(), types.ContainerListOptions{All: true, Quiet: true, Filters: filters})
@@ -42,4 +38,33 @@ func CpuUsagePercentage(cpu *CpuStats, precpu *CpuStats) float64 {
 
 func MemoryUsagePercentage(mem *MemoryStats) float64 {
 	return UsagePercentage(mem.Usage, mem.Limit)
+}
+
+func GetEmptyContainerJson() types.ContainerJSON {
+	return types.ContainerJSON{ContainerJSONBase: nil}
+}
+
+func IsEmptyContainerJson(c *types.ContainerJSON) bool {
+	return c.ContainerJSONBase == nil
+}
+
+func GetEmptyContainerStats() ContainerMainStats {
+	return ContainerMainStats{Name: "!"} // illegal name for real containers
+}
+
+func IsEmptyContainerStats(c *ContainerMainStats) bool {
+	return c.Name == "!"
+}
+
+func NetworkUsageToMapOfInt(s NetworkUsage) map[string]int {
+	j, err := json.Marshal(s)
+	if err != nil {
+		log.Fatalln("Couldn't marshal ", s)
+	}
+	var new_map map[string]int
+	err = json.Unmarshal(j, &new_map)
+	if err != nil {
+		log.Fatalln("Couldn't unmarshal ", j)
+	}
+	return new_map
 }
