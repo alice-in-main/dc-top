@@ -27,7 +27,6 @@ import (
 // }
 
 func main() {
-
 	logger.Init()
 	docker.Init()
 

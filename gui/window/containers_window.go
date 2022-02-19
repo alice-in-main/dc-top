@@ -25,48 +25,59 @@ const (
 )
 
 type ContainersWindow struct {
-	containers_border_style tcell.Style
+	//common
 	resize_chan             chan interface{}
 	next_chan               chan interface{}
 	prev_chan               chan interface{}
-	new_index_chan          chan int
-	delete_chan             chan interface{}
 	switch_to_logs_chan     chan interface{}
 	toggle_inspect_chan     chan interface{}
-	mouse_chan              chan tcell.EventMouse
 	new_container_data_chan chan docker.ContainerData
 	data_request_chan       chan tableState
 	draw_queue              chan tableState
 	stop_chan               chan interface{}
+	scroll_to_top_chan      chan interface{}
+	scroll_to_buttom_chan   chan interface{}
+	//containers view
+	new_index_chan chan int
+	delete_chan    chan interface{}
+	mouse_chan     chan tcell.EventMouse
 }
 
 type tableState struct {
-	window_state        WindowState
-	index_of_top        int
-	table_height        int
-	focused_id          string
-	containers_data     docker.ContainerData
-	main_sort_type      docker.SortType
-	secondary_sort_type docker.SortType
-	mode                mode
-	curr_inspect_info   types.ContainerJSON
+	//common
+	window_state WindowState
+	focused_id   string
+	mode         mode
+	//containers view
+	index_of_top_container int
+	table_height           int
+	containers_data        docker.ContainerData
+	main_sort_type         docker.SortType
+	secondary_sort_type    docker.SortType
+	//inspect view
+	curr_inspect_info types.ContainerJSON
+	top_line_inspect  int
+	inspect_height    int
 }
 
 func NewContainersWindow() ContainersWindow {
 	return ContainersWindow{
-		containers_border_style: tcell.StyleDefault.Foreground(tcell.Color103),
+		//common
 		resize_chan:             make(chan interface{}),
 		next_chan:               make(chan interface{}),
 		prev_chan:               make(chan interface{}),
 		new_index_chan:          make(chan int),
-		delete_chan:             make(chan interface{}),
+		draw_queue:              make(chan tableState),
+		stop_chan:               make(chan interface{}),
 		switch_to_logs_chan:     make(chan interface{}),
 		toggle_inspect_chan:     make(chan interface{}),
-		mouse_chan:              make(chan tcell.EventMouse),
 		new_container_data_chan: make(chan docker.ContainerData),
-		data_request_chan:       make(chan tableState),
-		stop_chan:               make(chan interface{}),
-		draw_queue:              make(chan tableState),
+		scroll_to_top_chan:      make(chan interface{}),
+		scroll_to_buttom_chan:   make(chan interface{}),
+		//containers view
+		delete_chan:       make(chan interface{}),
+		mouse_chan:        make(chan tcell.EventMouse),
+		data_request_chan: make(chan tableState),
 	}
 }
 
@@ -94,6 +105,10 @@ func (w *ContainersWindow) KeyPress(ev tcell.EventKey) {
 			w.switchToLogsWindow()
 		case 'i':
 			w.switchToInspectMode()
+		case 'g':
+			w.scrollToBeginning()
+		case 'G':
+			w.scrollToEnd()
 		}
 	default:
 		return
@@ -128,17 +143,25 @@ func (w *ContainersWindow) switchToInspectMode() {
 	w.toggle_inspect_chan <- nil
 }
 
+func (w *ContainersWindow) scrollToBeginning() {
+	w.scroll_to_top_chan <- nil
+}
+
+func (w *ContainersWindow) scrollToEnd() {
+	w.scroll_to_buttom_chan <- nil
+}
+
 func updateIndices(state *tableState, curr_index int) {
-	index_of_buttom := state.index_of_top + state.table_height - 1
-	if curr_index < state.index_of_top {
-		state.index_of_top = curr_index
+	index_of_buttom := state.index_of_top_container + state.table_height - 1
+	if curr_index < state.index_of_top_container {
+		state.index_of_top_container = curr_index
 	} else if curr_index >= index_of_buttom {
-		state.index_of_top = curr_index - state.table_height + 1
+		state.index_of_top_container = curr_index - state.table_height + 1
 	}
 	if index_of_buttom > state.containers_data.Len() && state.containers_data.Len() > state.table_height {
-		state.index_of_top -= (index_of_buttom - state.containers_data.Len() + 1)
+		state.index_of_top_container -= (index_of_buttom - state.containers_data.Len() + 1)
 	}
-	log.Printf("CURR: %d, TOP: %d, BUTTOM: %d\n", curr_index, state.index_of_top, index_of_buttom)
+	log.Printf("CURR: %d, TOP: %d, BUTTOM: %d\n", curr_index, state.index_of_top_container, index_of_buttom)
 }
 
 func (w *ContainersWindow) drawer(c context.Context) {
@@ -146,7 +169,7 @@ func (w *ContainersWindow) drawer(c context.Context) {
 		select {
 		case state := <-w.draw_queue:
 			log.Printf("Drawing new state...\n")
-			DrawBorders(&state.window_state, w.containers_border_style)
+			DrawBorders(&state.window_state, tcell.StyleDefault)
 			DrawContents(&state.window_state, dockerStatsDrawerGenerator(state))
 			state.window_state.Screen.Show()
 			log.Printf("Done drawing\n")
@@ -189,6 +212,7 @@ func handleResize(w *ContainersWindow, table_state tableState) tableState {
 	log.Printf("Resize request\n")
 	x1, y1, x2, y2 := ContainerWindowSize(table_state.window_state.Screen)
 	table_state.table_height = y2 - y1 - 4 + 1
+	table_state.inspect_height = y2 - y1 - 2 + 1
 	log.Printf("table height is %d\n", table_state.table_height)
 	for i, datum := range table_state.containers_data.GetData() {
 		if datum.ID() == table_state.focused_id {
@@ -298,14 +322,16 @@ func (w *ContainersWindow) main(s tcell.Screen) {
 	x1, y1, x2, y2 := ContainerWindowSize(s)
 	window_state := NewWindow(s, x1, y1, x2, y2)
 	state := tableState{
-		containers_data:     docker.GetContainers(nil),
-		index_of_top:        0,
-		table_height:        y2 - y1 - 4 + 1,
-		window_state:        window_state,
-		main_sort_type:      docker.State,
-		secondary_sort_type: docker.Name,
-		mode:                containers,
-		curr_inspect_info:   docker.GetEmptyContainerJson(),
+		containers_data:        docker.GetContainers(nil),
+		index_of_top_container: 0,
+		table_height:           y2 - y1 - 4 + 1,
+		window_state:           window_state,
+		main_sort_type:         docker.State,
+		secondary_sort_type:    docker.Name,
+		mode:                   containers,
+		curr_inspect_info:      docker.GetEmptyContainerJson(),
+		top_line_inspect:       0,
+		inspect_height:         y2 - y1 - 2 + 1,
 	}
 	state.containers_data.SortData(state.main_sort_type, state.secondary_sort_type)
 	window_context, cancel := context.WithCancel(context.TODO())
@@ -324,11 +350,23 @@ func (w *ContainersWindow) main(s tcell.Screen) {
 			if state.mode == containers {
 				state = handleChangeIndex(true, w, state)
 			} else if state.mode == inspect {
-				continue
+				state.top_line_inspect++
 			}
 		case <-w.prev_chan:
 			if state.mode == containers {
 				state = handleChangeIndex(false, w, state)
+			} else if state.mode == inspect {
+				state.top_line_inspect--
+			}
+		case <-w.scroll_to_top_chan:
+			if state.mode == containers {
+				state = handleNewIndex(0, w, state)
+			} else if state.mode == inspect {
+				state.top_line_inspect = 0
+			}
+		case <-w.scroll_to_buttom_chan:
+			if state.mode == containers {
+				state = handleNewIndex(state.containers_data.Len()-1, w, state)
 			} else if state.mode == inspect {
 				continue
 			}
@@ -547,9 +585,9 @@ func dockerStatsDrawerGenerator(state tableState) func(x, y int) (rune, tcell.St
 			if y == 0 || y == 1 {
 				return data_table[y](x)
 			}
-			if y+state.index_of_top < len(data_table) {
-				r, s := data_table[y+state.index_of_top](x)
-				if state.focused_id == state.containers_data.GetData()[y+state.index_of_top-2].ID() {
+			if y+state.index_of_top_container < len(data_table) {
+				r, s := data_table[y+state.index_of_top_container](x)
+				if state.focused_id == state.containers_data.GetData()[y+state.index_of_top_container-2].ID() {
 					s = s.Background(tcell.ColorDarkBlue)
 				}
 				return r, s
@@ -726,8 +764,16 @@ func generatePrettyInspectInfo(state tableState) map[int]elements.StringStyler {
 	)
 	info_arr = append(info_arr, generateNetworkUsage(stats.CachedStats().Network, stats.CachedStats().PreNetwork)...)
 
+	var row_offset int
+	num_rows := len(info_arr)
+	if num_rows > state.inspect_height {
+		row_offset += state.top_line_inspect % (1 + num_rows - state.inspect_height)
+		if row_offset < 0 {
+			row_offset += 1 + num_rows - state.inspect_height
+		}
+	}
 	for i, line := range info_arr {
-		info[i] = line
+		info[i-row_offset] = line
 	}
 	return info
 }
