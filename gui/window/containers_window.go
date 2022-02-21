@@ -30,6 +30,7 @@ type ContainersWindow struct {
 	next_chan               chan interface{}
 	prev_chan               chan interface{}
 	switch_to_logs_chan     chan interface{}
+	switch_to_shell_chan    chan interface{}
 	toggle_inspect_chan     chan interface{}
 	new_container_data_chan chan docker.ContainerData
 	data_request_chan       chan tableState
@@ -70,6 +71,7 @@ func NewContainersWindow() ContainersWindow {
 		draw_queue:              make(chan tableState),
 		stop_chan:               make(chan interface{}),
 		switch_to_logs_chan:     make(chan interface{}),
+		switch_to_shell_chan:    make(chan interface{}),
 		toggle_inspect_chan:     make(chan interface{}),
 		new_container_data_chan: make(chan docker.ContainerData),
 		scroll_to_top_chan:      make(chan interface{}),
@@ -103,6 +105,8 @@ func (w *ContainersWindow) KeyPress(ev tcell.EventKey) {
 		switch ev.Rune() {
 		case 'l':
 			w.switchToLogsWindow()
+		case 'e':
+			w.switchToShellWindow()
 		case 'i':
 			w.switchToInspectMode()
 		case 'g':
@@ -137,6 +141,10 @@ func (w *ContainersWindow) delFocused() {
 
 func (w *ContainersWindow) switchToLogsWindow() {
 	w.switch_to_logs_chan <- nil
+}
+
+func (w *ContainersWindow) switchToShellWindow() {
+	w.switch_to_shell_chan <- nil
 }
 
 func (w *ContainersWindow) switchToInspectMode() {
@@ -382,6 +390,11 @@ func (w *ContainersWindow) main(s tcell.Screen) {
 		case <-w.switch_to_logs_chan:
 			if state.focused_id != "" {
 				state.window_state.Screen.PostEvent(gui_events.NewChangeToLogsWindowEvent(state.focused_id))
+			}
+			continue
+		case <-w.switch_to_shell_chan:
+			if state.focused_id != "" {
+				state.window_state.Screen.PostEvent(gui_events.NewChangeToLogsShellEvent(state.focused_id))
 			}
 			continue
 		case <-w.toggle_inspect_chan:

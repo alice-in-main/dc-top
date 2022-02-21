@@ -1,6 +1,7 @@
 package gui
 
 import (
+	"context"
 	"dc-top/gui/gui_events"
 	"dc-top/gui/window"
 	"log"
@@ -62,6 +63,12 @@ func Draw() {
 			log.Printf("Changing to logs window of %s", ev.ContainerId)
 			new_window := window.NewContainerLogWindow(ev.ContainerId)
 			windowManager.Open(window.WindowType(window.ContainerLogs), &new_window)
+		case gui_events.ChangeToLogsShellEvent:
+			windowManager.SetFocusedWindow(window.ContainerShell)
+			windowManager.CloseAll()
+			log.Printf("Changing to shell window of %s", ev.ContainerId)
+			new_window := window.NewShellWindow(ev.ContainerId, context.Background())
+			windowManager.Open(window.WindowType(window.ContainerShell), &new_window)
 		case gui_events.ChangeToDefaultViewEvent:
 			log.Printf("Changing back to default")
 			windowManager.CloseAll()

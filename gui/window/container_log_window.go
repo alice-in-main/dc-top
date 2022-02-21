@@ -12,7 +12,6 @@ import (
 	"os"
 	"regexp"
 	"strings"
-	"sync"
 
 	"github.com/eiannone/keyboard"
 	"github.com/gdamore/tcell/v2"
@@ -25,6 +24,7 @@ const (
 	regex
 )
 
+// TODO: explore random order after search pause
 type logsWriter struct {
 	screen             tcell.Screen
 	search_mode        searchMode
@@ -32,7 +32,9 @@ type logsWriter struct {
 	regex_search_chan  chan string
 	string_search_chan chan string
 	search_query       string
-	write_lock         *sync.RWMutex
+	write_queue        chan []byte
+	pause              chan interface{}
+	resume             chan interface{}
 }
 
 func newLogsWriter(screen tcell.Screen) logsWriter {
@@ -41,7 +43,9 @@ func newLogsWriter(screen tcell.Screen) logsWriter {
 		regex_search_chan:  make(chan string),
 		string_search_chan: make(chan string),
 		search_query:       "",
-		write_lock:         &sync.RWMutex{},
+		write_queue:        make(chan []byte),
+		pause:              make(chan interface{}),
+		resume:             make(chan interface{}),
 	}
 	return new_writer
 }
@@ -56,9 +60,22 @@ func (writer *logsWriter) Write(logs_batch []byte) (int, error) {
 		} else {
 			log_line = logs_batch[offset:]
 		}
-		writer.writeSingleLog(log_line)
+		writer.write_queue <- log_line
 	}
 	return len(logs_batch), nil
+}
+
+func (writer *logsWriter) logPrinter(context context.Context) {
+	for {
+		select {
+		case log := <-writer.write_queue:
+			writer.writeSingleLog(log)
+		case <-writer.pause:
+			<-writer.resume
+		case <-context.Done():
+			return
+		}
+	}
 }
 
 func (writer *logsWriter) writeSingleLog(single_log []byte) {
@@ -109,7 +126,7 @@ func (writer *logsWriter) logStopper(cancel context.CancelFunc) {
 
 	for {
 		char, key, err := keyboard.GetSingleKey()
-		if err != nil {
+		if err != nil && !strings.HasPrefix(err.Error(), "Unrecognized escape sequence") {
 			log.Fatalf("Got error while waiting for key '%s'", err.Error())
 		}
 		if key == keyboard.KeyEsc || key == keyboard.KeyCtrlC || char == 'q' || char == 'l' {
@@ -119,9 +136,11 @@ func (writer *logsWriter) logStopper(cancel context.CancelFunc) {
 			}
 			return
 		} else if char == '/' || char == '?' {
+			writer.pause <- nil
 			search_reader := bufio.NewReader(os.Stdin)
 			fmt.Print(string(char), " Enter search: ")
 			text, err := search_reader.ReadString('\n')
+			writer.resume <- nil
 			if err != nil {
 				log.Fatalln("Failed to read user search", err)
 			}
@@ -135,6 +154,8 @@ func (writer *logsWriter) logStopper(cancel context.CancelFunc) {
 					}
 				}
 			}(text)
+		} else {
+			continue
 		}
 	}
 }
@@ -176,6 +197,7 @@ func (w *ContainerLogWindow) main(screen tcell.Screen) {
 	}
 	container_log_window_context, cancel := context.WithCancel(context.TODO())
 	logs_writer := newLogsWriter(screen)
+	go logs_writer.logPrinter(container_log_window_context)
 	go logs_writer.logStopper(cancel)
 	go docker.StreamContainerLogs(w.id, &logs_writer, container_log_window_context)
 	<-container_log_window_context.Done()

@@ -12,6 +12,7 @@ const (
 	ContainersHolder = iota
 	Info
 	ContainerLogs
+	ContainerShell
 )
 
 type WindowManager struct {

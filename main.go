@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"dc-top/docker"
 	"dc-top/gui"
 	"dc-top/logger"
@@ -29,8 +30,23 @@ import (
 func main() {
 	logger.Init()
 	docker.Init()
-
 	gui.Draw()
+
+	docker.OpenShell("058", context.Background(), "bash")
+
+	// tty, err := tty.Open()
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// defer tty.Close()
+
+	// for {
+	// 	r, err := tty.ReadRune()
+	// 	if err != nil {
+	// 		log.Fatal(err)
+	// 	}
+	// 	fmt.Println(([]byte(string(r))))
+	// }
 
 	// writer := logsWriterr{
 	// 	inner_write_index: 0,
