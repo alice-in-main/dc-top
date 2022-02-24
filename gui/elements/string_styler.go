@@ -1,6 +1,7 @@
 package elements
 
 import (
+	"fmt"
 	"log"
 	"math"
 
@@ -18,6 +19,27 @@ func StrikeThrough(orig_styler StringStyler) StringStyler {
 
 func TextDrawer(str string, style tcell.Style) StringStyler {
 	return func(i int) (rune, tcell.Style) {
+		if i < len(str) {
+			return rune(str[i]), style
+		} else {
+			return ' ', tcell.StyleDefault
+		}
+	}
+}
+
+func RuneDrawer(str []rune, style tcell.Style) StringStyler {
+	return func(i int) (rune, tcell.Style) {
+		if i < len(str) {
+			return str[i], style
+		} else {
+			return ' ', tcell.StyleDefault
+		}
+	}
+}
+
+func IntegerDrawer(n int, style tcell.Style) StringStyler {
+	return func(i int) (rune, tcell.Style) {
+		str := fmt.Sprintf("%d", n)
 		if i < len(str) {
 			return rune(str[i]), style
 		} else {
@@ -72,4 +94,14 @@ func ValuesBarDrawer(description string, min_val float64, max_val float64, curr_
 	normalized_max := max_val - min_val
 	normalized_curr := curr_val - min_val
 	return PercentageBarDrawer(description, 100.0*normalized_curr/normalized_max, bar_len, extra_info)
+}
+
+func (s1 StringStyler) Concat(stich_index int, s2 StringStyler) StringStyler {
+	return func(x int) (r rune, s tcell.Style) {
+		if x < stich_index {
+			return s1(x)
+		} else {
+			return s2(x - stich_index)
+		}
+	}
 }

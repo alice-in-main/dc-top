@@ -35,28 +35,28 @@ func NewContainerData() ContainerData {
 		log.Fatal(err)
 	}
 
-	num_containers := len(containers)
-	container_data := make([]ContainerDatum, num_containers)
-	container_init_ch := make(chan interface{}, num_containers)
+	container_data := make([]ContainerDatum, 0)
+	container_init_ch := make(chan interface{}, len(containers))
 	defer close(container_init_ch)
 
 	for index, container := range containers {
 		go func(i int, c types.Container) {
 			container_id := c.ID
 			container_stats, err := docker_cli.ContainerStats(context.Background(), container_id, true)
-			for err != nil && err != io.EOF {
+			if err != nil && err != io.EOF {
 				log.Println(err)
 				if !strings.HasPrefix(err.Error(), "Error response from daemon: No such container") {
 					log.Println(containers)
-					panic(1)
+					panic(err)
 				}
-				container_stats, err = docker_cli.ContainerStats(context.Background(), container_id, true)
+			} else {
+				container_data = append(container_data, NewContainerDatum(c, container_stats))
+				//container_data[i] = NewContainerDatum(c, container_stats)
 			}
-			container_data[i] = NewContainerDatum(c, container_stats)
 			container_init_ch <- i
 		}(index, container)
 	}
-	for range container_data {
+	for range containers {
 		<-container_init_ch
 	}
 

@@ -5,7 +5,6 @@ import (
 	"context"
 	"dc-top/docker"
 	"dc-top/gui/elements"
-	"dc-top/gui/gui_events"
 	"dc-top/utils"
 	"fmt"
 	"log"
@@ -24,7 +23,6 @@ const (
 	regex
 )
 
-// TODO: explore random order after search pause
 type logsWriter struct {
 	screen             tcell.Screen
 	search_mode        searchMode
@@ -119,11 +117,6 @@ func (writer *logsWriter) writeSingleLog(single_log []byte) {
 }
 
 func (writer *logsWriter) logStopper(cancel context.CancelFunc) {
-	if err := keyboard.Open(); err != nil {
-		log.Fatal("Failed to start keyboard in container log window")
-	}
-	defer keyboard.Close()
-
 	for {
 		char, key, err := keyboard.GetSingleKey()
 		if err != nil && !strings.HasPrefix(err.Error(), "Unrecognized escape sequence") {
@@ -145,15 +138,13 @@ func (writer *logsWriter) logStopper(cancel context.CancelFunc) {
 				log.Fatalln("Failed to read user search", err)
 			}
 			text = text[:len(text)-1] // remove newline
-			go func(query string) {
-				if query != "" {
-					if char == '?' {
-						writer.regex_search_chan <- query
-					} else {
-						writer.string_search_chan <- query
-					}
+			if text != "" {
+				if char == '?' {
+					writer.regex_search_chan <- text
+				} else {
+					writer.string_search_chan <- text
 				}
-			}(text)
+			}
 		} else {
 			continue
 		}
@@ -185,6 +176,11 @@ func (w *ContainerLogWindow) KeyPress(_ tcell.EventKey) {}
 
 func (w *ContainerLogWindow) MousePress(_ tcell.EventMouse) {}
 
+func (w *ContainerLogWindow) HandleEvent(interface{}) (interface{}, error) {
+	log.Println("Log window got event")
+	panic(1)
+}
+
 func (w *ContainerLogWindow) Close() {
 	w.cancel()
 }
@@ -195,14 +191,17 @@ func (w *ContainerLogWindow) main(screen tcell.Screen) {
 	for i := 0; i < height; i++ {
 		fmt.Println()
 	}
+	if err := keyboard.Open(); err != nil {
+		log.Fatal("Failed to start keyboard in container log window")
+	}
+	defer keyboard.Close()
 	container_log_window_context, cancel := context.WithCancel(context.TODO())
 	logs_writer := newLogsWriter(screen)
 	go logs_writer.logPrinter(container_log_window_context)
 	go logs_writer.logStopper(cancel)
 	go docker.StreamContainerLogs(w.id, &logs_writer, container_log_window_context)
 	<-container_log_window_context.Done()
-	cancel()
 	screen.Resume()
 	log.Println("Switcing back...")
-	screen.PostEvent(gui_events.NewChangeToDefaultViewEvent())
+	screen.PostEvent(NewChangeToDefaultViewEvent())
 }

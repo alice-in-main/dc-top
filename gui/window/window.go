@@ -19,6 +19,7 @@ type Window interface {
 	Resize()
 	KeyPress(tcell.EventKey)
 	MousePress(tcell.EventMouse)
+	HandleEvent(interface{}) (interface{}, error)
 	Close()
 }
 

@@ -2,7 +2,6 @@ package gui
 
 import (
 	"context"
-	"dc-top/gui/gui_events"
 	"dc-top/gui/window"
 	"log"
 	"os"
@@ -44,32 +43,26 @@ func Draw() {
 			switch key {
 			case tcell.KeyCtrlC:
 				quit()
-			case tcell.KeyEscape:
-				quit()
-			case tcell.KeyRune:
-				if ev.Rune() == 'q' {
-					quit()
-				} else {
-					handleKeyPress(windowManager, ev)
-				}
 			default:
 				handleKeyPress(windowManager, ev)
 			}
 		case *tcell.EventMouse:
 			handleMouseEvent(windowManager, ev)
-		case gui_events.ChangeToLogsWindowEvent:
+		case window.MessageEvent:
+			windowManager.GetWindow(ev.Receiver).HandleEvent(ev.Message)
+		case window.ChangeToLogsWindowEvent:
 			windowManager.SetFocusedWindow(window.ContainerLogs)
 			windowManager.CloseAll()
 			log.Printf("Changing to logs window of %s", ev.ContainerId)
 			new_window := window.NewContainerLogWindow(ev.ContainerId)
 			windowManager.Open(window.WindowType(window.ContainerLogs), &new_window)
-		case gui_events.ChangeToLogsShellEvent:
+		case window.ChangeToLogsShellEvent:
 			windowManager.SetFocusedWindow(window.ContainerShell)
 			windowManager.CloseAll()
 			log.Printf("Changing to shell window of %s", ev.ContainerId)
 			new_window := window.NewShellWindow(ev.ContainerId, context.Background())
 			windowManager.Open(window.WindowType(window.ContainerShell), &new_window)
-		case gui_events.ChangeToDefaultViewEvent:
+		case window.ChangeToDefaultViewEvent:
 			log.Printf("Changing back to default")
 			windowManager.CloseAll()
 			windowManager = window.InitWindowManager(s)

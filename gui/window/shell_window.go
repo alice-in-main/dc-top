@@ -3,7 +3,7 @@ package window
 import (
 	"context"
 	"dc-top/docker"
-	"dc-top/gui/gui_events"
+	"log"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -30,10 +30,15 @@ func (w *ShellWindow) KeyPress(_ tcell.EventKey) {}
 
 func (w *ShellWindow) MousePress(_ tcell.EventMouse) {}
 
+func (w *ShellWindow) HandleEvent(interface{}) (interface{}, error) {
+	log.Println("Shell window got event")
+	panic(1)
+}
+
 func (w *ShellWindow) Close() {}
 
 func (w *ShellWindow) main(s tcell.Screen) {
-	defer s.PostEvent(gui_events.NewChangeToDefaultViewEvent())
+	defer s.PostEvent(NewChangeToDefaultViewEvent())
 	s.Suspend()
 	defer s.Resume()
 	possible_shells := []string{"bash", "sh"}

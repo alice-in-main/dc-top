@@ -1,6 +1,7 @@
 package window
 
 import (
+	"context"
 	"log"
 
 	"github.com/gdamore/tcell/v2"
@@ -13,6 +14,7 @@ const (
 	Info
 	ContainerLogs
 	ContainerShell
+	Bar
 )
 
 type WindowManager struct {
@@ -24,11 +26,13 @@ type WindowManager struct {
 func InitWindowManager(screen tcell.Screen) WindowManager {
 	containers_w := NewContainersWindow()
 	docker_info_w := NewDockerInfoWindow()
+	bar_w := NewBarWindow(context.Background())
 
 	return WindowManager{
 		windows: map[WindowType]Window{
 			ContainersHolder: &containers_w,
 			Info:             &docker_info_w,
+			Bar:              &bar_w,
 		},
 		focusedWindow: ContainersHolder,
 		screen:        screen,

@@ -5,6 +5,7 @@ import (
 	"dc-top/gui/elements"
 	"fmt"
 	"log"
+	"runtime"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -42,6 +43,11 @@ func (w *DockerInfoWindow) MousePress(tcell.EventMouse) {
 	log.Fatal("docker info mouse press isn't implemented")
 }
 
+func (w *DockerInfoWindow) HandleEvent(interface{}) (interface{}, error) {
+	log.Println("Info window got event")
+	panic(1)
+}
+
 func (w *DockerInfoWindow) Close() {
 	w.stop_chan <- nil
 }
@@ -70,33 +76,39 @@ func (w *DockerInfoWindow) main(s tcell.Screen) {
 }
 
 func dockerInfoWindowDraw(state dockerInfoState) {
-	DrawBorders(&state.window_state, tcell.StyleDefault.Background(tcell.ColorDarkRed).Foreground(tcell.Color103))
+	DrawBorders(&state.window_state, tcell.StyleDefault)
 	DrawContents(&state.window_state, dockerInfoDrawerGenerator())
 }
 
 func dockerInfoDrawerGenerator() func(x, y int) (rune, tcell.Style) {
 	info_mapper := make(map[int]elements.StringStyler)
-	docker_info_data := docker.GetDockerInfo()
-	info_mapper[0] = elements.TextDrawer(docker_info_data.Info.SystemTime, tcell.StyleDefault)
-	info_mapper[1] = elements.TextDrawer(fmt.Sprintf("Containers running: %d", docker_info_data.Info.ContainersRunning), tcell.StyleDefault)
-	info_mapper[2] = elements.TextDrawer(fmt.Sprintf("Containers paused: %d", docker_info_data.Info.ContainersPaused), tcell.StyleDefault)
-	info_mapper[3] = elements.TextDrawer(fmt.Sprintf("Containers stopped: %d", docker_info_data.Info.ContainersStopped), tcell.StyleDefault)
-	info_mapper[4] = elements.TextDrawer(fmt.Sprintf("NCPU: %d", docker_info_data.Info.NCPU), tcell.StyleDefault)
-	info_mapper[5] = elements.TextDrawer(fmt.Sprintf("NCPU: %d", docker_info_data.Info.NCPU), tcell.StyleDefault)
-	info_mapper[6] = elements.TextDrawer(fmt.Sprintf("MemTotal: %.2fGB", float64(docker_info_data.Info.MemTotal)/float64(1<<30)), tcell.StyleDefault)
-	info_mapper[7] = elements.ValuesBarDrawer("", 3.0, 6.4, 6.35, 15, []rune{})
-	info_mapper[8] = elements.ValuesBarDrawer("", 3.0, 6.4, 6.1, 15, []rune{})
-	info_mapper[9] = elements.ValuesBarDrawer("", 3.0, 6.4, 5.3, 15, []rune{})
-	info_mapper[10] = elements.ValuesBarDrawer("", 3.0, 6.4, 3.1, 15, []rune{})
-	info_mapper[11] = elements.ValuesBarDrawer("", 3.0, 6.4, 3.0, 15, []rune{})
-	info_mapper[12] = elements.ValuesBarDrawer("", 3.0, 6.4, 3.5, 15, []rune{})
-	info_mapper[13] = elements.PercentageBarDrawer("", 0.0, 15, []rune{})
-	info_mapper[14] = elements.PercentageBarDrawer("", 0.1, 15, []rune{})
-	info_mapper[15] = elements.PercentageBarDrawer("", 3.0, 15, []rune{})
-	info_mapper[16] = elements.PercentageBarDrawer("", 16, 15, []rune{})
-	info_mapper[17] = elements.PercentageBarDrawer("", 40, 15, []rune{})
-	info_mapper[18] = elements.PercentageBarDrawer("", 70, 15, []rune{})
+	info_arr := make([]elements.StringStyler, 0)
+	docker_info_data := docker.GetDockerInfo().Info
+	var (
+		total   = docker_info_data.Containers
+		running = docker_info_data.ContainersRunning
+		paused  = docker_info_data.ContainersPaused
+		stopped = docker_info_data.ContainersStopped
+		col_len = 8
+	)
+	info_arr = append(info_arr, elements.TextDrawer("Containers summary:", tcell.StyleDefault))
+	info_arr = append(info_arr, elements.TextDrawer("total", tcell.StyleDefault).
+		Concat(col_len, elements.TextDrawer("running", tcell.StyleDefault)).
+		Concat(2*col_len, elements.TextDrawer("paused", tcell.StyleDefault)).
+		Concat(3*col_len, elements.TextDrawer("stopped", tcell.StyleDefault)))
+	info_arr = append(info_arr, elements.IntegerDrawer(total, tcell.StyleDefault).
+		Concat(col_len, elements.IntegerDrawer(running, tcell.StyleDefault)).
+		Concat(2*col_len, elements.IntegerDrawer(paused, tcell.StyleDefault)).
+		Concat(3*col_len, elements.IntegerDrawer(stopped, tcell.StyleDefault)))
+	info_arr = append(info_arr, elements.TextDrawer(fmt.Sprintf("Number of CPUs: %d", docker_info_data.NCPU), tcell.StyleDefault))
 
+	var mem_stats runtime.MemStats
+	runtime.ReadMemStats(&mem_stats)
+	// total_mem := mem_stats.Sys
+
+	for i, val := range info_arr {
+		info_mapper[i] = val
+	}
 	return func(x, y int) (rune, tcell.Style) {
 		if val, ok := info_mapper[y]; ok {
 			return val(x)

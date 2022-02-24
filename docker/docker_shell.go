@@ -11,7 +11,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-func OpenShell(id string, context context.Context, shell string) error {
+func OpenShell(id string, ctx context.Context, shell string) error {
 	var cfg = types.ExecConfig{
 		Tty:          true,
 		AttachStdin:  true,
@@ -19,16 +19,18 @@ func OpenShell(id string, context context.Context, shell string) error {
 		AttachStdout: true,
 		Cmd:          []string{shell},
 	}
-	exec_id, err := docker_cli.ContainerExecCreate(context, id, cfg)
+	shell_ctx, cancel_func := context.WithCancel(ctx)
+
+	exec_id, err := docker_cli.ContainerExecCreate(shell_ctx, id, cfg)
 	if err != nil {
 		return err
 	}
-	highjacked_conn, err := docker_cli.ContainerExecAttach(context, exec_id.ID, types.ExecStartCheck{Tty: true})
+	highjacked_conn, err := docker_cli.ContainerExecAttach(shell_ctx, exec_id.ID, types.ExecStartCheck{Tty: true})
 	if err != nil {
 		return err
 	}
 	defer highjacked_conn.Close()
-	err = readinessChecker(context, exec_id.ID)
+	err = readinessChecker(shell_ctx, exec_id.ID)
 	if err != nil {
 		return err
 	}
@@ -44,10 +46,12 @@ func OpenShell(id string, context context.Context, shell string) error {
 	defer s.Fini()
 
 	fmt.Printf("Using %s inside container '%s'\n\r", shell, id)
-	go screenWriter(&highjacked_conn, context)
+	go screenWriter(&highjacked_conn, shell_ctx)
 
-	go livenessChecker(s, context, exec_id.ID)
-	inputParser(s, highjacked_conn, context)
+	go livenessChecker(s, shell_ctx, exec_id.ID)
+	inputParser(s, highjacked_conn, shell_ctx)
+
+	cancel_func()
 
 	return err
 }
@@ -79,6 +83,8 @@ func inputParser(screen tcell.Screen, highjacked_conn types.HijackedResponse, co
 				highjacked_conn.Conn.Write([]byte{126})
 			case tcell.KeyCtrlC:
 				highjacked_conn.Conn.Write([]byte{0x3})
+			case tcell.KeyCtrlD:
+				highjacked_conn.Conn.Write([]byte{0x4})
 			case tcell.KeyCtrlZ:
 				highjacked_conn.Conn.Write([]byte{0x1A})
 			case tcell.KeyCtrlR:

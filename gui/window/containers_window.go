@@ -5,7 +5,6 @@ import (
 	"dc-top/docker"
 	"dc-top/errors"
 	"dc-top/gui/elements"
-	"dc-top/gui/gui_events"
 	"fmt"
 	"log"
 	"math"
@@ -123,6 +122,18 @@ func (w *ContainersWindow) MousePress(ev tcell.EventMouse) {
 	w.mouse_chan <- ev
 }
 
+type getTotalStats interface{}
+
+func (w *ContainersWindow) HandleEvent(ev interface{}) (interface{}, error) {
+	switch ev.(type) {
+	case getTotalStats:
+		log.Fatal("Unimplemented total stats")
+	default:
+		log.Fatal("Got unknown event")
+	}
+	return nil, nil
+}
+
 func (w *ContainersWindow) Close() {
 	w.stop_chan <- nil
 }
@@ -219,7 +230,7 @@ func (w *ContainersWindow) dockerDataStreamer(c context.Context) {
 func handleResize(w *ContainersWindow, table_state tableState) tableState {
 	log.Printf("Resize request\n")
 	x1, y1, x2, y2 := ContainerWindowSize(table_state.window_state.Screen)
-	table_state.table_height = y2 - y1 - 4 + 1
+	table_state.table_height = calcTableHeight(y1, y2)
 	table_state.inspect_height = y2 - y1 - 2 + 1
 	log.Printf("table height is %d\n", table_state.table_height)
 	for i, datum := range table_state.containers_data.GetData() {
@@ -326,13 +337,17 @@ func handleMouseEvent(ev *tcell.EventMouse, w *ContainersWindow, table_state tab
 	return table_state
 }
 
+func calcTableHeight(top, buttom int) int {
+	return buttom - top - 4 + 1 - 2
+}
+
 func (w *ContainersWindow) main(s tcell.Screen) {
 	x1, y1, x2, y2 := ContainerWindowSize(s)
 	window_state := NewWindow(s, x1, y1, x2, y2)
 	state := tableState{
 		containers_data:        docker.GetContainers(nil),
 		index_of_top_container: 0,
-		table_height:           y2 - y1 - 4 + 1,
+		table_height:           calcTableHeight(y1, y2),
 		window_state:           window_state,
 		main_sort_type:         docker.State,
 		secondary_sort_type:    docker.Name,
@@ -349,6 +364,7 @@ func (w *ContainersWindow) main(s tcell.Screen) {
 	for {
 		select {
 		case <-w.resize_chan:
+			s.PostEvent(NewMessageEvent(Bar, []rune{'a', 'b'}))
 			state = handleResize(w, state)
 		case new_data := <-w.new_container_data_chan:
 			state = handleNewData(&new_data, w, state)
@@ -389,12 +405,12 @@ func (w *ContainersWindow) main(s tcell.Screen) {
 			state = handleDelete(w, state)
 		case <-w.switch_to_logs_chan:
 			if state.focused_id != "" {
-				state.window_state.Screen.PostEvent(gui_events.NewChangeToLogsWindowEvent(state.focused_id))
+				state.window_state.Screen.PostEvent(NewChangeToLogsWindowEvent(state.focused_id))
 			}
 			continue
 		case <-w.switch_to_shell_chan:
 			if state.focused_id != "" {
-				state.window_state.Screen.PostEvent(gui_events.NewChangeToLogsShellEvent(state.focused_id))
+				state.window_state.Screen.PostEvent(NewChangeToLogsShellEvent(state.focused_id))
 			}
 			continue
 		case <-w.toggle_inspect_chan:
@@ -579,7 +595,6 @@ func generateTable(state *tableState) []elements.StringStyler {
 				}
 			} else {
 				log.Printf("Got error while generating row: %s\n", err)
-				table[i+offset] = elements.RuneRepeater(underline_rune, tcell.StyleDefault)
 			}
 			row_ready_ch <- i
 		}(index, datum)
@@ -594,6 +609,7 @@ func dockerStatsDrawerGenerator(state tableState) func(x, y int) (rune, tcell.St
 	if state.mode == containers {
 		data_table := generateTable(&state)
 		log.Printf("New table is ready\n")
+
 		return func(x, y int) (rune, tcell.Style) {
 			if y == 0 || y == 1 {
 				return data_table[y](x)
