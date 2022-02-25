@@ -49,7 +49,7 @@ func Draw() {
 		case *tcell.EventMouse:
 			handleMouseEvent(windowManager, ev)
 		case window.MessageEvent:
-			windowManager.GetWindow(ev.Receiver).HandleEvent(ev.Message)
+			windowManager.GetWindow(ev.Receiver).HandleEvent(ev.Message, ev.Sender)
 		case window.ChangeToLogsWindowEvent:
 			windowManager.SetFocusedWindow(window.ContainerLogs)
 			windowManager.CloseAll()
@@ -81,7 +81,7 @@ func Draw() {
 func handleKeyPress(wm window.WindowManager, key *tcell.EventKey) {
 	switch wm.GetFocusedWindow() {
 	case window.Info:
-		log.Fatal("shouldnt be here")
+		log.Fatal("shouldnt be here 1")
 	case window.ContainersHolder:
 		wm.GetWindow(window.ContainersHolder).KeyPress(*key)
 	case window.ContainerLogs:
@@ -92,7 +92,7 @@ func handleKeyPress(wm window.WindowManager, key *tcell.EventKey) {
 func handleMouseEvent(wm window.WindowManager, ev *tcell.EventMouse) {
 	switch wm.GetFocusedWindow() {
 	case window.Info:
-		log.Fatal("shouldnt be here")
+		log.Fatal("shouldnt be here 2")
 	case window.ContainersHolder:
 		wm.GetWindow(window.ContainersHolder).MousePress(*ev)
 	case window.ContainerLogs:

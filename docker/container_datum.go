@@ -17,11 +17,12 @@ type ContainerDatum struct {
 	base         types.Container
 	stats_stream types.ContainerStats
 	cached_stats ContainerMainStats
+	inspection   types.ContainerJSON
 	is_deleted   bool
 }
 
 func NewContainerDatum(base types.Container, stats_stream types.ContainerStats) ContainerDatum {
-	_cached_stats, err := getNewStats(stats_stream)
+	_cached_stats, err := getNewStats(base.ID, &stats_stream)
 	if err != nil {
 		log.Println("1 Failed to get new container stats:")
 		if strings.HasPrefix(err.Error(), "invalid character") || err == io.EOF || isBeingRemoved(base.ID) || isDeleted(base.ID) {
@@ -29,6 +30,7 @@ func NewContainerDatum(base types.Container, stats_stream types.ContainerStats) 
 				base:         base,
 				stats_stream: stats_stream,
 				cached_stats: ContainerMainStats{},
+				inspection:   types.ContainerJSON{},
 				is_deleted:   true,
 			}
 		}
@@ -38,12 +40,13 @@ func NewContainerDatum(base types.Container, stats_stream types.ContainerStats) 
 		base:         base,
 		stats_stream: stats_stream,
 		cached_stats: _cached_stats,
+		inspection:   InspectContainer(base.ID),
 		is_deleted:   false,
 	}
 }
 
 func UpdatedDatum(old_datum ContainerDatum) (ContainerDatum, error) {
-	new_stats, err := getNewStatsWithPrev(old_datum)
+	new_stats, err := getNewStatsWithPrev(&old_datum)
 	if err != nil {
 		log.Println("2 Failed to get new container stats:")
 		if strings.HasPrefix(err.Error(), "unexpected end of JSON input") ||
@@ -54,6 +57,7 @@ func UpdatedDatum(old_datum ContainerDatum) (ContainerDatum, error) {
 				base:         old_datum.base,
 				stats_stream: old_datum.stats_stream,
 				cached_stats: old_datum.cached_stats,
+				inspection:   old_datum.inspection,
 				is_deleted:   true,
 			}, err
 		}
@@ -69,6 +73,7 @@ func UpdatedDatum(old_datum ContainerDatum) (ContainerDatum, error) {
 		base:         containers[0],
 		stats_stream: old_datum.stats_stream,
 		cached_stats: new_stats,
+		inspection:   old_datum.inspection,
 		is_deleted:   false,
 	}, err
 }
@@ -101,13 +106,21 @@ func (datum *ContainerDatum) IsDeleted() bool {
 	return datum.is_deleted
 }
 
-func getNewStatsWithPrev(old_datum ContainerDatum) (ContainerMainStats, error) {
-	new_stats, err := getNewStats(old_datum.stats_stream)
+func (datum *ContainerDatum) InspectData() types.ContainerJSON {
+	return datum.inspection
+}
+
+func (datum *ContainerDatum) Contains(substr string) bool {
+	return strings.Contains(datum.Image(), substr) || strings.Contains(datum.cached_stats.Name, substr)
+}
+
+func getNewStatsWithPrev(old_datum *ContainerDatum) (ContainerMainStats, error) {
+	new_stats, err := getNewStats(old_datum.base.ID, &old_datum.stats_stream)
 	new_stats.PreNetwork = old_datum.cached_stats.Network
 	return new_stats, err
 }
 
-func getNewStats(stats_stream types.ContainerStats) (ContainerMainStats, error) {
+func getNewStats(id string, stats_stream *types.ContainerStats) (ContainerMainStats, error) {
 	const max_container_stats_data_len = 1 << 14
 	container_stats_json_data := make([]byte, max_container_stats_data_len)
 	_, err := stats_stream.Body.Read(container_stats_json_data)

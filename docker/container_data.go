@@ -51,7 +51,6 @@ func NewContainerData() ContainerData {
 				}
 			} else {
 				container_data = append(container_data, NewContainerDatum(c, container_stats))
-				//container_data[i] = NewContainerDatum(c, container_stats)
 			}
 			container_init_ch <- i
 		}(index, container)
@@ -75,7 +74,7 @@ func (containers *ContainerData) Len() int {
 
 func (containers *ContainerData) Less(i, j int) bool {
 	if containers.GetData()[i].ID() == containers.GetData()[j].ID() {
-		log.Fatal("Shouldn't get here")
+		log.Fatal("Shouldn't get here 3")
 	}
 	if lessAux(containers.main_sort_type, &containers.GetData()[i], &containers.GetData()[j]) {
 		return true
@@ -103,6 +102,19 @@ func (containers *ContainerData) SortData(main_sort_type, secondary_sort_type So
 
 	elapsed := time.Since(start)
 	log.Printf("It took %dmicrosecconds to sort data", elapsed.Microseconds())
+}
+
+func (containers *ContainerData) Filter(substr string) {
+	if substr == "" {
+		return
+	}
+	filtered_data := make([]ContainerDatum, 0)
+	for _, datum := range containers.GetData() {
+		if datum.Contains(substr) {
+			filtered_data = append(filtered_data, datum)
+		}
+	}
+	containers.data = filtered_data
 }
 
 func (containers *ContainerData) UpdateStats() {
@@ -182,8 +194,8 @@ func lessAux(sort_by SortType, i, j *ContainerDatum) bool {
 		{
 			stats_i := i.CachedStats()
 			stats_j := j.CachedStats()
-			usage_i := CpuUsagePercentage(&stats_i.Cpu, &stats_i.PreCpu)
-			usage_j := CpuUsagePercentage(&stats_j.Cpu, &stats_j.PreCpu)
+			usage_i := CpuUsagePercentage(&stats_i.Cpu, &stats_i.PreCpu, &i.inspection)
+			usage_j := CpuUsagePercentage(&stats_j.Cpu, &stats_j.PreCpu, &j.inspection)
 			return usage_i > usage_j
 		}
 	case State:

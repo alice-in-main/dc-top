@@ -57,6 +57,7 @@ func NewChangeToLogsShellEvent(container_id string) ChangeToLogsShellEvent {
 type MessageEvent struct {
 	t        time.Time
 	Receiver WindowType
+	Sender   WindowType
 	Message  interface{}
 }
 
@@ -64,10 +65,11 @@ func (e MessageEvent) When() time.Time {
 	return e.t
 }
 
-func NewMessageEvent(receiver_window WindowType, message interface{}) MessageEvent {
+func NewMessageEvent(receiver WindowType, sender WindowType, message interface{}) MessageEvent {
 	return MessageEvent{
 		t:        time.Now(),
-		Receiver: receiver_window,
+		Receiver: receiver,
+		Sender:   sender,
 		Message:  message,
 	}
 }

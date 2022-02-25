@@ -20,6 +20,7 @@ func OpenShell(id string, ctx context.Context, shell string) error {
 		Cmd:          []string{shell},
 	}
 	shell_ctx, cancel_func := context.WithCancel(ctx)
+	defer cancel_func()
 
 	exec_id, err := docker_cli.ContainerExecCreate(shell_ctx, id, cfg)
 	if err != nil {

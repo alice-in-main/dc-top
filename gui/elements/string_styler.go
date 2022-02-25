@@ -22,7 +22,7 @@ func TextDrawer(str string, style tcell.Style) StringStyler {
 		if i < len(str) {
 			return rune(str[i]), style
 		} else {
-			return ' ', tcell.StyleDefault
+			return '\x00', tcell.StyleDefault
 		}
 	}
 }
@@ -32,7 +32,7 @@ func RuneDrawer(str []rune, style tcell.Style) StringStyler {
 		if i < len(str) {
 			return str[i], style
 		} else {
-			return ' ', tcell.StyleDefault
+			return '\x00', tcell.StyleDefault
 		}
 	}
 }
@@ -43,17 +43,27 @@ func IntegerDrawer(n int, style tcell.Style) StringStyler {
 		if i < len(str) {
 			return rune(str[i]), style
 		} else {
-			return ' ', tcell.StyleDefault
+			return '\x00', tcell.StyleDefault
 		}
 	}
 }
 
 func EmptyDrawer() StringStyler {
-	return func(_ int) (rune, tcell.Style) { return ' ', tcell.StyleDefault }
+	return func(_ int) (rune, tcell.Style) { return '\x00', tcell.StyleDefault }
 }
 
 func RuneRepeater(r rune, s tcell.Style) StringStyler {
 	return func(_ int) (rune, tcell.Style) { return r, s }
+}
+
+func RuneNRepeater(r rune, n int, s tcell.Style) StringStyler {
+	return func(i int) (rune, tcell.Style) {
+		if i < n {
+			return r, s
+		} else {
+			return '\x00', tcell.StyleDefault
+		}
+	}
 }
 
 func PercentageBarDrawer(description string, percentage float64, bar_len int, extra_info []rune) StringStyler {
@@ -94,6 +104,23 @@ func ValuesBarDrawer(description string, min_val float64, max_val float64, curr_
 	normalized_max := max_val - min_val
 	normalized_curr := curr_val - min_val
 	return PercentageBarDrawer(description, 100.0*normalized_curr/normalized_max, bar_len, extra_info)
+}
+
+func TextBoxDrawer(text string, cursor_index int, default_style tcell.Style, cursor_style tcell.Style) StringStyler {
+	return func(i int) (rune, tcell.Style) {
+		var r rune = '\x00'
+		var s tcell.Style = default_style
+
+		if i < len(text) {
+			r = rune(text[i])
+		}
+
+		if i == cursor_index {
+			s = cursor_style
+		}
+
+		return r, s
+	}
 }
 
 func (s1 StringStyler) Concat(stich_index int, s2 StringStyler) StringStyler {

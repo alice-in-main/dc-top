@@ -12,6 +12,7 @@ require (
 	github.com/eiannone/keyboard v0.0.0-20200508000154-caf4b762e807 // indirect
 	github.com/gdamore/encoding v1.0.0 // indirect
 	github.com/go-delve/delve v1.8.0 // indirect
+	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/gobuffalo/uuid v2.0.5+incompatible // indirect
 	github.com/gofrs/uuid v3.2.0+incompatible // indirect
 	github.com/google/go-dap v0.6.0 // indirect
@@ -28,9 +29,13 @@ require (
 	github.com/peterh/liner v1.2.1 // indirect
 	github.com/rivo/uniseg v0.1.0 // indirect
 	github.com/russross/blackfriday/v2 v2.0.1 // indirect
+	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/shurcooL/sanitized_anchor_name v1.0.0 // indirect
 	github.com/spf13/cobra v1.1.3 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
+	github.com/tklauser/go-sysconf v0.3.9 // indirect
+	github.com/tklauser/numcpus v0.3.0 // indirect
+	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.starlark.net v0.0.0-20200821142938-949cc6f4b097 // indirect
 	gobot.io/x/gobot v1.15.0 // indirect
 	golang.org/x/arch v0.0.0-20190927153633-4e8777c89be4 // indirect

@@ -32,8 +32,14 @@ func UsagePercentage(usage int64, limit int64) float64 {
 	return 100.0 * float64(usage) / float64(limit)
 }
 
-func CpuUsagePercentage(cpu *CpuStats, precpu *CpuStats) float64 {
-	return UsagePercentage(cpu.ContainerUsage.TotalUsage-precpu.ContainerUsage.TotalUsage, cpu.SystemUsage-precpu.SystemUsage)
+func CpuUsagePercentage(cpu *CpuStats, precpu *CpuStats, inspect_data *types.ContainerJSON) float64 {
+	var limit int64
+	if inspect_data.HostConfig.NanoCPUs != 0 {
+		limit = inspect_data.HostConfig.NanoCPUs
+	} else {
+		limit = cpu.SystemUsage - precpu.SystemUsage
+	}
+	return UsagePercentage(cpu.ContainerUsage.TotalUsage-precpu.ContainerUsage.TotalUsage, limit)
 }
 
 func MemoryUsagePercentage(mem *MemoryStats) float64 {

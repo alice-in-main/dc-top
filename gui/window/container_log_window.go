@@ -176,7 +176,7 @@ func (w *ContainerLogWindow) KeyPress(_ tcell.EventKey) {}
 
 func (w *ContainerLogWindow) MousePress(_ tcell.EventMouse) {}
 
-func (w *ContainerLogWindow) HandleEvent(interface{}) (interface{}, error) {
+func (w *ContainerLogWindow) HandleEvent(interface{}, WindowType) (interface{}, error) {
 	log.Println("Log window got event")
 	panic(1)
 }

@@ -30,7 +30,7 @@ func (w *ShellWindow) KeyPress(_ tcell.EventKey) {}
 
 func (w *ShellWindow) MousePress(_ tcell.EventMouse) {}
 
-func (w *ShellWindow) HandleEvent(interface{}) (interface{}, error) {
+func (w *ShellWindow) HandleEvent(interface{}, WindowType) (interface{}, error) {
 	log.Println("Shell window got event")
 	panic(1)
 }
