@@ -1,10 +1,13 @@
 package main
 
 import (
-	"context"
 	"dc-top/docker"
+	"dc-top/docker/compose"
 	"dc-top/gui"
 	"dc-top/logger"
+	"flag"
+	"log"
+	"os"
 )
 
 // type logsWriterr struct {
@@ -28,11 +31,23 @@ import (
 // }
 
 func main() {
-	logger.Init()
+	const workdir = "/tmp/dc-top-files"
+	err := os.Mkdir(workdir, 0755)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer os.RemoveAll(workdir)
+	logger.Init(workdir)
+
+	dc_enabled := flag.Bool("dc-mode", true, "docker-compose mode")
+	dc_file_path := flag.String("dc-file-path", "./docker-compose.yaml", "path of docker-compose.yaml file")
+	flag.Parse()
+
+	if *dc_enabled {
+		compose.Init(workdir, *dc_file_path)
+	}
 	docker.Init()
 	gui.Draw()
-
-	docker.OpenShell("058", context.Background(), "bash")
 
 	// tty, err := tty.Open()
 	// if err != nil {

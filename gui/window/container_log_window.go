@@ -3,7 +3,7 @@ package window
 import (
 	"bufio"
 	"context"
-	"dc-top/docker"
+	docker "dc-top/docker"
 	"dc-top/gui/elements"
 	"dc-top/utils"
 	"fmt"
@@ -66,6 +66,18 @@ func (writer *logsWriter) Write(logs_batch []byte) (int, error) {
 func (writer *logsWriter) logPrinter(context context.Context) {
 	for {
 		select {
+		case search := <-writer.regex_search_chan:
+			writer.search_mode = regex
+			writer.search_query = search
+			re, err := regexp.Compile(writer.search_query)
+			if err != nil {
+				fmt.Println("Failed to compile regex ", writer.search_query)
+				break
+			}
+			writer.curr_re = re
+		case search := <-writer.string_search_chan:
+			writer.search_mode = str
+			writer.search_query = search
 		case log := <-writer.write_queue:
 			writer.writeSingleLog(log)
 		case <-writer.pause:
@@ -86,23 +98,6 @@ func (writer *logsWriter) writeSingleLog(single_log []byte) {
 	is_stdout := log_line_metadata[0] == 1
 	if !is_stdout {
 		log_line_text = elements.Foreground(log_line_text, elements.Purple)
-	}
-	select {
-	case search := <-writer.regex_search_chan:
-		writer.search_mode = regex
-		writer.search_query = search
-		re, err := regexp.Compile(writer.search_query)
-		if err != nil {
-			fmt.Println("Failed to compile regex ", writer.search_query)
-		}
-		writer.curr_re = re
-		break
-	case search := <-writer.string_search_chan:
-		writer.search_mode = str
-		writer.search_query = search
-		break
-	default:
-		break
 	}
 	if writer.search_query != "" {
 		if writer.search_mode == regex {
@@ -138,6 +133,7 @@ func (writer *logsWriter) logStopper(cancel context.CancelFunc) {
 				log.Fatalln("Failed to read user search", err)
 			}
 			text = text[:len(text)-1] // remove newline
+			log.Println("searcing for ", text)
 			if text != "" {
 				if char == '?' {
 					writer.regex_search_chan <- text
@@ -145,6 +141,7 @@ func (writer *logsWriter) logStopper(cancel context.CancelFunc) {
 					writer.string_search_chan <- text
 				}
 			}
+			log.Println("ready for new search ")
 		} else {
 			continue
 		}

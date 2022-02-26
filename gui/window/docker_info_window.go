@@ -1,7 +1,7 @@
 package window
 
 import (
-	"dc-top/docker"
+	docker "dc-top/docker"
 	"dc-top/gui/elements"
 	"fmt"
 	"log"
@@ -98,6 +98,7 @@ func dockerInfoDrawerGenerator(state dockerInfoState) func(x, y int) (rune, tcel
 	info_arr := make([]elements.StringStyler, 0)
 	info_arr = append(info_arr, generateTotalContainerStats(&state)...)
 	info_arr = append(info_arr, generateResourceUsage(&state)...)
+	info_arr = append(info_arr, generateWarnings(&state)...)
 
 	for i, val := range info_arr {
 		info_mapper[i] = val
@@ -134,7 +135,7 @@ func generateTotalContainerStats(state *dockerInfoState) []elements.StringStyler
 }
 
 func generateResourceUsage(state *dockerInfoState) []elements.StringStyler {
-	window_width := state.window_state.RightX - state.window_state.LeftX
+	window_width := Width(&state.window_state)
 	max_desc_len := 25
 	bar_len := window_width - max_desc_len
 	if bar_len < 0 {
@@ -153,6 +154,15 @@ func generateResourceUsage(state *dockerInfoState) []elements.StringStyler {
 	info_arr = append(info_arr, elements.TextDrawer(fmt.Sprintf("Number of CPUs: %d", state.docker_info.Info.NCPU), tcell.StyleDefault))
 	info_arr = append(info_arr, elements.ValuesBarDrawer("Total CPU usage: ", 0, system_cpu_usage, docker_cpu_usage, bar_len, []rune(fmt.Sprintf(" %.2f%%", 100.0*docker_cpu_usage/system_cpu_usage))))
 	info_arr = append(info_arr, elements.ValuesBarDrawer("Total Mem usage: ", 0, system_mem_usage, docker_mem_usage, bar_len, []rune(fmt.Sprintf(" %.2f%%", 100.0*docker_mem_usage/system_mem_usage))))
+	info_arr = append(info_arr, elements.EmptyDrawer())
+	return info_arr
+}
+
+func generateWarnings(state *dockerInfoState) []elements.StringStyler {
+	info_arr := make([]elements.StringStyler, 0)
+	for _, warning := range state.docker_info.Info.Warnings {
+		info_arr = append(info_arr, elements.TextDrawer(warning, tcell.StyleDefault.Foreground(tcell.ColorYellow)))
+	}
 	info_arr = append(info_arr, elements.EmptyDrawer())
 	return info_arr
 }

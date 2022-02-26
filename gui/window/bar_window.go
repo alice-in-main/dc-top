@@ -4,6 +4,7 @@ import (
 	"context"
 	"dc-top/gui/elements"
 	"log"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -53,6 +54,11 @@ func (w *BarWindow) main(s tcell.Screen) {
 		message:      _emptyMessage{},
 	}
 	drawBar(s, state)
+
+	clear_timer := time.NewTicker(5 * time.Second)
+	defer clear_timer.Stop()
+	var should_clear int
+
 	for {
 		select {
 		case <-w.resize_ch:
@@ -61,7 +67,17 @@ func (w *BarWindow) main(s tcell.Screen) {
 			drawBar(s, state)
 		case message_event := <-w.message_chan:
 			state.message = message_event
+			if should_clear < 5 {
+				should_clear++
+			}
 			drawBar(s, state)
+		case <-clear_timer.C:
+			if should_clear == 0 {
+				state.message = _emptyMessage{}
+				drawBar(s, state)
+			} else {
+				should_clear--
+			}
 		case <-w.context.Done():
 			log.Printf("Bar window stopped drwaing...\n")
 			return
@@ -113,6 +129,15 @@ type warnMessage struct {
 func (m warnMessage) Styler() elements.StringStyler {
 	var warn_prefix = []rune("\u26a0 Warn: ")
 	return elements.RuneDrawer(warn_prefix, tcell.StyleDefault.Foreground(tcell.ColorYellow)).Concat(len(warn_prefix), elements.RuneDrawer(m.msg, tcell.StyleDefault))
+}
+
+type errorMessage struct {
+	msg []rune
+}
+
+func (m errorMessage) Styler() elements.StringStyler {
+	var warn_prefix = []rune("\u26a0 Error: ")
+	return elements.RuneDrawer(warn_prefix, tcell.StyleDefault.Foreground(tcell.ColorRed)).Concat(len(warn_prefix), elements.RuneDrawer(m.msg, tcell.StyleDefault))
 }
 
 // type criticalMessage struct {

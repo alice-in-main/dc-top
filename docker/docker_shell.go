@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
+	"os/exec"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -12,6 +14,18 @@ import (
 )
 
 func OpenShell(id string, ctx context.Context, shell string) error {
+	cmd := exec.CommandContext(ctx, "docker", "exec", "-it", id, shell)
+	cmd.Stdin = os.Stdin
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	err := cmd.Run()
+	if err != nil {
+		log.Println("Failed to start shell ", shell, err)
+	}
+	return err
+}
+
+func OpenShellOld(id string, ctx context.Context, shell string) error {
 	var cfg = types.ExecConfig{
 		Tty:          true,
 		AttachStdin:  true,
@@ -127,7 +141,13 @@ func inputParser(screen tcell.Screen, highjacked_conn types.HijackedResponse, co
 				highjacked_conn.Conn.Write([]byte{52})
 				highjacked_conn.Conn.Write([]byte{126})
 			case tcell.KeyRune:
-				highjacked_conn.Conn.Write([]byte(string(ev.Rune())))
+				a := string(ev.Rune())
+				// TODO: fix sh
+				// if strings.ContainsAny(a, "\n") {
+				// 	continue
+				// }
+				// log.Println(a)
+				highjacked_conn.Conn.Write([]byte(a))
 			}
 		case stopExecEvent:
 			log.Println("Stopped exec")

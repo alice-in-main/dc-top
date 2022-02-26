@@ -38,13 +38,22 @@ func (w *ShellWindow) HandleEvent(interface{}, WindowType) (interface{}, error) 
 func (w *ShellWindow) Close() {}
 
 func (w *ShellWindow) main(s tcell.Screen) {
-	defer s.PostEvent(NewChangeToDefaultViewEvent())
+	var err error
 	s.Suspend()
-	defer s.Resume()
-	possible_shells := []string{"bash", "sh"}
+	defer func() {
+		s.Resume()
+		s.PostEvent(NewChangeToDefaultViewEvent())
+		if err != nil {
+			log.Println("resuming from exec")
+			s.PostEvent(NewMessageEvent(Bar, ContainerShell, errorMessage{msg: []rune("Exec failed, container probably isn't running")}))
+		}
+	}()
+	possible_shells := []string{"/bin/bash", "/bin/sh"}
 	for _, sh := range possible_shells {
-		if docker.OpenShell(w.id, w.context, sh) == nil {
+		err = docker.OpenShell(w.id, w.context, sh)
+		if err == nil {
 			return
 		}
 	}
+
 }

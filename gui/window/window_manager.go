@@ -15,6 +15,7 @@ const (
 	ContainerLogs
 	ContainerShell
 	Bar
+	GeneralInfo
 )
 
 type WindowManager struct {
@@ -24,12 +25,14 @@ type WindowManager struct {
 }
 
 func InitWindowManager(screen tcell.Screen) WindowManager {
+	general_info_w := NewGeneralInfoWindow(context.Background())
 	containers_w := NewContainersWindow()
 	docker_info_w := NewDockerInfoWindow()
 	bar_w := NewBarWindow(context.Background())
 
 	return WindowManager{
 		windows: map[WindowType]Window{
+			GeneralInfo:      &general_info_w,
 			ContainersHolder: &containers_w,
 			Info:             &docker_info_w,
 			Bar:              &bar_w,

@@ -2,9 +2,14 @@ package window
 
 import "github.com/gdamore/tcell/v2"
 
+func GeneralInfoWindowSize(s tcell.Screen) (x1, y1, x2, y2 int) {
+	width, _ := s.Size()
+	return 1, 0, width - 2, 4
+}
+
 func ContainerWindowSize(s tcell.Screen) (x1, y1, x2, y2 int) {
 	width, height := s.Size()
-	return 1, 1, width - 2, int(0.7 * float64(height))
+	return 1, 4, width - 2, int(0.7 * float64(height))
 }
 
 func ContainersBarWindowSize(s tcell.Screen) (x1, y1, x2, y2 int) {

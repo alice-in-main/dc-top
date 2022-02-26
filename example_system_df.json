@@ -1,0 +1,1241 @@
+{
+  "LayersSize": 9639742878,
+  "Images": [
+    {
+      "Containers": 1,
+      "Created": 1634900093,
+      "Id": "sha256:aef109f27eca50d1cada49edb7aef10210ce96bb73401c5f2d469bcca84061a6",
+      "Labels": {
+        "maintainer": "Bitnami <containers@bitnami.com>"
+      },
+      "ParentId": "",
+      "RepoDigests": [
+        "bitnami/zookeeper@sha256:08467e1dbf02aff125323ad20c9e04671d87d379f603cdeca94a88e6582d4bd4"
+      ],
+      "RepoTags": [
+        "bitnami/zookeeper:latest"
+      ],
+      "SharedSize": 67508577,
+      "Size": 468456681,
+      "VirtualSize": 468456681
+    },
+    {
+      "Containers": 1,
+      "Created": 1634819128,
+      "Id": "sha256:6c1ae46a77ec2e4b7766b8a5bd0f1d56bf804377a88e0c8c8367c901a4f9f67c",
+      "Labels": {
+        "maintainer": "Bitnami <containers@bitnami.com>"
+      },
+      "ParentId": "",
+      "RepoDigests": [
+        "bitnami/kafka@sha256:91155a01d7dc9de2e3909002b3c9fa308c8124d525de88e2acd55f1b95a8341d"
+      ],
+      "RepoTags": [
+        "bitnami/kafka:latest"
+      ],
+      "SharedSize": 67508577,
+      "Size": 614709722,
+      "VirtualSize": 614709722
+    },
+    {
+      "Containers": 0,
+      "Created": 1633544649,
+      "Id": "sha256:493210adc518b3c29c542e23b2f45e4d05f658fb7869ca0c9517be3c2f069249",
+      "Labels": {
+        "architecture": "x86_64",
+        "build-date": "2021-09-14T16:32:53.929147",
+        "com.redhat.build-host": "cpt-1003.osbs.prod.upshift.rdu2.redhat.com",
+        "com.redhat.component": "ubi8-minimal-container",
+        "com.redhat.license_terms": "https://www.redhat.com/en/about/red-hat-end-user-license-agreements#UBI",
+        "description": "Common base image for Confluent's Docker images.",
+        "distribution-scope": "public",
+        "io.confluent.docker": "true",
+        "io.confluent.docker.build.number": "6",
+        "io.confluent.docker.git.id": "538f95c6",
+        "io.confluent.docker.git.repo": "confluentinc/common-docker",
+        "io.k8s.description": "The Universal Base Image Minimal is a stripped down image that uses microdnf as a package manager. This base image is freely redistributable, but Red Hat only supports Red Hat technologies through subscriptions for Red Hat products. This image is maintained by Red Hat and updated regularly.",
+        "io.k8s.display-name": "Red Hat Universal Base Image 8 Minimal",
+        "io.openshift.expose-services": "",
+        "io.openshift.tags": "minimal rhel8",
+        "maintainer": "partner-support@confluent.io",
+        "name": "cp-ksqldb-examples",
+        "release": "6.2.1",
+        "summary": "Confluent KSQL is the streaming SQL engine that enables real-time data processing against Apache Kafka®.",
+        "url": "https://access.redhat.com/containers/#/registry.access.redhat.com/ubi8-minimal/images/8.4-210",
+        "vcs-ref": "7256039d3c371a38cf13906dcf5688c19700c73b",
+        "vcs-type": "git",
+        "vendor": "Confluent",
+        "version": "10650e4d"
+      },
+      "ParentId": "",
+      "RepoDigests": [
+        "confluentinc/ksqldb-examples@sha256:b34d658eb953daa2794102f5a0f14c5ab871955537ddec3efa208dc034e9bf75"
+      ],
+      "RepoTags": null,
+      "SharedSize": 680867196,
+      "Size": 801255394,
+      "VirtualSize": 801255394
+    },
+    {
+      "Containers": 0,
+      "Created": 1633544487,
+      "Id": "sha256:60b1400b8c470b4df05304a0a9329ad0a0cb75d19482de7b776024c880d5dd80",
+      "Labels": {
+        "architecture": "x86_64",
+        "build-date": "2021-09-14T16:32:53.929147",
+        "com.redhat.build-host": "cpt-1003.osbs.prod.upshift.rdu2.redhat.com",
+        "com.redhat.component": "ubi8-minimal-container",
+        "com.redhat.license_terms": "https://www.redhat.com/en/about/red-hat-end-user-license-agreements#UBI",
+        "description": "Confluent KSQL is the streaming SQL engine that enables real-time data processing against Apache Kafka®.",
+        "distribution-scope": "public",
+        "io.confluent.docker": "true",
+        "io.confluent.docker.build.number": "6",
+        "io.confluent.docker.git.id": "10650e4d",
+        "io.confluent.docker.git.repo": "confluentinc/common-docker",
+        "io.k8s.description": "The Universal Base Image Minimal is a stripped down image that uses microdnf as a package manager. This base image is freely redistributable, but Red Hat only supports Red Hat technologies through subscriptions for Red Hat products. This image is maintained by Red Hat and updated regularly.",
+        "io.k8s.display-name": "Red Hat Universal Base Image 8 Minimal",
+        "io.openshift.expose-services": "",
+        "io.openshift.tags": "minimal rhel8",
+        "maintainer": "partner-support@confluent.io",
+        "name": "cp-ksqldb-server",
+        "release": "6.2.1",
+        "summary": "Confluent KSQL is the streaming SQL engine that enables real-time data processing against Apache Kafka®.",
+        "url": "https://access.redhat.com/containers/#/registry.access.redhat.com/ubi8-minimal/images/8.4-210",
+        "vcs-ref": "7256039d3c371a38cf13906dcf5688c19700c73b",
+        "vcs-type": "git",
+        "vendor": "Confluent",
+        "version": "10650e4d"
+      },
+      "ParentId": "",
+      "RepoDigests": [
+        "confluentinc/cp-ksqldb-server@sha256:a16d56dafca53fbe97250738eab78d1ea042f2ade8d5f3e956f9d22adbd073e3"
+      ],
+      "RepoTags": null,
+      "SharedSize": 680867196,
+      "Size": 1196720537,
+      "VirtualSize": 1196720537
+    },
+    {
+      "Containers": 0,
+      "Created": 1633544306,
+      "Id": "sha256:52009d9449b742d466fdb5d0501578abbed716564a4234629a7b8e7e3819f75b",
+      "Labels": {
+        "architecture": "x86_64",
+        "build-date": "2021-09-14T16:32:53.929147",
+        "com.redhat.build-host": "cpt-1003.osbs.prod.upshift.rdu2.redhat.com",
+        "com.redhat.component": "ubi8-minimal-container",
+        "com.redhat.license_terms": "https://www.redhat.com/en/about/red-hat-end-user-license-agreements#UBI",
+        "description": "Common base image for Confluent's Docker images.",
+        "distribution-scope": "public",
+        "io.confluent.docker": "true",
+        "io.confluent.docker.build.number": "6",
+        "io.confluent.docker.git.id": "10650e4d",
+        "io.confluent.docker.git.repo": "confluentinc/common-docker",
+        "io.k8s.description": "The Universal Base Image Minimal is a stripped down image that uses microdnf as a package manager. This base image is freely redistributable, but Red Hat only supports Red Hat technologies through subscriptions for Red Hat products. This image is maintained by Red Hat and updated regularly.",
+        "io.k8s.display-name": "Red Hat Universal Base Image 8 Minimal",
+        "io.openshift.expose-services": "",
+        "io.openshift.tags": "minimal rhel8",
+        "maintainer": "partner-support@confluent.io",
+        "name": "cp-ksqldb-cli",
+        "release": "6.2.1",
+        "summary": "Confluent KSQL is the streaming SQL engine that enables real-time data processing against Apache Kafka®.",
+        "url": "https://access.redhat.com/containers/#/registry.access.redhat.com/ubi8-minimal/images/8.4-210",
+        "vcs-ref": "7256039d3c371a38cf13906dcf5688c19700c73b",
+        "vcs-type": "git",
+        "vendor": "Confluent",
+        "version": "10650e4d"
+      },
+      "ParentId": "",
+      "RepoDigests": [
+        "confluentinc/cp-ksqldb-cli@sha256:ab22dfff865914744fac305027e638888f88f1dab30d851ccc340e111b53edec"
+      ],
+      "RepoTags": null,
+      "SharedSize": 680867196,
+      "Size": 841878971,
+      "VirtualSize": 841878971
+    },
+    {
+      "Containers": 0,
+      "Created": 1633543552,
+      "Id": "sha256:174f0643fb8bb028d3b777c34fc7901fe4aa42af18d2536c67c2e5c44c98b005",
+      "Labels": {
+        "architecture": "x86_64",
+        "build-date": "2021-09-14T16:32:53.929147",
+        "com.redhat.build-host": "cpt-1003.osbs.prod.upshift.rdu2.redhat.com",
+        "com.redhat.component": "ubi8-minimal-container",
+        "com.redhat.license_terms": "https://www.redhat.com/en/about/red-hat-end-user-license-agreements#UBI",
+        "description": "Confluent Control Center is a web-based graphical user interface that helps you operate and build event streaming applications with Apache Kafka.",
+        "distribution-scope": "public",
+        "io.confluent.docker": "true",
+        "io.confluent.docker.build.number": "5",
+        "io.confluent.docker.git.id": "cd399ac",
+        "io.confluent.docker.git.repo": "confluentinc/control-center-images",
+        "io.k8s.description": "The Universal Base Image Minimal is a stripped down image that uses microdnf as a package manager. This base image is freely redistributable, but Red Hat only supports Red Hat technologies through subscriptions for Red Hat products. This image is maintained by Red Hat and updated regularly.",
+        "io.k8s.display-name": "Red Hat Universal Base Image 8 Minimal",
+        "io.openshift.expose-services": "",
+        "io.openshift.tags": "minimal rhel8",
+        "maintainer": "partner-support@confluent.io",
+        "name": "cp-enterprise-control-center",
+        "release": "6.2.1",
+        "summary": "Confluent Control Center is a web-based graphical user interface that helps you operate and build event streaming applications with Apache Kafka.",
+        "url": "https://access.redhat.com/containers/#/registry.access.redhat.com/ubi8-minimal/images/8.4-210",
+        "vcs-ref": "7256039d3c371a38cf13906dcf5688c19700c73b",
+        "vcs-type": "git",
+        "vendor": "Confluent",
+        "version": "cd399ac"
+      },
+      "ParentId": "",
+      "RepoDigests": [
+        "confluentinc/cp-enterprise-control-center@sha256:cde28d4a4371163692a1afaf939932635c2cb9ae1de1a682b942e6eb20e6ddf9"
+      ],
+      "RepoTags": null,
+      "SharedSize": 680867196,
+      "Size": 1088690405,
+      "VirtualSize": 1088690405
+    },
+    {
+      "Containers": 0,
+      "Created": 1633542971,
+      "Id": "sha256:745895703263072416be27b333d19eff4494b287001f6c6adddd22b963a3429d",
+      "Labels": {
+        "architecture": "x86_64",
+        "build-date": "2021-09-14T16:32:53.929147",
+        "com.redhat.build-host": "cpt-1003.osbs.prod.upshift.rdu2.redhat.com",
+        "com.redhat.component": "ubi8-minimal-container",
+        "com.redhat.license_terms": "https://www.redhat.com/en/about/red-hat-end-user-license-agreements#UBI",
+        "description": "Confluent platform server image.",
+        "distribution-scope": "public",
+        "io.confluent.docker": "true",
+        "io.confluent.docker.build.number": "5",
+        "io.confluent.docker.git.id": "31fed034",
+        "io.confluent.docker.git.repo": "confluentinc/kafka-images",
+        "io.k8s.description": "The Universal Base Image Minimal is a stripped down image that uses microdnf as a package manager. This base image is freely redistributable, but Red Hat only supports Red Hat technologies through subscriptions for Red Hat products. This image is maintained by Red Hat and updated regularly.",
+        "io.k8s.display-name": "Red Hat Universal Base Image 8 Minimal",
+        "io.openshift.expose-services": "",
+        "io.openshift.tags": "minimal rhel8",
+        "maintainer": "partner-support@confluent.io",
+        "name": "cp-server",
+        "release": "6.2.1",
+        "summary": "Confluent platform server image.",
+        "url": "https://access.redhat.com/containers/#/registry.access.redhat.com/ubi8-minimal/images/8.4-210",
+        "vcs-ref": "7256039d3c371a38cf13906dcf5688c19700c73b",
+        "vcs-type": "git",
+        "vendor": "Confluent",
+        "version": "31fed034"
+      },
+      "ParentId": "",
+      "RepoDigests": [
+        "confluentinc/cp-server@sha256:f6a3b7c8ee7c5c6a0247f333b8f697dd41ea3ce57bf3eb548c5c465499e2d350"
+      ],
+      "RepoTags": null,
+      "SharedSize": 680867196,
+      "Size": 1456097233,
+      "VirtualSize": 1456097233
+    },
+    {
+      "Containers": 0,
+      "Created": 1633542890,
+      "Id": "sha256:0390b975e20754737fe17ba5370a0be9ccadfb8015c59e8900f889eb979c1e0f",
+      "Labels": {
+        "architecture": "x86_64",
+        "build-date": "2021-09-14T16:32:53.929147",
+        "com.redhat.build-host": "cpt-1003.osbs.prod.upshift.rdu2.redhat.com",
+        "com.redhat.component": "ubi8-minimal-container",
+        "com.redhat.license_terms": "https://www.redhat.com/en/about/red-hat-end-user-license-agreements#UBI",
+        "description": "ZooKeeper is a centralized service for maintaining configuration information, naming, providing distributed synchronization, and providing group services.",
+        "distribution-scope": "public",
+        "io.confluent.docker": "true",
+        "io.confluent.docker.build.number": "5",
+        "io.confluent.docker.git.id": "31fed034",
+        "io.confluent.docker.git.repo": "confluentinc/kafka-images",
+        "io.k8s.description": "The Universal Base Image Minimal is a stripped down image that uses microdnf as a package manager. This base image is freely redistributable, but Red Hat only supports Red Hat technologies through subscriptions for Red Hat products. This image is maintained by Red Hat and updated regularly.",
+        "io.k8s.display-name": "Red Hat Universal Base Image 8 Minimal",
+        "io.openshift.expose-services": "",
+        "io.openshift.tags": "minimal rhel8",
+        "maintainer": "partner-support@confluent.io",
+        "name": "cp-zookeeper",
+        "release": "6.2.1",
+        "summary": "ZooKeeper is a centralized service for maintaining configuration information, naming, providing distributed synchronization, and providing group services.",
+        "url": "https://access.redhat.com/containers/#/registry.access.redhat.com/ubi8-minimal/images/8.4-210",
+        "vcs-ref": "7256039d3c371a38cf13906dcf5688c19700c73b",
+        "vcs-type": "git",
+        "vendor": "Confluent",
+        "version": "31fed034"
+      },
+      "ParentId": "",
+      "RepoDigests": [
+        "confluentinc/cp-zookeeper@sha256:5598d44649da42ab5ff926830ecd502303e1ba992fcedb65e03fab0ec2bfe976"
+      ],
+      "RepoTags": null,
+      "SharedSize": 680867196,
+      "Size": 771899773,
+      "VirtualSize": 771899773
+    },
+    {
+      "Containers": 0,
+      "Created": 1632938143,
+      "Id": "sha256:6b311331194a5cc0bf17184a3e29edfb80c6919744d8b4e643c5c9639de026ef",
+      "Labels": {
+        "architecture": "x86_64",
+        "build-date": "2021-08-03T16:57:21.054109",
+        "com.redhat.build-host": "cpt-1002.osbs.prod.upshift.rdu2.redhat.com",
+        "com.redhat.component": "ubi8-minimal-container",
+        "com.redhat.license_terms": "https://www.redhat.com/en/about/red-hat-end-user-license-agreements#UBI",
+        "description": "=Confluent platform server connect image.",
+        "distribution-scope": "public",
+        "io.confluent.docker": "true",
+        "io.confluent.docker.build.number": "3",
+        "io.confluent.docker.git.id": "31fed034",
+        "io.confluent.docker.git.repo": "confluentinc/kafka-images",
+        "io.k8s.description": "The Universal Base Image Minimal is a stripped down image that uses microdnf as a package manager. This base image is freely redistributable, but Red Hat only supports Red Hat technologies through subscriptions for Red Hat products. This image is maintained by Red Hat and updated regularly.",
+        "io.k8s.display-name": "Red Hat Universal Base Image 8 Minimal",
+        "io.openshift.expose-services": "",
+        "io.openshift.tags": "minimal rhel8",
+        "maintainer": "partner-support@confluent.io",
+        "name": "cp-server-connect",
+        "release": "6.2.1",
+        "summary": "Confluent platform server connect image.",
+        "url": "https://access.redhat.com/containers/#/registry.access.redhat.com/ubi8-minimal/images/8.4-208",
+        "vcs-ref": "7256039d3c371a38cf13906dcf5688c19700c73b",
+        "vcs-type": "git",
+        "vendor": "Confluent",
+        "version": "31fed034"
+      },
+      "ParentId": "",
+      "RepoDigests": [
+        "cnfldemos/cp-server-connect-datagen@sha256:0cd9bac80f7d32da65482c4e6f87ba740e23fe3163267f955f5bac84528de735"
+      ],
+      "RepoTags": [
+        "cnfldemos/cp-server-connect-datagen:0.5.0-6.2.1"
+      ],
+      "SharedSize": 1455506430,
+      "Size": 1941796228,
+      "VirtualSize": 1941796228
+    },
+    {
+      "Containers": 0,
+      "Created": 1632841124,
+      "Id": "sha256:9ed9bb3f510cd22b02eeb3d2f7807270e8730b3d0239ff1b0e3301f1cbc23c0a",
+      "Labels": {
+        "maintainer": "NGINX Docker Maintainers <docker-maint@nginx.com>"
+      },
+      "ParentId": "",
+      "RepoDigests": null,
+      "RepoTags": [
+        "web-app:0.0.1"
+      ],
+      "SharedSize": 133283279,
+      "Size": 133964543,
+      "VirtualSize": 133964543
+    },
+    {
+      "Containers": 2,
+      "Created": 1632817567,
+      "Id": "sha256:f8f4ffc8092c956ddd6a3a64814f36882798065799b8aedeebedf2855af3395b",
+      "Labels": {
+        "maintainer": "NGINX Docker Maintainers <docker-maint@nginx.com>"
+      },
+      "ParentId": "",
+      "RepoDigests": [
+        "nginx@sha256:969419c0b7b0a5f40a4d666ad227360de5874930a2b228a7c11e15dedbc6e092"
+      ],
+      "RepoTags": [
+        "nginx:latest"
+      ],
+      "SharedSize": 133283279,
+      "Size": 133283279,
+      "VirtualSize": 133283279
+    },
+    {
+      "Containers": 0,
+      "Created": 1631860317,
+      "Id": "sha256:2888f29d482c2f9a711f6b66288636393b81679a4c6176f26f4c43142ca9f25a",
+      "Labels": {
+        "architecture": "x86_64",
+        "build-date": "2021-08-03T16:57:21.054109",
+        "com.redhat.build-host": "cpt-1002.osbs.prod.upshift.rdu2.redhat.com",
+        "com.redhat.component": "ubi8-minimal-container",
+        "com.redhat.license_terms": "https://www.redhat.com/en/about/red-hat-end-user-license-agreements#UBI",
+        "description": "Common base image for Confluent's Docker images.",
+        "distribution-scope": "public",
+        "io.confluent.docker": "true",
+        "io.confluent.docker.build.number": "3",
+        "io.confluent.docker.git.id": "ba8ec23e",
+        "io.confluent.docker.git.repo": "confluentinc/common-docker",
+        "io.k8s.description": "The Universal Base Image Minimal is a stripped down image that uses microdnf as a package manager. This base image is freely redistributable, but Red Hat only supports Red Hat technologies through subscriptions for Red Hat products. This image is maintained by Red Hat and updated regularly.",
+        "io.k8s.display-name": "Red Hat Universal Base Image 8 Minimal",
+        "io.openshift.expose-services": "",
+        "io.openshift.tags": "minimal rhel8",
+        "maintainer": "partner-support@confluent.io",
+        "name": "cp-ksqldb-examples",
+        "release": "6.2.1",
+        "summary": "Confluent KSQL is the streaming SQL engine that enables real-time data processing against Apache Kafka®.",
+        "url": "https://access.redhat.com/containers/#/registry.access.redhat.com/ubi8-minimal/images/8.4-208",
+        "vcs-ref": "7256039d3c371a38cf13906dcf5688c19700c73b",
+        "vcs-type": "git",
+        "vendor": "Confluent",
+        "version": "10650e4"
+      },
+      "ParentId": "",
+      "RepoDigests": [
+        "confluentinc/ksqldb-examples@sha256:317b2eb4d6d5dba9922f103a8c6e842f7413a5d850d66f893becb186f2b750da"
+      ],
+      "RepoTags": [
+        "confluentinc/ksqldb-examples:6.2.1"
+      ],
+      "SharedSize": 680288598,
+      "Size": 800678246,
+      "VirtualSize": 800678246
+    },
+    {
+      "Containers": 0,
+      "Created": 1631860146,
+      "Id": "sha256:8ca019f9adc354e387cd2c00e20d28b3c219077b43e7be42769c091ee8c70fc8",
+      "Labels": {
+        "architecture": "x86_64",
+        "build-date": "2021-08-03T16:57:21.054109",
+        "com.redhat.build-host": "cpt-1002.osbs.prod.upshift.rdu2.redhat.com",
+        "com.redhat.component": "ubi8-minimal-container",
+        "com.redhat.license_terms": "https://www.redhat.com/en/about/red-hat-end-user-license-agreements#UBI",
+        "description": "Confluent KSQL is the streaming SQL engine that enables real-time data processing against Apache Kafka®.",
+        "distribution-scope": "public",
+        "io.confluent.docker": "true",
+        "io.confluent.docker.build.number": "4",
+        "io.confluent.docker.git.id": "10650e4",
+        "io.confluent.docker.git.repo": "confluentinc/common-docker",
+        "io.k8s.description": "The Universal Base Image Minimal is a stripped down image that uses microdnf as a package manager. This base image is freely redistributable, but Red Hat only supports Red Hat technologies through subscriptions for Red Hat products. This image is maintained by Red Hat and updated regularly.",
+        "io.k8s.display-name": "Red Hat Universal Base Image 8 Minimal",
+        "io.openshift.expose-services": "",
+        "io.openshift.tags": "minimal rhel8",
+        "maintainer": "partner-support@confluent.io",
+        "name": "cp-ksqldb-server",
+        "release": "6.2.1",
+        "summary": "Confluent KSQL is the streaming SQL engine that enables real-time data processing against Apache Kafka®.",
+        "url": "https://access.redhat.com/containers/#/registry.access.redhat.com/ubi8-minimal/images/8.4-208",
+        "vcs-ref": "7256039d3c371a38cf13906dcf5688c19700c73b",
+        "vcs-type": "git",
+        "vendor": "Confluent",
+        "version": "10650e4"
+      },
+      "ParentId": "",
+      "RepoDigests": [
+        "confluentinc/cp-ksqldb-server@sha256:74b6390c12f98c2bc234b6db6820a7ccfba4b9615016140895f988b2095a837f"
+      ],
+      "RepoTags": [
+        "confluentinc/cp-ksqldb-server:6.2.1"
+      ],
+      "SharedSize": 680288598,
+      "Size": 1196128076,
+      "VirtualSize": 1196128076
+    },
+    {
+      "Containers": 0,
+      "Created": 1631859955,
+      "Id": "sha256:50792480b442e28cce974973dc2baab2fb3adaf2d8a7b6db1c4586aa93e769c8",
+      "Labels": {
+        "architecture": "x86_64",
+        "build-date": "2021-08-03T16:57:21.054109",
+        "com.redhat.build-host": "cpt-1002.osbs.prod.upshift.rdu2.redhat.com",
+        "com.redhat.component": "ubi8-minimal-container",
+        "com.redhat.license_terms": "https://www.redhat.com/en/about/red-hat-end-user-license-agreements#UBI",
+        "description": "Common base image for Confluent's Docker images.",
+        "distribution-scope": "public",
+        "io.confluent.docker": "true",
+        "io.confluent.docker.build.number": "4",
+        "io.confluent.docker.git.id": "10650e4",
+        "io.confluent.docker.git.repo": "confluentinc/common-docker",
+        "io.k8s.description": "The Universal Base Image Minimal is a stripped down image that uses microdnf as a package manager. This base image is freely redistributable, but Red Hat only supports Red Hat technologies through subscriptions for Red Hat products. This image is maintained by Red Hat and updated regularly.",
+        "io.k8s.display-name": "Red Hat Universal Base Image 8 Minimal",
+        "io.openshift.expose-services": "",
+        "io.openshift.tags": "minimal rhel8",
+        "maintainer": "partner-support@confluent.io",
+        "name": "cp-ksqldb-cli",
+        "release": "6.2.1",
+        "summary": "Confluent KSQL is the streaming SQL engine that enables real-time data processing against Apache Kafka®.",
+        "url": "https://access.redhat.com/containers/#/registry.access.redhat.com/ubi8-minimal/images/8.4-208",
+        "vcs-ref": "7256039d3c371a38cf13906dcf5688c19700c73b",
+        "vcs-type": "git",
+        "vendor": "Confluent",
+        "version": "10650e4"
+      },
+      "ParentId": "",
+      "RepoDigests": [
+        "confluentinc/cp-ksqldb-cli@sha256:188a9671e263ad1a881a08acc1226a31d82df8b37dec54afd6127546b3667a82"
+      ],
+      "RepoTags": [
+        "confluentinc/cp-ksqldb-cli:6.2.1"
+      ],
+      "SharedSize": 680288598,
+      "Size": 841286422,
+      "VirtualSize": 841286422
+    },
+    {
+      "Containers": 0,
+      "Created": 1631858647,
+      "Id": "sha256:51b5c56398bca26e152d2d846445ab094800d037f07f51ffe7a4b3fd0eb8a00d",
+      "Labels": {
+        "architecture": "x86_64",
+        "build-date": "2021-08-03T16:57:21.054109",
+        "com.redhat.build-host": "cpt-1002.osbs.prod.upshift.rdu2.redhat.com",
+        "com.redhat.component": "ubi8-minimal-container",
+        "com.redhat.license_terms": "https://www.redhat.com/en/about/red-hat-end-user-license-agreements#UBI",
+        "description": "Common base image for Confluent's Docker images.",
+        "distribution-scope": "public",
+        "io.confluent.docker": "true",
+        "io.confluent.docker.build.number": "3",
+        "io.confluent.docker.git.id": "ba8ec23e",
+        "io.confluent.docker.git.repo": "confluentinc/kafka-rest-images",
+        "io.k8s.description": "The Universal Base Image Minimal is a stripped down image that uses microdnf as a package manager. This base image is freely redistributable, but Red Hat only supports Red Hat technologies through subscriptions for Red Hat products. This image is maintained by Red Hat and updated regularly.",
+        "io.k8s.display-name": "Red Hat Universal Base Image 8 Minimal",
+        "io.openshift.expose-services": "",
+        "io.openshift.tags": "minimal rhel8",
+        "maintainer": "partner-support@confluent.io",
+        "name": "cp-kafka-rest",
+        "release": "6.2.1",
+        "summary": "The Confluent REST Proxy provides a RESTful interface to a Kafka cluster, making it easy to produce and consume messages, view the state of the cluster, and perform administrative actions without using the native Kafka protocol or clients.",
+        "url": "https://access.redhat.com/containers/#/registry.access.redhat.com/ubi8-minimal/images/8.4-208",
+        "vcs-ref": "7256039d3c371a38cf13906dcf5688c19700c73b",
+        "vcs-type": "git",
+        "vendor": "Confluent",
+        "version": "acd9f73"
+      },
+      "ParentId": "",
+      "RepoDigests": [
+        "confluentinc/cp-kafka-rest@sha256:04de6038d9a93e78f426b469a66fe0e67a2507bb95614d5a613a263d522ebee0"
+      ],
+      "RepoTags": [
+        "confluentinc/cp-kafka-rest:6.2.1"
+      ],
+      "SharedSize": 680288598,
+      "Size": 1478189794,
+      "VirtualSize": 1478189794
+    },
+    {
+      "Containers": 0,
+      "Created": 1631858063,
+      "Id": "sha256:f0b02c526b6e949f7114cad8340b737e008e6012669647efce51f8fbacc72030",
+      "Labels": {
+        "architecture": "x86_64",
+        "build-date": "2021-08-03T16:57:21.054109",
+        "com.redhat.build-host": "cpt-1002.osbs.prod.upshift.rdu2.redhat.com",
+        "com.redhat.component": "ubi8-minimal-container",
+        "com.redhat.license_terms": "https://www.redhat.com/en/about/red-hat-end-user-license-agreements#UBI",
+        "description": "Confluent platform server image.",
+        "distribution-scope": "public",
+        "io.confluent.docker": "true",
+        "io.confluent.docker.build.number": "3",
+        "io.confluent.docker.git.id": "31fed034",
+        "io.confluent.docker.git.repo": "confluentinc/kafka-images",
+        "io.k8s.description": "The Universal Base Image Minimal is a stripped down image that uses microdnf as a package manager. This base image is freely redistributable, but Red Hat only supports Red Hat technologies through subscriptions for Red Hat products. This image is maintained by Red Hat and updated regularly.",
+        "io.k8s.display-name": "Red Hat Universal Base Image 8 Minimal",
+        "io.openshift.expose-services": "",
+        "io.openshift.tags": "minimal rhel8",
+        "maintainer": "partner-support@confluent.io",
+        "name": "cp-server",
+        "release": "6.2.1",
+        "summary": "Confluent platform server image.",
+        "url": "https://access.redhat.com/containers/#/registry.access.redhat.com/ubi8-minimal/images/8.4-208",
+        "vcs-ref": "7256039d3c371a38cf13906dcf5688c19700c73b",
+        "vcs-type": "git",
+        "vendor": "Confluent",
+        "version": "31fed034"
+      },
+      "ParentId": "",
+      "RepoDigests": [
+        "confluentinc/cp-server@sha256:8e5c979d47d46d0cba2a1ef56239c98af2ee1c74b68dfca39ae34cd6ff1b2bc1"
+      ],
+      "RepoTags": [
+        "confluentinc/cp-server:6.2.1"
+      ],
+      "SharedSize": 1455506430,
+      "Size": 1455506430,
+      "VirtualSize": 1455506430
+    },
+    {
+      "Containers": 0,
+      "Created": 1631858040,
+      "Id": "sha256:f540bcfc65bb6dcde36123c93978093925c73b92eec3aaf2d9384798ebd1235c",
+      "Labels": {
+        "architecture": "x86_64",
+        "build-date": "2021-08-03T16:57:21.054109",
+        "com.redhat.build-host": "cpt-1002.osbs.prod.upshift.rdu2.redhat.com",
+        "com.redhat.component": "ubi8-minimal-container",
+        "com.redhat.license_terms": "https://www.redhat.com/en/about/red-hat-end-user-license-agreements#UBI",
+        "description": "Confluent Schema Registry provides a RESTful interface for developers to define standard schemas for their events, share them across the organization and safely evolve them in a way that is backward compatible and future proof.",
+        "distribution-scope": "public",
+        "io.confluent.docker": "true",
+        "io.confluent.docker.build.number": "3",
+        "io.confluent.docker.git.id": "f612c68",
+        "io.confluent.docker.git.repo": "confluentinc/schema-registry-images",
+        "io.k8s.description": "The Universal Base Image Minimal is a stripped down image that uses microdnf as a package manager. This base image is freely redistributable, but Red Hat only supports Red Hat technologies through subscriptions for Red Hat products. This image is maintained by Red Hat and updated regularly.",
+        "io.k8s.display-name": "Red Hat Universal Base Image 8 Minimal",
+        "io.openshift.expose-services": "",
+        "io.openshift.tags": "minimal rhel8",
+        "maintainer": "partner-support@confluent.io",
+        "name": "cp-schema-registry",
+        "release": "6.2.1",
+        "summary": "Confluent Schema Registry provides a RESTful interface for developers to define standard schemas for their events, share them across the organization and safely evolve them in a way that is backward compatible and future proof.",
+        "url": "https://access.redhat.com/containers/#/registry.access.redhat.com/ubi8-minimal/images/8.4-208",
+        "vcs-ref": "7256039d3c371a38cf13906dcf5688c19700c73b",
+        "vcs-type": "git",
+        "vendor": "Confluent",
+        "version": "f612c68"
+      },
+      "ParentId": "",
+      "RepoDigests": [
+        "confluentinc/cp-schema-registry@sha256:d093cd5e4a6dc80619b447ca7d35d0415f0c85b6fb2328da133d8685fe01d7ad"
+      ],
+      "RepoTags": [
+        "confluentinc/cp-schema-registry:6.2.1"
+      ],
+      "SharedSize": 680288598,
+      "Size": 1531948694,
+      "VirtualSize": 1531948694
+    },
+    {
+      "Containers": 0,
+      "Created": 1631858005,
+      "Id": "sha256:a77a46d36543bc1a0373d01c180c6321770b5bdae04a5a9128abef95a507c15c",
+      "Labels": {
+        "architecture": "x86_64",
+        "build-date": "2021-08-03T16:57:21.054109",
+        "com.redhat.build-host": "cpt-1002.osbs.prod.upshift.rdu2.redhat.com",
+        "com.redhat.component": "ubi8-minimal-container",
+        "com.redhat.license_terms": "https://www.redhat.com/en/about/red-hat-end-user-license-agreements#UBI",
+        "description": "Confluent Control Center is a web-based graphical user interface that helps you operate and build event streaming applications with Apache Kafka.",
+        "distribution-scope": "public",
+        "io.confluent.docker": "true",
+        "io.confluent.docker.build.number": "3",
+        "io.confluent.docker.git.id": "cd399ac",
+        "io.confluent.docker.git.repo": "confluentinc/control-center-images",
+        "io.k8s.description": "The Universal Base Image Minimal is a stripped down image that uses microdnf as a package manager. This base image is freely redistributable, but Red Hat only supports Red Hat technologies through subscriptions for Red Hat products. This image is maintained by Red Hat and updated regularly.",
+        "io.k8s.display-name": "Red Hat Universal Base Image 8 Minimal",
+        "io.openshift.expose-services": "",
+        "io.openshift.tags": "minimal rhel8",
+        "maintainer": "partner-support@confluent.io",
+        "name": "cp-enterprise-control-center",
+        "release": "6.2.1",
+        "summary": "Confluent Control Center is a web-based graphical user interface that helps you operate and build event streaming applications with Apache Kafka.",
+        "url": "https://access.redhat.com/containers/#/registry.access.redhat.com/ubi8-minimal/images/8.4-208",
+        "vcs-ref": "7256039d3c371a38cf13906dcf5688c19700c73b",
+        "vcs-type": "git",
+        "vendor": "Confluent",
+        "version": "cd399ac"
+      },
+      "ParentId": "",
+      "RepoDigests": [
+        "confluentinc/cp-enterprise-control-center@sha256:0230d6adf6edcc96cfbaf14fe251201682f3f110d383c3864d72d00986ad9725"
+      ],
+      "RepoTags": [
+        "confluentinc/cp-enterprise-control-center:6.2.1"
+      ],
+      "SharedSize": 680288598,
+      "Size": 1088099411,
+      "VirtualSize": 1088099411
+    },
+    {
+      "Containers": 0,
+      "Created": 1631857979,
+      "Id": "sha256:db00bbd6af7bd513a6562f39dfba8c84ddea719d103c98c89b73abc4f37b67ca",
+      "Labels": {
+        "architecture": "x86_64",
+        "build-date": "2021-08-03T16:57:21.054109",
+        "com.redhat.build-host": "cpt-1002.osbs.prod.upshift.rdu2.redhat.com",
+        "com.redhat.component": "ubi8-minimal-container",
+        "com.redhat.license_terms": "https://www.redhat.com/en/about/red-hat-end-user-license-agreements#UBI",
+        "description": "ZooKeeper is a centralized service for maintaining configuration information, naming, providing distributed synchronization, and providing group services.",
+        "distribution-scope": "public",
+        "io.confluent.docker": "true",
+        "io.confluent.docker.build.number": "3",
+        "io.confluent.docker.git.id": "31fed034",
+        "io.confluent.docker.git.repo": "confluentinc/kafka-images",
+        "io.k8s.description": "The Universal Base Image Minimal is a stripped down image that uses microdnf as a package manager. This base image is freely redistributable, but Red Hat only supports Red Hat technologies through subscriptions for Red Hat products. This image is maintained by Red Hat and updated regularly.",
+        "io.k8s.display-name": "Red Hat Universal Base Image 8 Minimal",
+        "io.openshift.expose-services": "",
+        "io.openshift.tags": "minimal rhel8",
+        "maintainer": "partner-support@confluent.io",
+        "name": "cp-zookeeper",
+        "release": "6.2.1",
+        "summary": "ZooKeeper is a centralized service for maintaining configuration information, naming, providing distributed synchronization, and providing group services.",
+        "url": "https://access.redhat.com/containers/#/registry.access.redhat.com/ubi8-minimal/images/8.4-208",
+        "vcs-ref": "7256039d3c371a38cf13906dcf5688c19700c73b",
+        "vcs-type": "git",
+        "vendor": "Confluent",
+        "version": "31fed034"
+      },
+      "ParentId": "",
+      "RepoDigests": [
+        "confluentinc/cp-zookeeper@sha256:495cd7882650d30bb2300fe7701358901d702b7b82c993cf8675bd98196041bb"
+      ],
+      "RepoTags": [
+        "confluentinc/cp-zookeeper:6.2.1"
+      ],
+      "SharedSize": 680288598,
+      "Size": 771308628,
+      "VirtualSize": 771308628
+    },
+    {
+      "Containers": 1,
+      "Created": 1630673791,
+      "Id": "sha256:346c7820a8fb194200f88493f2b350c1f9ea972beb31fe0fb26432be43293462",
+      "Labels": null,
+      "ParentId": "",
+      "RepoDigests": [
+        "postgres@sha256:97e5e91582e89514277912d4b7c95bceabdede3482e32395bcb40099abd9c506"
+      ],
+      "RepoTags": [
+        "postgres:latest"
+      ],
+      "SharedSize": 69256822,
+      "Size": 314693798,
+      "VirtualSize": 314693798
+    },
+    {
+      "Containers": 0,
+      "Created": 1630653897,
+      "Id": "sha256:0716d6ebcc1a61c5a296fcb187e71f93531e510d4e4400267e2e502103d0194c",
+      "Labels": null,
+      "ParentId": "",
+      "RepoDigests": [
+        "mysql@sha256:99e0989e7e3797cfbdb8d51a19d32c8d286dd8862794d01a547651a896bcf00c"
+      ],
+      "RepoTags": [
+        "mysql:8.0",
+        "mysql:latest"
+      ],
+      "SharedSize": 69256822,
+      "Size": 513817419,
+      "VirtualSize": 513817419
+    },
+    {
+      "Containers": 1,
+      "Created": 1630603192,
+      "Id": "sha256:357d5daa8a92ec206e1cd86f32aba8fa5e5394e48a34270873a4bc42031b057a",
+      "Labels": null,
+      "ParentId": "",
+      "RepoDigests": [
+        "adminer@sha256:9d187c3025d03c033dcc71e3a284fee53be88cc4c0356a19242758bc80cab673"
+      ],
+      "RepoTags": [
+        "adminer:latest"
+      ],
+      "SharedSize": 0,
+      "Size": 91244468,
+      "VirtualSize": 91244468
+    }
+  ],
+  "Containers": [
+    {
+      "Id": "5b1f328884d76b91eb9134de70c82f181815d9718d632dac32c6b45624de94e4",
+      "Names": [
+        "/db_adminer_1"
+      ],
+      "Image": "adminer",
+      "ImageID": "sha256:357d5daa8a92ec206e1cd86f32aba8fa5e5394e48a34270873a4bc42031b057a",
+      "Command": "entrypoint.sh docker-php-entrypoint php -S [::]:8080 -t /var/www/html",
+      "Created": 1645822705,
+      "Ports": [
+        {
+          "IP": "0.0.0.0",
+          "PrivatePort": 8080,
+          "PublicPort": 8000,
+          "Type": "tcp"
+        }
+      ],
+      "SizeRw": 776,
+      "SizeRootFs": 91245244,
+      "Labels": {
+        "com.docker.compose.config-hash": "fc43a553fbd9a6656d2500d6c0d1201d0a2304f7a4614041d2fc8e2eb2d36e15",
+        "com.docker.compose.container-number": "1",
+        "com.docker.compose.oneoff": "False",
+        "com.docker.compose.project": "db",
+        "com.docker.compose.project.config_files": "docker-compose.yaml",
+        "com.docker.compose.project.working_dir": "/home/vlad/stuff/repos/real-time-forum/db",
+        "com.docker.compose.service": "adminer",
+        "com.docker.compose.version": "1.25.0",
+        "desktop.docker.io/wsl-distro": "Ubuntu-20.04"
+      },
+      "State": "running",
+      "Status": "Up 12 hours",
+      "HostConfig": {
+        "NetworkMode": "db_default"
+      },
+      "NetworkSettings": {
+        "Networks": {
+          "db_default": {
+            "IPAMConfig": null,
+            "Links": null,
+            "Aliases": null,
+            "NetworkID": "22069dd7756fbbb6cae9cdeef61e90fbda3f58764645c57367866a6620c5501f",
+            "EndpointID": "5e2b1a003707c515849a90379e911670464335ef86bb786787f9d8e0dc44db13",
+            "Gateway": "172.29.0.1",
+            "IPAddress": "172.29.0.2",
+            "IPPrefixLen": 16,
+            "IPv6Gateway": "",
+            "GlobalIPv6Address": "",
+            "GlobalIPv6PrefixLen": 0,
+            "MacAddress": "02:42:ac:1d:00:02",
+            "DriverOpts": null
+          }
+        }
+      },
+      "Mounts": []
+    },
+    {
+      "Id": "743785cb0a74dd0bf5e948e0d05dae8bccc903a8b49653eadc47c63d2c477206",
+      "Names": [
+        "/db_sql_app_1"
+      ],
+      "Image": "postgres",
+      "ImageID": "sha256:346c7820a8fb194200f88493f2b350c1f9ea972beb31fe0fb26432be43293462",
+      "Command": "docker-entrypoint.sh postgres",
+      "Created": 1645822705,
+      "Ports": [
+        {
+          "IP": "0.0.0.0",
+          "PrivatePort": 5432,
+          "PublicPort": 5001,
+          "Type": "tcp"
+        }
+      ],
+      "SizeRw": 63,
+      "SizeRootFs": 314693861,
+      "Labels": {
+        "com.docker.compose.config-hash": "69aaac3d5f62ef320720c48f4729cdfc7d4ce70676043b6cdb61dfe0d36b6e28",
+        "com.docker.compose.container-number": "1",
+        "com.docker.compose.oneoff": "False",
+        "com.docker.compose.project": "db",
+        "com.docker.compose.project.config_files": "docker-compose.yaml",
+        "com.docker.compose.project.working_dir": "/home/vlad/stuff/repos/real-time-forum/db",
+        "com.docker.compose.service": "sql_app",
+        "com.docker.compose.version": "1.25.0",
+        "desktop.docker.io/wsl-distro": "Ubuntu-20.04"
+      },
+      "State": "running",
+      "Status": "Up 12 hours",
+      "HostConfig": {
+        "NetworkMode": "db_default"
+      },
+      "NetworkSettings": {
+        "Networks": {
+          "db_default": {
+            "IPAMConfig": null,
+            "Links": null,
+            "Aliases": null,
+            "NetworkID": "22069dd7756fbbb6cae9cdeef61e90fbda3f58764645c57367866a6620c5501f",
+            "EndpointID": "f6d109ee8a8db177ef7e853b89b413905f558d2006ed833f8e8bb4c48b127f55",
+            "Gateway": "172.29.0.1",
+            "IPAddress": "172.29.0.3",
+            "IPPrefixLen": 16,
+            "IPv6Gateway": "",
+            "GlobalIPv6Address": "",
+            "GlobalIPv6PrefixLen": 0,
+            "MacAddress": "02:42:ac:1d:00:03",
+            "DriverOpts": null
+          }
+        }
+      },
+      "Mounts": [
+        {
+          "Type": "volume",
+          "Name": "db_sql_volume",
+          "Source": "/var/lib/docker/volumes/db_sql_volume/_data",
+          "Destination": "/var/lib/postgresql/data",
+          "Driver": "local",
+          "Mode": "rw",
+          "RW": true,
+          "Propagation": ""
+        }
+      ]
+    },
+    {
+      "Id": "c3529af352d741dcae3ae36552dd0e0edc5fcb4731399caed2fbef44921b6797",
+      "Names": [
+        "/kafka"
+      ],
+      "Image": "bitnami/kafka:latest",
+      "ImageID": "sha256:6c1ae46a77ec2e4b7766b8a5bd0f1d56bf804377a88e0c8c8367c901a4f9f67c",
+      "Command": "/opt/bitnami/scripts/kafka/entrypoint.sh /opt/bitnami/scripts/kafka/run.sh",
+      "Created": 1645822696,
+      "Ports": [
+        {
+          "IP": "0.0.0.0",
+          "PrivatePort": 9092,
+          "PublicPort": 9092,
+          "Type": "tcp"
+        }
+      ],
+      "SizeRw": 70903,
+      "SizeRootFs": 614780625,
+      "Labels": {
+        "com.docker.compose.config-hash": "a6b5a97a2b739f7f901074906257e912175c9a753fad2d8425a549123c480aa4",
+        "com.docker.compose.container-number": "1",
+        "com.docker.compose.oneoff": "False",
+        "com.docker.compose.project": "kafka",
+        "com.docker.compose.project.config_files": "docker-compose.yaml",
+        "com.docker.compose.project.working_dir": "/home/vlad/stuff/repos/real-time-forum/kafka",
+        "com.docker.compose.service": "kafka",
+        "com.docker.compose.version": "1.25.0",
+        "desktop.docker.io/wsl-distro": "Ubuntu-20.04",
+        "maintainer": "Bitnami <containers@bitnami.com>"
+      },
+      "State": "running",
+      "Status": "Up 12 hours",
+      "HostConfig": {
+        "NetworkMode": "kafka_default"
+      },
+      "NetworkSettings": {
+        "Networks": {
+          "kafka_default": {
+            "IPAMConfig": null,
+            "Links": null,
+            "Aliases": null,
+            "NetworkID": "000db3f2e4349f8debe275f5c80ec62964366b7c0732d67178f4499e1518c701",
+            "EndpointID": "b645e895f1843420e3e1995df1714eeba24d69bfd0b2576d1fb38ac67fc5cd15",
+            "Gateway": "172.18.0.1",
+            "IPAddress": "172.18.0.3",
+            "IPPrefixLen": 16,
+            "IPv6Gateway": "",
+            "GlobalIPv6Address": "",
+            "GlobalIPv6PrefixLen": 0,
+            "MacAddress": "02:42:ac:12:00:03",
+            "DriverOpts": null
+          }
+        }
+      },
+      "Mounts": []
+    },
+    {
+      "Id": "ff47b8b13c66d591a0b2907a9b9cb8ef776647548e70bacf8332e9f3ca9d4f96",
+      "Names": [
+        "/zookeeper"
+      ],
+      "Image": "bitnami/zookeeper:latest",
+      "ImageID": "sha256:aef109f27eca50d1cada49edb7aef10210ce96bb73401c5f2d469bcca84061a6",
+      "Command": "/opt/bitnami/scripts/zookeeper/entrypoint.sh /opt/bitnami/scripts/zookeeper/run.sh",
+      "Created": 1645822695,
+      "Ports": [
+        {
+          "IP": "0.0.0.0",
+          "PrivatePort": 2181,
+          "PublicPort": 2181,
+          "Type": "tcp"
+        },
+        {
+          "PrivatePort": 2888,
+          "Type": "tcp"
+        },
+        {
+          "PrivatePort": 3888,
+          "Type": "tcp"
+        },
+        {
+          "PrivatePort": 8080,
+          "Type": "tcp"
+        }
+      ],
+      "SizeRw": 67114120,
+      "SizeRootFs": 535570801,
+      "Labels": {
+        "com.docker.compose.config-hash": "0700623ebee9bd3b842968ede28e21911f9cb9c332cbf59e64b962c7afa5ad1f",
+        "com.docker.compose.container-number": "1",
+        "com.docker.compose.oneoff": "False",
+        "com.docker.compose.project": "kafka",
+        "com.docker.compose.project.config_files": "docker-compose.yaml",
+        "com.docker.compose.project.working_dir": "/home/vlad/stuff/repos/real-time-forum/kafka",
+        "com.docker.compose.service": "zookeeper",
+        "com.docker.compose.version": "1.25.0",
+        "desktop.docker.io/wsl-distro": "Ubuntu-20.04",
+        "maintainer": "Bitnami <containers@bitnami.com>"
+      },
+      "State": "running",
+      "Status": "Up 12 hours",
+      "HostConfig": {
+        "NetworkMode": "kafka_default"
+      },
+      "NetworkSettings": {
+        "Networks": {
+          "kafka_default": {
+            "IPAMConfig": null,
+            "Links": null,
+            "Aliases": null,
+            "NetworkID": "000db3f2e4349f8debe275f5c80ec62964366b7c0732d67178f4499e1518c701",
+            "EndpointID": "25365bf30af47136a66fa873f58d291c03fe836213e30bdceced54d61fb751c4",
+            "Gateway": "172.18.0.1",
+            "IPAddress": "172.18.0.2",
+            "IPPrefixLen": 16,
+            "IPv6Gateway": "",
+            "GlobalIPv6Address": "",
+            "GlobalIPv6PrefixLen": 0,
+            "MacAddress": "02:42:ac:12:00:02",
+            "DriverOpts": null
+          }
+        }
+      },
+      "Mounts": []
+    },
+    {
+      "Id": "2f60052ee6f7957e45ec87e18baee3958b43d6f9e5c1a194503cdb559248717c",
+      "Names": [
+        "/exciting_brattain"
+      ],
+      "Image": "nginx",
+      "ImageID": "sha256:f8f4ffc8092c956ddd6a3a64814f36882798065799b8aedeebedf2855af3395b",
+      "Command": "/docker-entrypoint.sh nginx -g 'daemon off;'",
+      "Created": 1645822467,
+      "Ports": [
+        {
+          "PrivatePort": 80,
+          "Type": "tcp"
+        }
+      ],
+      "SizeRw": 1098,
+      "SizeRootFs": 133284377,
+      "Labels": {
+        "desktop.docker.io/wsl-distro": "Ubuntu-20.04",
+        "maintainer": "NGINX Docker Maintainers <docker-maint@nginx.com>"
+      },
+      "State": "running",
+      "Status": "Up 12 hours",
+      "HostConfig": {
+        "NetworkMode": "default"
+      },
+      "NetworkSettings": {
+        "Networks": {
+          "bridge": {
+            "IPAMConfig": null,
+            "Links": null,
+            "Aliases": null,
+            "NetworkID": "a4887fffb9e8f3a9d65fa72abc0ede7973b1badce544650c3f3241dcc78f10ab",
+            "EndpointID": "071a8f4e937107e97dfb6a8a91869f04df8a611e08f2ed1f58ff1d44b8e39f24",
+            "Gateway": "172.17.0.1",
+            "IPAddress": "172.17.0.2",
+            "IPPrefixLen": 16,
+            "IPv6Gateway": "",
+            "GlobalIPv6Address": "",
+            "GlobalIPv6PrefixLen": 0,
+            "MacAddress": "02:42:ac:11:00:02",
+            "DriverOpts": null
+          }
+        }
+      },
+      "Mounts": []
+    },
+    {
+      "Id": "3aa93f916e00a2e338449fd5f5f9cea361724eed4d926257615599d4d907abde",
+      "Names": [
+        "/cool_edison"
+      ],
+      "Image": "nginx",
+      "ImageID": "sha256:f8f4ffc8092c956ddd6a3a64814f36882798065799b8aedeebedf2855af3395b",
+      "Command": "/docker-entrypoint.sh nginx -g 'daemon off;'",
+      "Created": 1645822017,
+      "Ports": [
+        {
+          "IP": "0.0.0.0",
+          "PrivatePort": 80,
+          "PublicPort": 8080,
+          "Type": "tcp"
+        }
+      ],
+      "SizeRw": 1102,
+      "SizeRootFs": 133284381,
+      "Labels": {
+        "desktop.docker.io/wsl-distro": "Ubuntu-20.04",
+        "maintainer": "NGINX Docker Maintainers <docker-maint@nginx.com>"
+      },
+      "State": "running",
+      "Status": "Up 12 hours",
+      "HostConfig": {
+        "NetworkMode": "default"
+      },
+      "NetworkSettings": {
+        "Networks": {
+          "bridge": {
+            "IPAMConfig": null,
+            "Links": null,
+            "Aliases": null,
+            "NetworkID": "a4887fffb9e8f3a9d65fa72abc0ede7973b1badce544650c3f3241dcc78f10ab",
+            "EndpointID": "491dd4ae46e630502d6284ba624d6ba6526cc0f490f909fd5833f88ff7b6b701",
+            "Gateway": "172.17.0.1",
+            "IPAddress": "172.17.0.11",
+            "IPPrefixLen": 16,
+            "IPv6Gateway": "",
+            "GlobalIPv6Address": "",
+            "GlobalIPv6PrefixLen": 0,
+            "MacAddress": "02:42:ac:11:00:0b",
+            "DriverOpts": null
+          }
+        }
+      },
+      "Mounts": []
+    }
+  ],
+  "Volumes": [
+    {
+      "CreatedAt": "2022-02-25T20:58:27Z",
+      "Driver": "local",
+      "Labels": {
+        "com.docker.compose.project": "db",
+        "com.docker.compose.version": "1.25.0",
+        "com.docker.compose.volume": "sql_volume"
+      },
+      "Mountpoint": "/var/lib/docker/volumes/db_sql_volume/_data",
+      "Name": "db_sql_volume",
+      "Options": null,
+      "Scope": "local",
+      "UsageData": {
+        "RefCount": 1,
+        "Size": 67441900
+      }
+    },
+    {
+      "CreatedAt": "2022-02-18T17:27:20Z",
+      "Driver": "local",
+      "Labels": {},
+      "Mountpoint": "/var/lib/docker/volumes/hello/_data",
+      "Name": "hello",
+      "Options": {},
+      "Scope": "local",
+      "UsageData": {
+        "RefCount": 0,
+        "Size": 1112
+      }
+    }
+  ],
+  "BuildCache": [
+    {
+      "ID": "pnh2fyhu6ldqchafdqkshujjr",
+      "Parent": "",
+      "Type": "source.local",
+      "Description": "local source for dockerfile",
+      "InUse": false,
+      "Shared": false,
+      "Size": 96,
+      "CreatedAt": "2021-09-28T14:58:02.232494166Z",
+      "LastUsedAt": "2021-09-28T14:58:44.847865686Z",
+      "UsageCount": 2
+    },
+    {
+      "ID": "xs33d56g4ik8j3rk7hmzjquet",
+      "Parent": "",
+      "Type": "source.local",
+      "Description": "local source for context",
+      "InUse": false,
+      "Shared": false,
+      "Size": 681264,
+      "CreatedAt": "2021-09-28T14:58:02.475303969Z",
+      "LastUsedAt": "2021-09-28T14:58:44.883086268Z",
+      "UsageCount": 2
+    },
+    {
+      "ID": "aqnnd0mb3hzj5sk1in60y2blr",
+      "Parent": "zgr69qybkor1i3u7cs55dq8z4",
+      "Type": "regular",
+      "Description": "fileop target",
+      "InUse": false,
+      "Shared": true,
+      "Size": 285,
+      "CreatedAt": "2021-09-28T14:58:44.485074696Z",
+      "LastUsedAt": "2021-09-28T14:58:44.889992494Z",
+      "UsageCount": 1
+    },
+    {
+      "ID": "zgr69qybkor1i3u7cs55dq8z4",
+      "Parent": "ugd6cobl5qcyegn89lb8xe9zs",
+      "Type": "regular",
+      "Description": "from local ",
+      "InUse": false,
+      "Shared": true,
+      "Size": 0,
+      "CreatedAt": "2021-09-28T14:58:02.943248121Z",
+      "LastUsedAt": "2021-09-28T14:58:44.868571961Z",
+      "UsageCount": 2
+    },
+    {
+      "ID": "ugd6cobl5qcyegn89lb8xe9zs",
+      "Parent": "or6jlxq95is50xwb7q3c36y2g",
+      "Type": "regular",
+      "Description": "from local ",
+      "InUse": false,
+      "Shared": true,
+      "Size": 0,
+      "CreatedAt": "2021-09-28T14:58:02.856450273Z",
+      "LastUsedAt": "2021-09-28T14:58:44.807699538Z",
+      "UsageCount": 2
+    },
+    {
+      "ID": "yxx4vw0gy7td6qepe7uto2g94",
+      "Parent": "",
+      "Type": "source.local",
+      "Description": "local source for context",
+      "InUse": false,
+      "Shared": false,
+      "Size": 0,
+      "CreatedAt": "2021-09-28T14:58:02.273081722Z",
+      "LastUsedAt": "2021-09-28T14:58:44.861515424Z",
+      "UsageCount": 2
+    },
+    {
+      "ID": "fp3ab6opnh2fzf5iiut8obxcl",
+      "Parent": "x5sa5vxz7dvx0kaxxjnqg4ee0",
+      "Type": "regular",
+      "Description": "from local ",
+      "InUse": false,
+      "Shared": true,
+      "Size": 0,
+      "CreatedAt": "2021-09-28T14:58:02.58176008Z",
+      "LastUsedAt": "2021-09-28T14:58:44.788862873Z",
+      "UsageCount": 2
+    },
+    {
+      "ID": "x5sa5vxz7dvx0kaxxjnqg4ee0",
+      "Parent": "",
+      "Type": "regular",
+      "Description": "from local ",
+      "InUse": false,
+      "Shared": true,
+      "Size": 0,
+      "CreatedAt": "2021-09-28T14:58:02.509481698Z",
+      "LastUsedAt": "2021-09-28T14:58:44.78211373Z",
+      "UsageCount": 2
+    },
+    {
+      "ID": "or6jlxq95is50xwb7q3c36y2g",
+      "Parent": "zh9egtgjcqajij8s4ojjq8w0c",
+      "Type": "regular",
+      "Description": "from local ",
+      "InUse": false,
+      "Shared": true,
+      "Size": 0,
+      "CreatedAt": "2021-09-28T14:58:02.776867649Z",
+      "LastUsedAt": "2021-09-28T14:58:44.801632002Z",
+      "UsageCount": 2
+    },
+    {
+      "ID": "n15m3a7k2una0zarnunj99zd0",
+      "Parent": "aqnnd0mb3hzj5sk1in60y2blr",
+      "Type": "regular",
+      "Description": "fileop target",
+      "InUse": false,
+      "Shared": true,
+      "Size": 680979,
+      "CreatedAt": "2021-09-28T14:58:44.633783432Z",
+      "LastUsedAt": "2021-09-28T14:58:44.831660926Z",
+      "UsageCount": 1
+    },
+    {
+      "ID": "zh9egtgjcqajij8s4ojjq8w0c",
+      "Parent": "fp3ab6opnh2fzf5iiut8obxcl",
+      "Type": "regular",
+      "Description": "from local ",
+      "InUse": false,
+      "Shared": true,
+      "Size": 0,
+      "CreatedAt": "2021-09-28T14:58:02.670459078Z",
+      "LastUsedAt": "2021-09-28T14:58:44.795044952Z",
+      "UsageCount": 2
+    }
+  ],
+  "BuilderSize": 1362624
+}

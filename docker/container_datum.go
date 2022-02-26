@@ -40,7 +40,7 @@ func NewContainerDatum(base types.Container, stats_stream types.ContainerStats) 
 		base:         base,
 		stats_stream: stats_stream,
 		cached_stats: _cached_stats,
-		inspection:   InspectContainer(base.ID),
+		inspection:   InspectContainerNoPanic(base.ID),
 		is_deleted:   false,
 	}
 }

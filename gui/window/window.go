@@ -128,8 +128,8 @@ func DrawBorders(screen tcell.Screen, window_state *WindowState) {
 }
 
 func DrawContents(screen tcell.Screen, window_state *WindowState, contents_generator func(int, int) (rune, tcell.Style)) {
-	width := window_state.RightX - window_state.LeftX - 1
-	height := window_state.ButtomY - window_state.TopY - 1
+	width := Width(window_state)
+	height := Height(window_state)
 	offset_x := window_state.LeftX + 1
 	offset_y := window_state.TopY + 1
 	for i := 0; i < width; i++ {
@@ -138,4 +138,12 @@ func DrawContents(screen tcell.Screen, window_state *WindowState, contents_gener
 			screen.SetContent(offset_x+i, offset_y+j, r, nil, s)
 		}
 	}
+}
+
+func Width(window_state *WindowState) int {
+	return window_state.RightX - window_state.LeftX - 1
+}
+
+func Height(window_state *WindowState) int {
+	return window_state.ButtomY - window_state.TopY - 1
 }

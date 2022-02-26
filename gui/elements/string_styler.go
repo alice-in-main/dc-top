@@ -27,6 +27,16 @@ func TextDrawer(str string, style tcell.Style) StringStyler {
 	}
 }
 
+func RhsTextDrawer(str string, style tcell.Style, window_width int) StringStyler {
+	start_index := window_width - len(str)
+	return func(i int) (rune, tcell.Style) {
+		if i >= start_index {
+			return rune(str[i-start_index]), style
+		}
+		return '\x00', tcell.StyleDefault
+	}
+}
+
 func RuneDrawer(str []rune, style tcell.Style) StringStyler {
 	return func(i int) (rune, tcell.Style) {
 		if i < len(str) {
@@ -108,7 +118,7 @@ func ValuesBarDrawer(description string, min_val float64, max_val float64, curr_
 
 func TextBoxDrawer(text string, cursor_index int, default_style tcell.Style, cursor_style tcell.Style) StringStyler {
 	return func(i int) (rune, tcell.Style) {
-		var r rune = '\x00'
+		var r rune = ' '
 		var s tcell.Style = default_style
 
 		if i < len(text) {

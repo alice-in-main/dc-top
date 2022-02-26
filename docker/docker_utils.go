@@ -34,7 +34,7 @@ func UsagePercentage(usage int64, limit int64) float64 {
 
 func CpuUsagePercentage(cpu *CpuStats, precpu *CpuStats, inspect_data *types.ContainerJSON) float64 {
 	var limit int64
-	if inspect_data.HostConfig.NanoCPUs != 0 {
+	if inspect_data.ContainerJSONBase != nil && inspect_data.HostConfig.NanoCPUs != 0 {
 		limit = inspect_data.HostConfig.NanoCPUs
 	} else {
 		limit = cpu.SystemUsage - precpu.SystemUsage

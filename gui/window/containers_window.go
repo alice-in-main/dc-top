@@ -2,7 +2,7 @@ package window
 
 import (
 	"context"
-	"dc-top/docker"
+	docker "dc-top/docker"
 	"dc-top/errors"
 	"dc-top/gui/elements"
 	"fmt"
@@ -256,6 +256,32 @@ func handleDelete(table_state *tableState) {
 	handleChangeIndex(change_to_next, table_state)
 }
 
+func handlePause(id string) {
+	go func(id_to_pause string) {
+		if err := docker.PauseContainer(id_to_pause); err != nil {
+			log.Printf("Got error '%s' when trying to container delete %s", err, id_to_pause)
+			if strings.Contains(err.Error(), "is already paused") {
+				if err := docker.UnpauseContainer(id_to_pause); err != nil {
+					panic(err)
+				}
+			} else if !strings.Contains(err.Error(), "is already in progress") && !strings.Contains(err.Error(), "No such container") {
+				panic(err)
+			}
+		}
+	}(id)
+}
+
+func handleStop(id string) {
+	go func(id_to_stop string) {
+		if err := docker.StopContainer(id_to_stop); err != nil {
+			log.Printf("Got error '%s' when trying to container delete %s", err, id_to_stop)
+			if !strings.Contains(err.Error(), "is already in progress") && !strings.Contains(err.Error(), "No such container") {
+				panic(err)
+			}
+		}
+	}(id)
+}
+
 func handleMouseEvent(ev *tcell.EventMouse, w *ContainersWindow, table_state tableState) tableState {
 	if table_state.window_state.IsOutbounds(ev) {
 		x, y := ev.Position()
@@ -263,7 +289,7 @@ func handleMouseEvent(ev *tcell.EventMouse, w *ContainersWindow, table_state tab
 		return table_state
 	}
 	x, y := table_state.window_state.RelativeMousePosition(ev)
-	total_width := table_state.window_state.RightX - table_state.window_state.LeftX
+	total_width := Width(&table_state.window_state)
 	log.Printf("Handling mouse event that happened on %d, %d", x, y)
 	switch {
 	case y == 1:
@@ -328,6 +354,14 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 				state.window_mode = containers
 			}
 			log.Println("Toggling inspect mode")
+		case 'p':
+			if state.focused_id != "" {
+				handlePause(state.focused_id)
+			}
+		case 's':
+			if state.focused_id != "" {
+				handleStop(state.focused_id)
+			}
 		case 'g':
 			if state.window_mode == containers {
 				handleNewIndex(0, state)
@@ -378,7 +412,9 @@ func (state *tableState) searchKeyPress(ev *tcell.EventKey, w *ContainersWindow)
 		}
 	case tcell.KeyEnter:
 		state.keyboard_mode = regular
-		w.screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, infoMessage{msg: []rune(fmt.Sprintf("Searching for %s", state.search_buffer))}))
+		if state.search_buffer != "" {
+			w.screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, infoMessage{msg: []rune(fmt.Sprintf("Searching for %s", state.search_buffer))}))
+		}
 	case tcell.KeyEscape:
 		state.keyboard_mode = regular
 		resetSearchBuffer(w, state)
@@ -624,13 +660,18 @@ func dockerStatsDrawerGenerator(state tableState) func(x, y int) (rune, tcell.St
 			state.search_buffer_index,
 			tcell.StyleDefault,
 			tcell.StyleDefault.Background(tcell.ColorWhite).Foreground(tcell.ColorBlack)))
+		search_filter_message := elements.TextDrawer(fmt.Sprintf("Showing only containers containing '%s'", state.search_buffer), tcell.StyleDefault)
 
 		return func(x, y int) (rune, tcell.Style) {
 			if y == 0 || y == 1 {
 				return data_table[y](x)
 			}
-			if y == state.table_height+3 && state.keyboard_mode == search {
-				return search_row(x)
+			if y == state.table_height+3 {
+				if state.keyboard_mode == search {
+					return search_row(x)
+				} else if state.keyboard_mode == regular && state.search_buffer != "" {
+					return search_filter_message(x)
+				}
 			}
 			if y+state.index_of_top_container < len(data_table) {
 				r, s := data_table[y+state.index_of_top_container](x)
@@ -678,14 +719,19 @@ func generateResourceUsageStyler(usage, quota, limit int64, resource, unit strin
 		[]rune(" "+usage_human_readable+quota_desc))
 }
 
-func generatePortMap(ports *nat.PortMap) []string {
-	var port_map []string = make([]string, len(*ports))
+func generatePortMap(ports nat.PortMap) []string {
+	var port_map []string = make([]string, len(ports))
 	index := 0
-	for port, port_bindings := range *ports {
-		for _, binding := range port_bindings {
-			port_map[index] = fmt.Sprintf("  %s : %s", port, binding.HostPort)
-			index++
+	for port, port_bindings := range ports {
+		log.Println(port, port_bindings)
+		if len(port_bindings) > 0 {
+			for _, binding := range port_bindings {
+				port_map[index] = fmt.Sprintf("  %s : %s", port, binding.HostPort)
+			}
+		} else {
+			port_map[index] = fmt.Sprintf("  %s not mapped", port)
 		}
+		index++
 	}
 	sort.Strings(sort.StringSlice(port_map))
 	return port_map
@@ -767,7 +813,7 @@ func generatePrettyInspectInfo(state tableState) map[int]elements.StringStyler {
 	}
 	stats := state.containers_data.GetData()[index]
 	inspect_info := stats.InspectData()
-	window_width := state.window_state.RightX - state.window_state.LeftX
+	window_width := Width(&state.window_state)
 
 	info_arr = append(info_arr,
 		elements.TextDrawer("Name: "+stats.CachedStats().Name, tcell.StyleDefault),
@@ -793,9 +839,9 @@ func generatePrettyInspectInfo(state tableState) map[int]elements.StringStyler {
 		generateResourceUsageStyler(cpu_usage, cpu_quota, cpu_limit, "CPU:    ", "Cores", bar_len),
 		generateResourceUsageStyler(memory_usage, memory_quota, memory_limit, "Memory: ", "GB", bar_len),
 		generateInspectSeperator(),
-		elements.TextDrawer("Ports: ", tcell.StyleDefault),
+		elements.TextDrawer("Ports:", tcell.StyleDefault),
 	)
-	port_map := generatePortMap(&inspect_info.NetworkSettings.Ports)
+	port_map := generatePortMap(inspect_info.NetworkSettings.Ports)
 	for _, port_binding := range port_map {
 		info_arr = append(info_arr, elements.TextDrawer(port_binding, tcell.StyleDefault))
 	}

@@ -4,7 +4,6 @@ import (
 	"context"
 	"dc-top/gui/window"
 	"log"
-	"os"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -24,12 +23,11 @@ func Draw() {
 	windowManager := window.InitWindowManager(s)
 	windowManager.OpenAll()
 
-	quit := func() {
+	finalize := func() {
 		windowManager.CloseAll()
 		s.Fini()
-		os.Exit(0)
 	}
-	defer quit()
+	defer finalize()
 
 	for {
 		ev := s.PollEvent()
@@ -42,7 +40,7 @@ func Draw() {
 			key := ev.Key()
 			switch key {
 			case tcell.KeyCtrlC:
-				quit()
+				return
 			default:
 				handleKeyPress(windowManager, ev)
 			}
