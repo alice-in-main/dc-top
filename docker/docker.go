@@ -18,7 +18,7 @@ func Init() {
 	}
 }
 
-func GetContainers(old_data *ContainerData) ContainerData {
+func GetContainers(old_data *ContainerData) (ContainerData, error) {
 	if old_data != nil {
 		for _, datum := range old_data.data {
 			datum.Close()
@@ -28,10 +28,10 @@ func GetContainers(old_data *ContainerData) ContainerData {
 	return NewContainerData()
 }
 
-func GetDockerInfo() DockerInfo {
+func GetDockerInfo() (DockerInfo, error) {
 	docker_info, err := docker_cli.Info(context.Background())
 	if err != nil {
-		log.Fatal(err)
+		return DockerInfo{}, err
 	}
-	return NewDockerInfo(docker_info)
+	return NewDockerInfo(docker_info), nil
 }

@@ -54,6 +54,26 @@ func NewChangeToLogsShellEvent(container_id string) ChangeToLogsShellEvent {
 
 // ---------
 
+type ChangeToViWindowEvent struct {
+	t        time.Time
+	FilePath string
+	Sender   WindowType
+}
+
+func (e ChangeToViWindowEvent) When() time.Time {
+	return e.t
+}
+
+func NewChangeToViWindowEvent(file_path string, sender_window WindowType) ChangeToViWindowEvent {
+	return ChangeToViWindowEvent{
+		t:        time.Now(),
+		FilePath: file_path,
+		Sender:   sender_window,
+	}
+}
+
+// ---------
+
 type MessageEvent struct {
 	t        time.Time
 	Receiver WindowType
@@ -71,5 +91,23 @@ func NewMessageEvent(receiver WindowType, sender WindowType, message interface{}
 		Receiver: receiver,
 		Sender:   sender,
 		Message:  message,
+	}
+}
+
+// ---------
+
+type FatalErrorEvent struct {
+	t   time.Time
+	Err error
+}
+
+func (e FatalErrorEvent) When() time.Time {
+	return e.t
+}
+
+func NewFatalErrorEvent(err error) FatalErrorEvent {
+	return FatalErrorEvent{
+		t:   time.Now(),
+		Err: err,
 	}
 }

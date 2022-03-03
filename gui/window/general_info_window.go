@@ -49,7 +49,7 @@ type generalInfoState struct {
 func (w *GeneralInfoWindow) main(s tcell.Screen) {
 	x1, y1, x2, y2 := GeneralInfoWindowSize(s)
 	state := generalInfoState{
-		window_state:   NewWindow(x1, y1, x2, y2, NeighboringWindows{}),
+		window_state:   NewWindow(x1, y1, x2, y2),
 		version:        "dc-top v0.1",
 		dc_mode_status: getDcModeStatus(),
 	}

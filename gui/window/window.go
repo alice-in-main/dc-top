@@ -7,18 +7,10 @@ import (
 )
 
 type WindowState struct {
-	LeftX     int
-	RightX    int
-	TopY      int
-	ButtomY   int
-	neighbors NeighboringWindows
-}
-
-type NeighboringWindows struct {
-	UpperNeighbor bool
-	LowerNeighbor bool
-	RightNeighbor bool
-	LeftNeighbor  bool
+	LeftX   int
+	RightX  int
+	TopY    int
+	ButtomY int
 }
 
 type Window interface {
@@ -30,17 +22,16 @@ type Window interface {
 	Close()
 }
 
-func NewWindow(x1, y1, x2, y2 int, neighbors NeighboringWindows) WindowState {
+func NewWindow(x1, y1, x2, y2 int) WindowState {
 	if x1 >= x2 || y1 >= y2 {
 		log.Printf("Bad window coordinates:\ntop left:(%d,%d), buttom right:(%d,%d)\n", x1, y1, x2, y2)
 		panic(1)
 	}
 	return WindowState{
-		LeftX:     x1,
-		RightX:    x2,
-		TopY:      y1,
-		ButtomY:   y2,
-		neighbors: neighbors,
+		LeftX:   x1,
+		RightX:  x2,
+		TopY:    y1,
+		ButtomY: y2,
 	}
 }
 
@@ -76,50 +67,6 @@ func DrawBorders(screen tcell.Screen, window_state *WindowState) {
 	var ur_corner rune = tcell.RuneURCorner
 	var ll_corner rune = tcell.RuneLLCorner
 	var lr_corner rune = tcell.RuneLRCorner
-
-	// switch {
-	// case window_state.neighbors.LeftNeighbor && window_state.neighbors.UpperNeighbor:
-	// 	ul_corner = tcell.RunePlus
-	// case window_state.neighbors.LeftNeighbor:
-	// 	ul_corner = tcell.RuneTTee
-	// case window_state.neighbors.UpperNeighbor:
-	// 	ul_corner = tcell.RuneLTee
-	// default:
-	// 	ul_corner = tcell.RuneULCorner
-	// }
-
-	// switch {
-	// case window_state.neighbors.RightNeighbor && window_state.neighbors.UpperNeighbor:
-	// 	ur_corner = tcell.RunePlus
-	// case window_state.neighbors.RightNeighbor:
-	// 	ur_corner = tcell.RuneTTee
-	// case window_state.neighbors.UpperNeighbor:
-	// 	ur_corner = tcell.RuneRTee
-	// default:
-	// 	ur_corner = tcell.RuneURCorner
-	// }
-
-	// switch {
-	// case window_state.neighbors.LeftNeighbor && window_state.neighbors.LowerNeighbor:
-	// 	ll_corner = tcell.RunePlus
-	// case window_state.neighbors.LeftNeighbor:
-	// 	ll_corner = tcell.RuneBTee
-	// case window_state.neighbors.LowerNeighbor:
-	// 	ll_corner = tcell.RuneLTee
-	// default:
-	// 	ll_corner = tcell.RuneLLCorner
-	// }
-
-	// switch {
-	// case window_state.neighbors.RightNeighbor && window_state.neighbors.LowerNeighbor:
-	// 	lr_corner = tcell.RunePlus
-	// case window_state.neighbors.RightNeighbor:
-	// 	lr_corner = tcell.RuneBTee
-	// case window_state.neighbors.LowerNeighbor:
-	// 	lr_corner = tcell.RuneRTee
-	// default:
-	// 	lr_corner = tcell.RuneLRCorner
-	// }
 
 	screen.SetContent(window_state.LeftX, window_state.TopY, ul_corner, nil, style)
 	screen.SetContent(window_state.RightX, window_state.TopY, ur_corner, nil, style)

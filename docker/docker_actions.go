@@ -32,7 +32,7 @@ func DeleteContainer(id string) error {
 		types.ContainerRemoveOptions{RemoveVolumes: true, RemoveLinks: false, Force: true})
 }
 
-func StreamContainerLogs(id string, writer io.Writer, c context.Context) error {
+func StreamContainerLogs(id string, writer io.Writer, c context.Context, cancel context.CancelFunc) {
 	reader, err := docker_cli.ContainerLogs(c, id, types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
@@ -40,30 +40,22 @@ func StreamContainerLogs(id string, writer io.Writer, c context.Context) error {
 		Follow:     true,
 	})
 	if err != nil {
-		log.Fatal(err)
+		log.Println(err)
+		cancel()
 	}
 	defer reader.Close()
 
 	_, err = io.Copy(writer, reader)
 	if err != nil && err != io.EOF && err.Error() != "context canceled" {
-		log.Fatal(err)
+		log.Println(err)
+		cancel()
 	}
-
-	return nil
 }
 
 func InspectContainerNoPanic(id string) types.ContainerJSON {
 	j, err := docker_cli.ContainerInspect(context.Background(), id)
 	if err != nil {
 		return types.ContainerJSON{}
-	}
-	return j
-}
-
-func InspectContainer(id string) types.ContainerJSON {
-	j, err := docker_cli.ContainerInspect(context.Background(), id)
-	if err != nil {
-		log.Fatalf("Got error '%s' when inspecting '%s'", err, id)
 	}
 	return j
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"dc-top/utils"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"strings"
@@ -21,20 +22,28 @@ type ContainerDatum struct {
 	is_deleted   bool
 }
 
-func NewContainerDatum(base types.Container, stats_stream types.ContainerStats) ContainerDatum {
+func NewContainerDatum(base types.Container, stats_stream types.ContainerStats) (ContainerDatum, error) {
 	_cached_stats, err := getNewStats(base.ID, &stats_stream)
 	if err != nil {
 		log.Println("1 Failed to get new container stats:")
-		if strings.HasPrefix(err.Error(), "invalid character") || err == io.EOF || isBeingRemoved(base.ID) || isDeleted(base.ID) {
+		is_being_removed, test_err := isBeingRemoved(base.ID)
+		if test_err != nil {
+			return ContainerDatum{}, err
+		}
+		is_deleted, test_err := isDeleted(base.ID)
+		if test_err != nil {
+			return ContainerDatum{}, err
+		}
+		if strings.HasPrefix(err.Error(), "invalid character") || err == io.EOF || is_being_removed || is_deleted {
 			return ContainerDatum{
 				base:         base,
 				stats_stream: stats_stream,
 				cached_stats: ContainerMainStats{},
 				inspection:   types.ContainerJSON{},
 				is_deleted:   true,
-			}
+			}, nil
 		}
-		log.Fatalf("1 Failed to get stats and container %s wasnt deleted. %s", base.ID, err)
+		return ContainerDatum{}, fmt.Errorf("1 Failed to get stats and container %s wasnt deleted. %s", base.ID, err)
 	}
 	return ContainerDatum{
 		base:         base,
@@ -42,32 +51,39 @@ func NewContainerDatum(base types.Container, stats_stream types.ContainerStats) 
 		cached_stats: _cached_stats,
 		inspection:   InspectContainerNoPanic(base.ID),
 		is_deleted:   false,
-	}
+	}, nil
 }
 
 func UpdatedDatum(old_datum ContainerDatum) (ContainerDatum, error) {
 	new_stats, err := getNewStatsWithPrev(&old_datum)
 	if err != nil {
 		log.Println("2 Failed to get new container stats:")
+		is_being_removed, test_err := isBeingRemoved(old_datum.base.ID)
+		if test_err != nil {
+			return ContainerDatum{}, err
+		}
+		is_deleted, test_err := isDeleted(old_datum.base.ID)
+		if test_err != nil {
+			return ContainerDatum{}, err
+		}
 		if strings.HasPrefix(err.Error(), "unexpected end of JSON input") ||
 			strings.HasPrefix(err.Error(), "invalid character") ||
-			err == io.EOF || isBeingRemoved(old_datum.base.ID) ||
-			isDeleted(old_datum.base.ID) {
+			err == io.EOF || is_being_removed || is_deleted {
 			return ContainerDatum{
 				base:         old_datum.base,
 				stats_stream: old_datum.stats_stream,
 				cached_stats: old_datum.cached_stats,
 				inspection:   old_datum.inspection,
 				is_deleted:   true,
-			}, err
+			}, nil
 		}
-		log.Fatalf("2 Failed to get stats and container %s wasn't deleted. %s", old_datum.base.ID, err)
+		return ContainerDatum{}, fmt.Errorf("2 Failed to get stats and container %s wasnt deleted. %s", old_datum.base.ID, err)
 	}
 	var filters filters.Args = filters.NewArgs(filters.Arg("id", old_datum.ID()))
 	containers, err := docker_cli.ContainerList(context.Background(), types.ContainerListOptions{All: true, Filters: filters})
-	if len(containers) != 1 {
+	if len(containers) != 1 || err != nil {
 		log.Println(containers)
-		log.Fatal("Got more than 1 filtered image from id")
+		return ContainerDatum{}, fmt.Errorf("got more than 1 filtered image from id or %s", err)
 	}
 	return ContainerDatum{
 		base:         containers[0],
@@ -75,7 +91,7 @@ func UpdatedDatum(old_datum ContainerDatum) (ContainerDatum, error) {
 		cached_stats: new_stats,
 		inspection:   old_datum.inspection,
 		is_deleted:   false,
-	}, err
+	}, nil
 }
 
 func (datum *ContainerDatum) ID() string {

@@ -2,8 +2,11 @@ package docker
 
 import (
 	"context"
+	"dc-top/docker/compose"
+	"fmt"
 	"io"
 	"log"
+	"path/filepath"
 	"sort"
 	"strings"
 	"time"
@@ -16,6 +19,9 @@ type ContainerData struct {
 	data                []ContainerDatum
 	main_sort_type      SortType
 	secondary_sort_type SortType
+	// only with docker-compose mode
+	dc_services *compose.Services
+	dc_filters  *filters.Args
 }
 
 type SortType uint8
@@ -29,14 +35,35 @@ const (
 	None
 )
 
-func NewContainerData() ContainerData {
-	containers, err := docker_cli.ContainerList(context.Background(), types.ContainerListOptions{All: true})
+func NewContainerData() (ContainerData, error) {
+	var container_list_options = types.ContainerListOptions{All: true}
+	var dc_services *compose.Services = nil
+	var dc_filters *filters.Args = nil
+	var err error
+	if compose.DcModeEnabled() {
+		dc_services = &compose.Services{}
+		*dc_services, err = compose.GenerateDcData()
+		if err != nil {
+			return ContainerData{}, err
+		}
+		dc_filters = &filters.Args{}
+		*dc_filters = filters.NewArgs()
+		for service_key, service := range dc_services.ServicesMap {
+			if service.ContainerName == "" {
+				dc_filters.Add("name", fmt.Sprintf("%s_%s_1", filepath.Base(filepath.Dir(compose.DcYamlPath())), service_key))
+			} else {
+				dc_filters.Add("name", service.ContainerName)
+			}
+		}
+		container_list_options.Filters = *dc_filters
+	}
+	containers, err := docker_cli.ContainerList(context.TODO(), container_list_options)
 	if err != nil {
-		log.Fatal(err)
+		return ContainerData{}, err
 	}
 
 	container_data := make([]ContainerDatum, 0)
-	container_init_ch := make(chan interface{}, len(containers))
+	container_init_ch := make(chan error, len(containers))
 	defer close(container_init_ch)
 
 	for index, container := range containers {
@@ -47,25 +74,32 @@ func NewContainerData() ContainerData {
 				log.Println(err)
 				if !strings.HasPrefix(err.Error(), "Error response from daemon: No such container") {
 					log.Println(containers)
-					panic(err)
 				}
 			} else {
-				container_data = append(container_data, NewContainerDatum(c, container_stats))
+				new_datum, _err := NewContainerDatum(c, container_stats)
+				container_data = append(container_data, new_datum)
+				err = _err
 			}
-			container_init_ch <- i
+			container_init_ch <- err
 		}(index, container)
 	}
 	for range containers {
-		<-container_init_ch
+		_err := <-container_init_ch
+		if err != nil {
+			err = _err
+		}
 	}
 
 	new_containers_data := ContainerData{
 		data:                container_data,
 		main_sort_type:      State,
 		secondary_sort_type: Name,
+		// docker compose mode:
+		dc_services: dc_services,
+		dc_filters:  dc_filters,
 	}
 
-	return new_containers_data
+	return new_containers_data, err
 }
 
 func (containers *ContainerData) Len() int {
@@ -104,17 +138,14 @@ func (containers *ContainerData) SortData(main_sort_type, secondary_sort_type So
 	log.Printf("It took %dmicrosecconds to sort data", elapsed.Microseconds())
 }
 
-func (containers *ContainerData) Filter(substr string) {
-	if substr == "" {
-		return
-	}
+func (containers *ContainerData) Filter(substr string) []ContainerDatum {
 	filtered_data := make([]ContainerDatum, 0)
 	for _, datum := range containers.GetData() {
 		if datum.Contains(substr) {
 			filtered_data = append(filtered_data, datum)
 		}
 	}
-	containers.data = filtered_data
+	return filtered_data
 }
 
 func (containers *ContainerData) UpdateStats() {
@@ -129,23 +160,31 @@ func (containers *ContainerData) UpdateStats() {
 	}
 }
 
-func (containers *ContainerData) AreIdsUpToDate() bool {
-	var filtered_ids filters.Args = filters.NewArgs()
+func (containers *ContainerData) AreIdsUpToDate() (bool, error) {
+
+	preserved_container_options := types.ContainerListOptions{All: true, Quiet: true, Filters: filters.NewArgs()}
+	all_containers_options := types.ContainerListOptions{All: true, Quiet: true}
+
+	if containers.dc_filters != nil {
+		preserved_container_options.Filters = containers.dc_filters.Clone()
+		all_containers_options.Filters = containers.dc_filters.Clone()
+	}
+
 	for _, c := range containers.data {
-		filtered_ids.Add("id", c.base.ID)
+		preserved_container_options.Filters.Add("id", c.base.ID)
 	}
 
 	var err error
-	preserved_containers, err := docker_cli.ContainerList(context.Background(), types.ContainerListOptions{All: true, Quiet: true, Filters: filtered_ids})
+	preserved_containers, err := docker_cli.ContainerList(context.Background(), preserved_container_options)
 	if err != nil {
-		log.Fatal(err)
+		return false, err
 	}
-	all_containers, err := docker_cli.ContainerList(context.Background(), types.ContainerListOptions{All: true, Quiet: true})
+	all_containers, err := docker_cli.ContainerList(context.Background(), all_containers_options)
 	if err != nil {
-		log.Fatal(err)
+		return false, err
 	}
 
-	return len(preserved_containers) == containers.Len() && len(all_containers) == containers.Len()
+	return len(preserved_containers) == containers.Len() && len(all_containers) == containers.Len(), nil
 }
 
 func (containers *ContainerData) Contains(id string) bool {

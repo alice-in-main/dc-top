@@ -115,7 +115,8 @@ func (writer *logsWriter) logStopper(cancel context.CancelFunc) {
 	for {
 		char, key, err := keyboard.GetSingleKey()
 		if err != nil && !strings.HasPrefix(err.Error(), "Unrecognized escape sequence") {
-			log.Fatalf("Got error while waiting for key '%s'", err.Error())
+			log.Printf("Got error while waiting for key '%s'", err.Error())
+			cancel()
 		}
 		if key == keyboard.KeyEsc || key == keyboard.KeyCtrlC || char == 'q' || char == 'l' {
 			cancel()
@@ -130,7 +131,8 @@ func (writer *logsWriter) logStopper(cancel context.CancelFunc) {
 			text, err := search_reader.ReadString('\n')
 			writer.resume <- nil
 			if err != nil {
-				log.Fatalln("Failed to read user search", err)
+				log.Println("Failed to read user search", err)
+				cancel()
 			}
 			text = text[:len(text)-1] // remove newline
 			log.Println("searcing for ", text)
@@ -188,15 +190,14 @@ func (w *ContainerLogWindow) main(screen tcell.Screen) {
 	for i := 0; i < height; i++ {
 		fmt.Println()
 	}
-	if err := keyboard.Open(); err != nil {
-		log.Fatal("Failed to start keyboard in container log window")
-	}
+	err := keyboard.Open()
+	exitIfErr(screen, err)
 	defer keyboard.Close()
 	container_log_window_context, cancel := context.WithCancel(context.TODO())
 	logs_writer := newLogsWriter(screen)
 	go logs_writer.logPrinter(container_log_window_context)
 	go logs_writer.logStopper(cancel)
-	go docker.StreamContainerLogs(w.id, &logs_writer, container_log_window_context)
+	go docker.StreamContainerLogs(w.id, &logs_writer, container_log_window_context, cancel)
 	<-container_log_window_context.Done()
 	screen.Resume()
 	log.Println("Switcing back...")

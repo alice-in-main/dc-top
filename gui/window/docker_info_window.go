@@ -63,7 +63,7 @@ func (w *DockerInfoWindow) Close() {
 func (w *DockerInfoWindow) main(s tcell.Screen) {
 	x1, y1, x2, y2 := DockerInfoWindowSize(s)
 	var state dockerInfoState = dockerInfoState{
-		window_state: NewWindow(x1, y1, x2, y2, NeighboringWindows{UpperNeighbor: true, RightNeighbor: true}),
+		window_state: NewWindow(x1, y1, x2, y2),
 	}
 	tick := time.NewTicker(1000 * time.Millisecond)
 	for {
@@ -74,7 +74,9 @@ func (w *DockerInfoWindow) main(s tcell.Screen) {
 			dockerInfoWindowDraw(s, state)
 		case summary := <-w.new_stats_chan:
 			state.docker_resource_summary = summary
-			state.docker_info = docker.GetDockerInfo()
+			info, err := docker.GetDockerInfo()
+			exitIfErr(s, err)
+			state.docker_info = info
 			dockerInfoWindowDraw(s, state)
 		case <-tick.C:
 			var getTotalStatsRequest = getTotalStats{}

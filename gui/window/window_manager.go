@@ -7,15 +7,16 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-type WindowType int8
+type WindowType uint8
 
 const (
-	ContainersHolder = iota
+	ContainersHolder WindowType = iota
 	Info
 	ContainerLogs
 	ContainerShell
 	Bar
 	GeneralInfo
+	Vi
 )
 
 type WindowManager struct {
@@ -81,4 +82,11 @@ func (wm *WindowManager) CloseAll() {
 		win.Close()
 	}
 	wm.windows = make(map[WindowType]Window)
+}
+
+func exitIfErr(screen tcell.Screen, err error) {
+	if err != nil {
+		log.Printf("a fatal error occured: %s\n", err)
+		screen.PostEvent(NewFatalErrorEvent(err))
+	}
 }

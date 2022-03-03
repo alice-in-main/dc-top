@@ -50,7 +50,7 @@ func (w *BarWindow) Close() {}
 func (w *BarWindow) main(s tcell.Screen) {
 	x1, y1, x2, y2 := ContainersBarWindowSize(s)
 	var state = barState{
-		window_state: NewWindow(x1, y1, x2, y2, NeighboringWindows{UpperNeighbor: true, LowerNeighbor: true}),
+		window_state: NewWindow(x1, y1, x2, y2),
 		message:      _emptyMessage{},
 	}
 	drawBar(s, state)
@@ -122,14 +122,14 @@ func (m infoMessage) Styler() elements.StringStyler {
 	return elements.TextDrawer(info_prefix, tcell.StyleDefault.Foreground(tcell.ColorGreen)).Concat(len(info_prefix), elements.RuneDrawer(m.msg, tcell.StyleDefault))
 }
 
-type warnMessage struct {
-	msg []rune
-}
+// type warnMessage struct {
+// 	msg []rune
+// }
 
-func (m warnMessage) Styler() elements.StringStyler {
-	var warn_prefix = []rune("\u26a0 Warn: ")
-	return elements.RuneDrawer(warn_prefix, tcell.StyleDefault.Foreground(tcell.ColorYellow)).Concat(len(warn_prefix), elements.RuneDrawer(m.msg, tcell.StyleDefault))
-}
+// func (m warnMessage) Styler() elements.StringStyler {
+// 	var warn_prefix = []rune("\u26a0 Warn: ")
+// 	return elements.RuneDrawer(warn_prefix, tcell.StyleDefault.Foreground(tcell.ColorYellow)).Concat(len(warn_prefix), elements.RuneDrawer(m.msg, tcell.StyleDefault))
+// }
 
 type errorMessage struct {
 	msg []rune

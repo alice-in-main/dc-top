@@ -3,6 +3,7 @@ package window
 import (
 	"context"
 	docker "dc-top/docker"
+	"dc-top/docker/compose"
 	"dc-top/errors"
 	"dc-top/gui/elements"
 	"fmt"
@@ -56,6 +57,7 @@ type tableState struct {
 	index_of_top_container int
 	table_height           int
 	containers_data        docker.ContainerData
+	filtered_data          []docker.ContainerDatum
 	main_sort_type         docker.SortType
 	secondary_sort_type    docker.SortType
 	top_line_inspect       int
@@ -122,6 +124,18 @@ func (w *ContainersWindow) HandleEvent(ev interface{}, sender WindowType) (inter
 			totalMemUsage:       total_mem_usage,
 		}
 		w.screen.PostEvent(NewMessageEvent(sender, ContainersHolder, summary))
+	case ViWindowResult:
+		if compose.DcYamlPath() != ev.FilePath {
+			exitIfErr(w.screen, fmt.Errorf("got vi result in containers holder that isn't for dc yaml"))
+		}
+		if ev.WasEditted {
+			if !compose.ValidateYaml(context.TODO()) {
+				compose.RestoreFromBackup()
+			} else {
+				log.Println("dc yaml file was editted, restarting dc")
+				go compose.Up(context.TODO())
+			}
+		}
 	default:
 		log.Fatal("Got unknown event in holder", ev)
 	}
@@ -138,11 +152,11 @@ func (w *ContainersWindow) drawer(screen tcell.Screen, c context.Context) {
 		case state := <-w.draw_queue:
 			log.Printf("Drawing new state...\n")
 			DrawBorders(screen, &state.window_state)
-			state.containers_data.Filter(state.search_buffer)
-			if state.containers_data.Len() == 0 {
-				w.screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, warnMessage{msg: []rune("Filtered list is empty")}))
+			drawer_func, err := dockerStatsDrawerGenerator(state)
+			if err != nil {
+				log.Printf("Got error %s while drawing\n", err)
 			}
-			DrawContents(screen, &state.window_state, dockerStatsDrawerGenerator(state))
+			DrawContents(screen, &state.window_state, drawer_func)
 			screen.Show()
 			log.Printf("Done drawing\n")
 		case <-c.Done():
@@ -158,9 +172,12 @@ func (w *ContainersWindow) dockerDataStreamer(c context.Context) {
 		case state := <-w.data_request_chan:
 			log.Printf("Got request for new data")
 			var new_data docker.ContainerData
-			if !state.containers_data.AreIdsUpToDate() {
+			up_to_date, err := state.containers_data.AreIdsUpToDate()
+			exitIfErr(w.screen, err)
+			if !up_to_date {
 				log.Printf("Ids changed, getting new container stats")
-				new_data = docker.GetContainers(&state.containers_data)
+				new_data, err = docker.GetContainers(&state.containers_data)
+				exitIfErr(w.screen, err)
 			} else {
 				state.containers_data.UpdateStats()
 				new_data = state.containers_data
@@ -199,6 +216,7 @@ func handleResize(w *ContainersWindow, table_state tableState) tableState {
 func handleNewData(new_data *docker.ContainerData, w *ContainersWindow, table_state tableState) tableState {
 	log.Printf("Got new data\n")
 	table_state.containers_data = *new_data
+	table_state.filtered_data = table_state.containers_data.Filter(table_state.search_buffer)
 	if !new_data.Contains(table_state.focused_id) {
 		table_state.focused_id = ""
 		table_state.window_mode = containers
@@ -208,11 +226,11 @@ func handleNewData(new_data *docker.ContainerData, w *ContainersWindow, table_st
 
 func handleNewIndex(new_index int, table_state *tableState) {
 	if new_index < 0 {
-		new_index = table_state.containers_data.Len() - 1
-	} else if new_index >= table_state.containers_data.Len() {
+		new_index = len(table_state.filtered_data) - 1
+	} else if new_index >= len(table_state.filtered_data) {
 		new_index = 0
 	}
-	table_state.focused_id = table_state.containers_data.GetData()[new_index].ID()
+	table_state.focused_id = table_state.filtered_data[new_index].ID()
 	updateIndices(table_state, new_index)
 }
 
@@ -226,7 +244,7 @@ func handleChangeIndex(is_next bool, table_state *tableState) {
 			new_index = table_state.containers_data.Len() - 1
 		}
 	} else {
-		index, err := findIndexOfId(&table_state.containers_data, table_state.focused_id)
+		index, err := findIndexOfId(table_state.filtered_data, table_state.focused_id)
 		if err != nil {
 			return
 		}
@@ -239,10 +257,10 @@ func handleChangeIndex(is_next bool, table_state *tableState) {
 	handleNewIndex(new_index, table_state)
 }
 
-func handleDelete(table_state *tableState) {
-	index, err := findIndexOfId(&table_state.containers_data, table_state.focused_id)
+func handleDelete(table_state *tableState) error {
+	index, err := findIndexOfId(table_state.containers_data.GetData(), table_state.focused_id)
 	if err != nil {
-		log.Fatalf("Tried deleting non-existing '%s'", table_state.focused_id)
+		return err
 	}
 	go func(id_to_delete string) {
 		if err := docker.DeleteContainer(id_to_delete); err != nil {
@@ -254,6 +272,7 @@ func handleDelete(table_state *tableState) {
 	}(table_state.focused_id)
 	change_to_next := index != (table_state.containers_data.Len() - 1)
 	handleChangeIndex(change_to_next, table_state)
+	return nil
 }
 
 func handlePause(id string) {
@@ -264,7 +283,9 @@ func handlePause(id string) {
 				if err := docker.UnpauseContainer(id_to_pause); err != nil {
 					panic(err)
 				}
-			} else if !strings.Contains(err.Error(), "is already in progress") && !strings.Contains(err.Error(), "No such container") {
+			} else if !strings.Contains(err.Error(), "is already in progress") &&
+				!strings.Contains(err.Error(), "No such container") &&
+				!strings.Contains(err.Error(), "is not running") {
 				panic(err)
 			}
 		}
@@ -299,24 +320,31 @@ func handleMouseEvent(ev *tcell.EventMouse, w *ContainersWindow, table_state tab
 			table_state.main_sort_type = new_sort_type
 		}
 	case y > 2 && y < table_state.containers_data.Len()+3:
-		updateIndices(&table_state, y-3)
-		table_state.focused_id = table_state.containers_data.GetData()[y-3].ID()
+		i := table_state.index_of_top_container + y - 3
+		if i >= table_state.containers_data.Len() {
+			break
+		}
+		updateIndices(&table_state, i)
+		table_state.focused_id = table_state.containers_data.GetData()[i].ID()
 	}
 	return table_state
 }
 
-func handleKeyboardEvent(ev *tcell.EventKey, w *ContainersWindow, table_state tableState) tableState {
+func handleKeyboardEvent(ev *tcell.EventKey, w *ContainersWindow, table_state tableState) (tableState, error) {
 	if table_state.keyboard_mode == regular {
-		table_state.regularKeyPress(ev, w)
+		err := table_state.regularKeyPress(ev, w)
+		if err != nil {
+			return table_state, err
+		}
 	} else if table_state.keyboard_mode == search {
 		table_state.searchKeyPress(ev, w)
 	} else {
 		log.Fatal("Unknown keyboard mode", table_state.keyboard_mode)
 	}
-	return table_state
+	return table_state, nil
 }
 
-func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow) {
+func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow) error {
 	key := ev.Key()
 	switch key {
 	case tcell.KeyUp:
@@ -333,7 +361,12 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 		}
 	case tcell.KeyDelete:
 		state.window_mode = containers
-		handleDelete(state)
+		if state.focused_id != "" {
+			err := handleDelete(state)
+			if err != nil {
+				return err
+			}
+		}
 	case tcell.KeyRune:
 		switch ev.Rune() {
 		case 'l':
@@ -344,10 +377,22 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 			if state.focused_id != "" {
 				w.screen.PostEvent(NewChangeToLogsShellEvent(state.focused_id))
 			}
+		case 'v':
+			if compose.DcModeEnabled() {
+				if !compose.ValidateYaml(context.TODO()) {
+					w.screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, errorMessage{msg: []rune("docker compose yaml syntax is invalid")}))
+				} else {
+					compose.CreateBackupYaml()
+					w.screen.PostEvent(NewChangeToViWindowEvent(compose.DcYamlPath(), ContainersHolder))
+				}
+			} else {
+				w.screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, errorMessage{msg: []rune("dc mode is disabled")}))
+			}
 		case 'i':
 			if state.window_mode == containers {
-				if state.focused_id == "" {
-					return
+				_, err := findIndexOfId(state.containers_data.GetData(), state.focused_id)
+				if err != nil {
+					return err
 				}
 				state.window_mode = inspect
 			} else {
@@ -374,12 +419,15 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 			}
 		case 'c':
 			resetSearchBuffer(w, state)
+			state.filtered_data = state.containers_data.Filter(state.search_buffer)
 		case '/':
+			// TODO fix search scrolling
 			resetSearchBuffer(w, state)
 			w.screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, infoMessage{msg: []rune("Switched to search mode...")}))
 			state.keyboard_mode = search
 		}
 	}
+	return nil
 }
 
 func (state *tableState) searchKeyPress(ev *tcell.EventKey, w *ContainersWindow) {
@@ -422,18 +470,21 @@ func (state *tableState) searchKeyPress(ev *tcell.EventKey, w *ContainersWindow)
 		state.keyboard_mode = regular
 		resetSearchBuffer(w, state)
 	}
+	state.filtered_data = state.containers_data.Filter(state.search_buffer)
 	log.Println(state.search_buffer)
 }
 
 func calcTableHeight(top, buttom int) int {
-	return buttom - top - 4 + 1 - 2
+	return buttom - top - 4 + 1 - 1
 }
 
 func (w *ContainersWindow) main(s tcell.Screen) {
 	x1, y1, x2, y2 := ContainerWindowSize(s)
-	window_state := NewWindow(x1, y1, x2, y2, NeighboringWindows{LowerNeighbor: true})
+	window_state := NewWindow(x1, y1, x2, y2)
+	data, err := docker.GetContainers(nil)
+	exitIfErr(w.screen, err)
 	state := tableState{
-		containers_data:        docker.GetContainers(nil),
+		containers_data:        data,
 		index_of_top_container: 0,
 		table_height:           calcTableHeight(y1, y2),
 		window_state:           window_state,
@@ -463,7 +514,8 @@ func (w *ContainersWindow) main(s tcell.Screen) {
 			log.Println("Handling mouse event")
 			state = handleMouseEvent(&mouse_event, w, state)
 		case keyboard_event := <-w.keyboard_chan:
-			state = handleKeyboardEvent(&keyboard_event, w, state)
+			state, err = handleKeyboardEvent(&keyboard_event, w, state)
+			exitIfErr(w.screen, err)
 		case <-w.stop_chan:
 			log.Printf("Stopping all containers window routines\n")
 			cancel()
@@ -621,16 +673,16 @@ func generateDataRow(total_width int, datum *docker.ContainerDatum) (elements.St
 }
 
 func generateTable(state *tableState) []elements.StringStyler {
-	total_width := (state.window_state.RightX - 1) - (state.window_state.LeftX + 1)
+	total_width := Width(&state.window_state)
 	underline_rune := '\u2500'
 	offset := 2
-	table := make([]elements.StringStyler, state.containers_data.Len()+offset)
+	table := make([]elements.StringStyler, len(state.filtered_data)+offset)
 	table[0] = generateTableHeader(total_width)
 	table[1] = elements.RuneRepeater(underline_rune, tcell.StyleDefault.Foreground(tcell.ColorRebeccaPurple))
 
-	row_ready_ch := make(chan interface{}, state.containers_data.Len())
+	row_ready_ch := make(chan interface{}, len(state.filtered_data))
 	defer close(row_ready_ch)
-	for index, datum := range state.containers_data.GetData() {
+	for index, datum := range state.filtered_data {
 		go func(i int, d docker.ContainerDatum) {
 			row, err := generateDataRow(total_width, &d)
 			if err == nil {
@@ -645,13 +697,13 @@ func generateTable(state *tableState) []elements.StringStyler {
 			row_ready_ch <- i
 		}(index, datum)
 	}
-	for range state.containers_data.GetData() {
+	for range state.filtered_data {
 		<-row_ready_ch
 	}
 	return table
 }
 
-func dockerStatsDrawerGenerator(state tableState) func(x, y int) (rune, tcell.Style) {
+func dockerStatsDrawerGenerator(state tableState) (func(x, y int) (rune, tcell.Style), error) {
 	if state.window_mode == containers {
 		data_table := generateTable(&state)
 		log.Printf("New table is ready\n")
@@ -666,7 +718,7 @@ func dockerStatsDrawerGenerator(state tableState) func(x, y int) (rune, tcell.St
 			if y == 0 || y == 1 {
 				return data_table[y](x)
 			}
-			if y == state.table_height+3 {
+			if y == state.table_height+2 {
 				if state.keyboard_mode == search {
 					return search_row(x)
 				} else if state.keyboard_mode == regular && state.search_buffer != "" {
@@ -675,26 +727,26 @@ func dockerStatsDrawerGenerator(state tableState) func(x, y int) (rune, tcell.St
 			}
 			if y+state.index_of_top_container < len(data_table) {
 				r, s := data_table[y+state.index_of_top_container](x)
-				if state.focused_id == state.containers_data.GetData()[y+state.index_of_top_container-2].ID() {
+				if state.focused_id == state.filtered_data[y+state.index_of_top_container-2].ID() {
 					s = s.Background(tcell.ColorDarkBlue)
 				}
 				return r, s
 			} else {
 				return rune('\x00'), tcell.StyleDefault
 			}
-		}
+		}, nil
 	} else if state.window_mode == inspect {
-		if state.focused_id == "" {
-			return func(x, y int) (rune, tcell.Style) { return '\x00', tcell.StyleDefault }
+		pretty_info, err := generatePrettyInspectInfo(state)
+		if err != nil {
+			return func(_, _ int) (rune, tcell.Style) { return '\x00', tcell.StyleDefault }, err
 		}
-		pretty_info := generatePrettyInspectInfo(state)
 		return func(x, y int) (rune, tcell.Style) {
 			if val, ok := pretty_info[y]; ok {
 				return (val)(x)
 			} else {
 				return '\x00', tcell.StyleDefault
 			}
-		}
+		}, nil
 	} else {
 		log.Printf("Got into unimplemented containers window mode '%d'", state.window_mode)
 		panic(1)
@@ -750,12 +802,18 @@ func generateMountsMap(mounts []types.MountPoint) []string {
 	return parsed_mounts
 }
 
-func generateNetworkUsage(curr_stats map[string]docker.NetworkUsage, prev_stats map[string]docker.NetworkUsage) []elements.StringStyler {
+func generateNetworkUsage(curr_stats map[string]docker.NetworkUsage, prev_stats map[string]docker.NetworkUsage) ([]elements.StringStyler, error) {
 	ret := make([]elements.StringStyler, 0)
 	for network_interface, usage := range curr_stats {
 		ret = append(ret, elements.TextDrawer("  "+network_interface, tcell.StyleDefault))
-		mapped_usage := docker.NetworkUsageToMapOfInt(usage)
-		prev_mapped_usage := docker.NetworkUsageToMapOfInt(prev_stats[network_interface])
+		mapped_usage, err := docker.NetworkUsageToMapOfInt(usage)
+		if err != nil {
+			return nil, err
+		}
+		prev_mapped_usage, err := docker.NetworkUsageToMapOfInt(prev_stats[network_interface])
+		if err != nil {
+			return nil, err
+		}
 		time_diff := curr_stats[network_interface].LastUpdateTime.Sub(prev_stats[network_interface].LastUpdateTime).Seconds()
 
 		sorted_usage_keys := make([]string, 0, len(mapped_usage))
@@ -795,7 +853,7 @@ func generateNetworkUsage(curr_stats map[string]docker.NetworkUsage, prev_stats 
 		}
 
 	}
-	return ret
+	return ret, nil
 }
 
 func generateInspectSeperator() elements.StringStyler {
@@ -803,17 +861,21 @@ func generateInspectSeperator() elements.StringStyler {
 	return elements.RuneRepeater(underline_rune, tcell.StyleDefault.Foreground(tcell.ColorPaleGreen))
 }
 
-func generatePrettyInspectInfo(state tableState) map[int]elements.StringStyler {
+func generatePrettyInspectInfo(state tableState) (map[int]elements.StringStyler, error) {
 	var info map[int]elements.StringStyler = make(map[int]elements.StringStyler)
 	var info_arr []elements.StringStyler = make([]elements.StringStyler, 0)
 
-	index, err := findIndexOfId(&state.containers_data, state.focused_id)
+	index, err := findIndexOfId(state.containers_data.GetData(), state.focused_id)
 	if err != nil {
-		log.Fatalf("Didn't find container '%s' for inspecting", state.focused_id)
+		return info, fmt.Errorf("didn't find container '%s' for inspecting", state.focused_id)
 	}
 	stats := state.containers_data.GetData()[index]
 	inspect_info := stats.InspectData()
 	window_width := Width(&state.window_state)
+
+	if inspect_info.ContainerJSONBase == nil {
+		return info, fmt.Errorf("inspection ended")
+	}
 
 	info_arr = append(info_arr,
 		elements.TextDrawer("Name: "+stats.CachedStats().Name, tcell.StyleDefault),
@@ -855,8 +917,11 @@ func generatePrettyInspectInfo(state tableState) map[int]elements.StringStyler {
 	info_arr = append(info_arr, generateInspectSeperator(),
 		elements.TextDrawer("Network Usage:", tcell.StyleDefault),
 	)
-	info_arr = append(info_arr, generateNetworkUsage(stats.CachedStats().Network, stats.CachedStats().PreNetwork)...)
-
+	network_usage, err := generateNetworkUsage(stats.CachedStats().Network, stats.CachedStats().PreNetwork)
+	if err != nil {
+		return info, err
+	}
+	info_arr = append(info_arr, network_usage...)
 	var row_offset int
 	num_rows := len(info_arr)
 	if num_rows > state.inspect_height {
@@ -868,7 +933,7 @@ func generatePrettyInspectInfo(state tableState) map[int]elements.StringStyler {
 	for i, line := range info_arr {
 		info[i-row_offset] = line
 	}
-	return info
+	return info, nil
 }
 
 func updateIndices(state *tableState, curr_index int) {
@@ -890,8 +955,8 @@ func resetSearchBuffer(w *ContainersWindow, state *tableState) {
 	w.screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, infoMessage{msg: []rune("Cleared search")}))
 }
 
-func findIndexOfId(data *docker.ContainerData, id string) (int, error) {
-	for i, datum := range data.GetData() {
+func findIndexOfId(data []docker.ContainerDatum, id string) (int, error) {
+	for i, datum := range data {
 		if datum.ID() == id {
 			return i, nil
 		}

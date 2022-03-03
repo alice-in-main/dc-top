@@ -3,6 +3,7 @@ package gui
 import (
 	"context"
 	"dc-top/gui/window"
+	"fmt"
 	"log"
 
 	"github.com/gdamore/tcell/v2"
@@ -60,12 +61,22 @@ func Draw() {
 			log.Printf("Changing to shell window of %s", ev.ContainerId)
 			new_window := window.NewShellWindow(ev.ContainerId, context.Background())
 			windowManager.Open(window.WindowType(window.ContainerShell), &new_window)
+		case window.ChangeToViWindowEvent:
+			windowManager.SetFocusedWindow(window.Vi)
+			windowManager.CloseAll()
+			log.Printf("Changing to vi window of %s", ev.FilePath)
+			new_window := window.NewViWindow(ev.FilePath, ev.Sender, context.Background())
+			windowManager.Open(window.WindowType(window.Vi), &new_window)
 		case window.ChangeToDefaultViewEvent:
 			log.Printf("Changing back to default")
 			windowManager.CloseAll()
 			windowManager = window.InitWindowManager(s)
 			windowManager.OpenAll()
 			windowManager.SetFocusedWindow(window.ContainersHolder)
+		case window.FatalErrorEvent:
+			s.Fini()
+			fmt.Printf("A fatal error occured at %s:\n%s", ev.When(), ev.Err)
+			return
 		case nil:
 			log.Printf("Recieved nil event, exitting")
 			return
