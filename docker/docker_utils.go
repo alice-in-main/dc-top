@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
@@ -26,7 +25,6 @@ func isExisting(id string, filters filters.Args) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	log.Println(c)
 	return len(c) > 0, nil
 }
 

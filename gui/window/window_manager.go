@@ -77,8 +77,8 @@ func (wm *WindowManager) ResizeAll() {
 }
 
 func (wm *WindowManager) CloseAll() {
-	for _, win := range wm.windows {
-		log.Printf("Closing %s", win)
+	for typE, win := range wm.windows {
+		log.Printf("Closing %+v", typE)
 		win.Close()
 	}
 	wm.windows = make(map[WindowType]Window)

@@ -150,7 +150,6 @@ func (w *ContainersWindow) drawer(screen tcell.Screen, c context.Context) {
 	for {
 		select {
 		case state := <-w.draw_queue:
-			log.Printf("Drawing new state...\n")
 			DrawBorders(screen, &state.window_state)
 			drawer_func, err := dockerStatsDrawerGenerator(state)
 			if err != nil {
@@ -158,7 +157,6 @@ func (w *ContainersWindow) drawer(screen tcell.Screen, c context.Context) {
 			}
 			DrawContents(screen, &state.window_state, drawer_func)
 			screen.Show()
-			log.Printf("Done drawing\n")
 		case <-c.Done():
 			log.Printf("Containers window stopped drwaing...\n")
 			return
@@ -170,7 +168,6 @@ func (w *ContainersWindow) dockerDataStreamer(c context.Context) {
 	for {
 		select {
 		case state := <-w.data_request_chan:
-			log.Printf("Got request for new data")
 			var new_data docker.ContainerData
 			up_to_date, err := state.containers_data.AreIdsUpToDate()
 			exitIfErr(w.screen, err)
@@ -237,11 +234,11 @@ func handleNewIndex(new_index int, table_state *tableState) {
 func handleChangeIndex(is_next bool, table_state *tableState) {
 	var new_index int
 	log.Printf("Requesting change index\n")
-	if table_state.focused_id == "" && table_state.containers_data.Len() > 0 {
+	if table_state.focused_id == "" && len(table_state.filtered_data) > 0 {
 		if is_next {
 			new_index = 0
 		} else {
-			new_index = table_state.containers_data.Len() - 1
+			new_index = len(table_state.filtered_data) - 1
 		}
 	} else {
 		index, err := findIndexOfId(table_state.filtered_data, table_state.focused_id)
@@ -471,7 +468,6 @@ func (state *tableState) searchKeyPress(ev *tcell.EventKey, w *ContainersWindow)
 		resetSearchBuffer(w, state)
 	}
 	state.filtered_data = state.containers_data.Filter(state.search_buffer)
-	log.Println(state.search_buffer)
 }
 
 func calcTableHeight(top, buttom int) int {
@@ -706,7 +702,6 @@ func generateTable(state *tableState) []elements.StringStyler {
 func dockerStatsDrawerGenerator(state tableState) (func(x, y int) (rune, tcell.Style), error) {
 	if state.window_mode == containers {
 		data_table := generateTable(&state)
-		log.Printf("New table is ready\n")
 		search_row := elements.TextDrawer(" /", tcell.StyleDefault.Foreground(tcell.ColorYellow)).Concat(2, elements.TextBoxDrawer(
 			state.search_buffer,
 			state.search_buffer_index,
@@ -775,7 +770,6 @@ func generatePortMap(ports nat.PortMap) []string {
 	var port_map []string = make([]string, len(ports))
 	index := 0
 	for port, port_bindings := range ports {
-		log.Println(port, port_bindings)
 		if len(port_bindings) > 0 {
 			for _, binding := range port_bindings {
 				port_map[index] = fmt.Sprintf("  %s : %s", port, binding.HostPort)
@@ -791,7 +785,6 @@ func generatePortMap(ports nat.PortMap) []string {
 
 func generateMountsMap(mounts []types.MountPoint) []string {
 	sort.SliceStable(mounts, func(i, j int) bool { return mounts[i].Destination < mounts[j].Destination })
-	log.Println("Generating mounts map", mounts)
 	var parsed_mounts []string = make([]string, 3*len(mounts))
 	for i := 0; i < 2*len(mounts); i += 3 {
 		mount_num := i / 3

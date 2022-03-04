@@ -134,8 +134,7 @@ func (writer *logsWriter) logStopper(cancel context.CancelFunc) {
 				log.Println("Failed to read user search", err)
 				cancel()
 			}
-			text = text[:len(text)-1] // remove newline
-			log.Println("searcing for ", text)
+			text = text[:len(text)-1] // remove newline char
 			if text != "" {
 				if char == '?' {
 					writer.regex_search_chan <- text

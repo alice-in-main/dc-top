@@ -27,6 +27,9 @@ func Draw() {
 	finalize := func() {
 		windowManager.CloseAll()
 		s.Fini()
+		if err != nil {
+			fmt.Println(err.Error())
+		}
 	}
 	defer finalize()
 
@@ -74,11 +77,7 @@ func Draw() {
 			windowManager.OpenAll()
 			windowManager.SetFocusedWindow(window.ContainersHolder)
 		case window.FatalErrorEvent:
-			s.Fini()
-			fmt.Printf("A fatal error occured at %s:\n%s", ev.When(), ev.Err)
-			return
-		case nil:
-			log.Printf("Recieved nil event, exitting")
+			err = fmt.Errorf("a fatal error occured at %s:\n%s", ev.When(), ev.Err)
 			return
 		default:
 			log.Printf("%T", ev)

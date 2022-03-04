@@ -6,8 +6,8 @@ type Services struct {
 }
 
 type Service struct {
-	Image         string   `yaml:"image"`
-	ContainerName string   `yaml:"container_name,omitempty"`
-	Restart       string   `yaml:"restart,omitempty"`
-	Environment   []string `yaml:"environment,omitempty"`
+	Image         string            `yaml:"image"`
+	ContainerName string            `yaml:"container_name,omitempty"`
+	Restart       string            `yaml:"restart,omitempty"`
+	Environment   map[string]string `yaml:"environment,omitempty"`
 }
