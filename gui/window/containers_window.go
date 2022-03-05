@@ -1,5 +1,7 @@
 package window
 
+// TODO: add start date in inspect mode
+
 import (
 	"context"
 	docker "dc-top/docker"
@@ -39,6 +41,7 @@ type ContainersWindow struct {
 	new_container_data_chan chan docker.ContainerData
 	data_request_chan       chan tableState
 	draw_queue              chan tableState
+	enable_toggle           chan bool
 	stop_chan               chan interface{}
 	//containers view
 	mouse_chan    chan tcell.EventMouse
@@ -50,6 +53,7 @@ type tableState struct {
 	window_state WindowState
 	focused_id   string
 	//containers view
+	is_enabled             bool
 	window_mode            windowMode
 	keyboard_mode          keyboardMode
 	search_buffer          string
@@ -69,6 +73,7 @@ func NewContainersWindow() ContainersWindow {
 		//common
 		resize_chan:             make(chan interface{}),
 		draw_queue:              make(chan tableState),
+		enable_toggle:           make(chan bool),
 		stop_chan:               make(chan interface{}),
 		new_container_data_chan: make(chan docker.ContainerData),
 		//containers view
@@ -79,7 +84,6 @@ func NewContainersWindow() ContainersWindow {
 }
 
 func (w *ContainersWindow) Open(s tcell.Screen) {
-	s.EnableMouse(tcell.MouseButtonEvents)
 	w.screen = s
 	go w.main(s)
 }
@@ -124,22 +128,20 @@ func (w *ContainersWindow) HandleEvent(ev interface{}, sender WindowType) (inter
 			totalMemUsage:       total_mem_usage,
 		}
 		w.screen.PostEvent(NewMessageEvent(sender, ContainersHolder, summary))
-	case ViWindowResult:
-		if compose.DcYamlPath() != ev.FilePath {
-			exitIfErr(w.screen, fmt.Errorf("got vi result in containers holder that isn't for dc yaml"))
-		}
-		if ev.WasEditted {
-			if !compose.ValidateYaml(context.TODO()) {
-				compose.RestoreFromBackup()
-			} else {
-				log.Println("dc yaml file was editted, restarting dc")
-				go compose.Up(context.TODO())
-			}
-		}
 	default:
 		log.Fatal("Got unknown event in holder", ev)
 	}
 	return nil, nil
+}
+
+func (w *ContainersWindow) Disable() {
+	log.Printf("Disable containers...")
+	w.enable_toggle <- false
+}
+
+func (w *ContainersWindow) Enable() {
+	log.Printf("Enable containers...")
+	w.enable_toggle <- true
 }
 
 func (w *ContainersWindow) Close() {
@@ -150,13 +152,15 @@ func (w *ContainersWindow) drawer(screen tcell.Screen, c context.Context) {
 	for {
 		select {
 		case state := <-w.draw_queue:
-			DrawBorders(screen, &state.window_state)
-			drawer_func, err := dockerStatsDrawerGenerator(state)
-			if err != nil {
-				log.Printf("Got error %s while drawing\n", err)
+			if state.is_enabled {
+				DrawBorders(screen, &state.window_state)
+				drawer_func, err := dockerStatsDrawerGenerator(state)
+				if err != nil {
+					log.Printf("Got error %s while drawing\n", err)
+				}
+				DrawContents(screen, &state.window_state, drawer_func)
+				screen.Show()
 			}
-			DrawContents(screen, &state.window_state, drawer_func)
-			screen.Show()
 		case <-c.Done():
 			log.Printf("Containers window stopped drwaing...\n")
 			return
@@ -368,22 +372,22 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 		switch ev.Rune() {
 		case 'l':
 			if state.focused_id != "" {
-				w.screen.PostEvent(NewChangeToLogsWindowEvent(state.focused_id))
+				w.screen.PostEvent(NewChangeToLogsEvent(state.focused_id))
 			}
 		case 'e':
 			if state.focused_id != "" {
-				w.screen.PostEvent(NewChangeToLogsShellEvent(state.focused_id))
+				w.screen.PostEvent(NewChangeToContainerShellEvent(state.focused_id))
 			}
 		case 'v':
 			if compose.DcModeEnabled() {
 				if !compose.ValidateYaml(context.TODO()) {
-					w.screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, errorMessage{msg: []rune("docker compose yaml syntax is invalid")}))
+					w.screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, ErrorMessage{Msg: []rune("docker compose yaml syntax is invalid")}))
 				} else {
 					compose.CreateBackupYaml()
-					w.screen.PostEvent(NewChangeToViWindowEvent(compose.DcYamlPath(), ContainersHolder))
+					w.screen.PostEvent(NewChangeToFileEdittorEvent(compose.DcYamlPath(), ContainersHolder))
 				}
 			} else {
-				w.screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, errorMessage{msg: []rune("dc mode is disabled")}))
+				w.screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, ErrorMessage{Msg: []rune("dc mode is disabled")}))
 			}
 		case 'i':
 			if state.window_mode == containers {
@@ -420,7 +424,7 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 		case '/':
 			// TODO fix search scrolling
 			resetSearchBuffer(w, state)
-			w.screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, infoMessage{msg: []rune("Switched to search mode...")}))
+			w.screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, InfoMessage{Msg: []rune("Switched to search mode...")}))
 			state.keyboard_mode = search
 		}
 	}
@@ -458,7 +462,7 @@ func (state *tableState) searchKeyPress(ev *tcell.EventKey, w *ContainersWindow)
 	case tcell.KeyEnter:
 		state.keyboard_mode = regular
 		if state.search_buffer != "" {
-			w.screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, infoMessage{msg: []rune(fmt.Sprintf("Searching for %s", state.search_buffer))}))
+			w.screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, InfoMessage{Msg: []rune(fmt.Sprintf("Searching for %s", state.search_buffer))}))
 		}
 	case tcell.KeyEscape:
 		state.keyboard_mode = regular
@@ -480,7 +484,9 @@ func (w *ContainersWindow) main(s tcell.Screen) {
 	data, err := docker.GetContainers(nil)
 	exitIfErr(w.screen, err)
 	state := tableState{
+		is_enabled:             true,
 		containers_data:        data,
+		filtered_data:          data.Filter(""),
 		index_of_top_container: 0,
 		table_height:           calcTableHeight(y1, y2),
 		window_state:           window_state,
@@ -499,6 +505,8 @@ func (w *ContainersWindow) main(s tcell.Screen) {
 	go func() { w.new_container_data_chan <- state.containers_data }()
 	for {
 		select {
+		case state.is_enabled = <-w.enable_toggle:
+			log.Printf("changed enabled to %t in containers holder", state.is_enabled)
 		case <-w.resize_chan:
 			state = handleResize(w, state)
 		case new_data := <-w.new_container_data_chan:
@@ -945,7 +953,7 @@ func updateIndices(state *tableState, curr_index int) {
 func resetSearchBuffer(w *ContainersWindow, state *tableState) {
 	state.search_buffer = ""
 	state.search_buffer_index = 0
-	w.screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, infoMessage{msg: []rune("Cleared search")}))
+	w.screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, InfoMessage{Msg: []rune("Cleared search")}))
 }
 
 func findIndexOfId(data []docker.ContainerDatum, id string) (int, error) {

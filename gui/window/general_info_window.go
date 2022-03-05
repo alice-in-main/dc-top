@@ -38,6 +38,14 @@ func (w *GeneralInfoWindow) HandleEvent(interface{}, WindowType) (interface{}, e
 	panic(1)
 }
 
+func (w *GeneralInfoWindow) Disable() {
+	log.Printf("Disable GeneralInfoWindow...")
+}
+
+func (w *GeneralInfoWindow) Enable() {
+	log.Printf("Enable GeneralInfoWindow...")
+}
+
 func (w *GeneralInfoWindow) Close() {}
 
 type generalInfoState struct {

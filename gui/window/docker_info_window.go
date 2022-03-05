@@ -14,6 +14,7 @@ type DockerInfoWindow struct {
 	resize_chan    chan interface{}
 	new_stats_chan chan totalStatsSummary
 	stop_chan      chan interface{}
+	enable_toggle  chan bool
 }
 
 type dockerInfoState struct {
@@ -27,6 +28,7 @@ func NewDockerInfoWindow() DockerInfoWindow {
 		resize_chan:    make(chan interface{}),
 		new_stats_chan: make(chan totalStatsSummary),
 		stop_chan:      make(chan interface{}),
+		enable_toggle:  make(chan bool),
 	}
 }
 
@@ -56,11 +58,22 @@ func (w *DockerInfoWindow) HandleEvent(ev interface{}, wt WindowType) (interface
 	return nil, nil
 }
 
+func (w *DockerInfoWindow) Disable() {
+	log.Printf("Disable DockerInfoWindow...")
+	w.enable_toggle <- false
+}
+
+func (w *DockerInfoWindow) Enable() {
+	log.Printf("Enable DockerInfoWindow...")
+	w.enable_toggle <- true
+}
+
 func (w *DockerInfoWindow) Close() {
 	w.stop_chan <- nil
 }
 
 func (w *DockerInfoWindow) main(s tcell.Screen) {
+	is_enabled := true
 	x1, y1, x2, y2 := DockerInfoWindowSize(s)
 	var state dockerInfoState = dockerInfoState{
 		window_state: NewWindow(x1, y1, x2, y2),
@@ -68,31 +81,37 @@ func (w *DockerInfoWindow) main(s tcell.Screen) {
 	tick := time.NewTicker(1000 * time.Millisecond)
 	for {
 		select {
+		case is_enabled = <-w.enable_toggle:
+			log.Printf("changed docker info to %t", is_enabled)
 		case <-w.resize_chan:
-			x1, y1, x2, y2 := DockerInfoWindowSize(s)
-			state.window_state.SetBorders(x1, y1, x2, y2)
-			dockerInfoWindowDraw(s, state)
+			if is_enabled {
+				x1, y1, x2, y2 := DockerInfoWindowSize(s)
+				state.window_state.SetBorders(x1, y1, x2, y2)
+				dockerInfoWindowDraw(s, state)
+			}
 		case summary := <-w.new_stats_chan:
-			state.docker_resource_summary = summary
-			info, err := docker.GetDockerInfo()
-			exitIfErr(s, err)
-			state.docker_info = info
-			dockerInfoWindowDraw(s, state)
+			if is_enabled {
+				state.docker_resource_summary = summary
+				info, err := docker.GetDockerInfo()
+				exitIfErr(s, err)
+				state.docker_info = info
+				dockerInfoWindowDraw(s, state)
+			}
 		case <-tick.C:
 			var getTotalStatsRequest = getTotalStats{}
-			s.PostEvent(NewMessageEvent(ContainersHolder, Info, getTotalStatsRequest))
+			s.PostEvent(NewMessageEvent(ContainersHolder, DockerInfo, getTotalStatsRequest))
 		case <-w.stop_chan:
 			tick.Stop()
 			log.Println("Docker info stopped drawing")
 			return
 		}
-		s.Show()
 	}
 }
 
 func dockerInfoWindowDraw(screen tcell.Screen, state dockerInfoState) {
 	DrawBorders(screen, &state.window_state)
 	DrawContents(screen, &state.window_state, dockerInfoDrawerGenerator(state))
+	screen.Show()
 }
 
 func dockerInfoDrawerGenerator(state dockerInfoState) func(x, y int) (rune, tcell.Style) {

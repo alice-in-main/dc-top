@@ -45,6 +45,14 @@ func (w *BarWindow) HandleEvent(ev interface{}, wt WindowType) (interface{}, err
 	return nil, nil
 }
 
+func (w *BarWindow) Disable() {
+	log.Printf("Disable bar...")
+}
+
+func (w *BarWindow) Enable() {
+	log.Printf("Enable bar...")
+}
+
 func (w *BarWindow) Close() {}
 
 func (w *BarWindow) main(s tcell.Screen) {
@@ -113,13 +121,13 @@ func (_emptyMessage) Styler() elements.StringStyler {
 	return elements.EmptyDrawer()
 }
 
-type infoMessage struct {
-	msg []rune
+type InfoMessage struct {
+	Msg []rune
 }
 
-func (m infoMessage) Styler() elements.StringStyler {
+func (m InfoMessage) Styler() elements.StringStyler {
 	const info_prefix = "Info: "
-	return elements.TextDrawer(info_prefix, tcell.StyleDefault.Foreground(tcell.ColorGreen)).Concat(len(info_prefix), elements.RuneDrawer(m.msg, tcell.StyleDefault))
+	return elements.TextDrawer(info_prefix, tcell.StyleDefault.Foreground(tcell.ColorGreen)).Concat(len(info_prefix), elements.RuneDrawer(m.Msg, tcell.StyleDefault))
 }
 
 // type warnMessage struct {
@@ -131,13 +139,14 @@ func (m infoMessage) Styler() elements.StringStyler {
 // 	return elements.RuneDrawer(warn_prefix, tcell.StyleDefault.Foreground(tcell.ColorYellow)).Concat(len(warn_prefix), elements.RuneDrawer(m.msg, tcell.StyleDefault))
 // }
 
-type errorMessage struct {
-	msg []rune
+// TODO: hide message structs and wrap in functions
+type ErrorMessage struct {
+	Msg []rune
 }
 
-func (m errorMessage) Styler() elements.StringStyler {
+func (m ErrorMessage) Styler() elements.StringStyler {
 	var warn_prefix = []rune("\u26a0 Error: ")
-	return elements.RuneDrawer(warn_prefix, tcell.StyleDefault.Foreground(tcell.ColorRed)).Concat(len(warn_prefix), elements.RuneDrawer(m.msg, tcell.StyleDefault))
+	return elements.RuneDrawer(warn_prefix, tcell.StyleDefault.Foreground(tcell.ColorRed)).Concat(len(warn_prefix), elements.RuneDrawer(m.Msg, tcell.StyleDefault))
 }
 
 // type criticalMessage struct {

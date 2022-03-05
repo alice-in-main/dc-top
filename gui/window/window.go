@@ -19,6 +19,8 @@ type Window interface {
 	KeyPress(tcell.EventKey)
 	MousePress(tcell.EventMouse)
 	HandleEvent(event interface{}, sender WindowType) (interface{}, error)
+	Enable()
+	Disable()
 	Close()
 }
 

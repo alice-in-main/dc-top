@@ -1,6 +1,8 @@
 package window
 
-import "time"
+import (
+	"time"
+)
 
 type ChangeToDefaultViewEvent struct {
 	t time.Time
@@ -18,17 +20,49 @@ func NewChangeToDefaultViewEvent() ChangeToDefaultViewEvent {
 
 // ---------
 
-type ChangeToLogsWindowEvent struct {
+type PauseWindowsEvent struct {
+	t time.Time
+}
+
+func (e PauseWindowsEvent) When() time.Time {
+	return e.t
+}
+
+func NewPauseWindowsEvent() PauseWindowsEvent {
+	return PauseWindowsEvent{
+		t: time.Now(),
+	}
+}
+
+// ---------
+
+type ResumeWindowsEvent struct {
+	t time.Time
+}
+
+func (e ResumeWindowsEvent) When() time.Time {
+	return e.t
+}
+
+func NewResumeWindowsEvent() ResumeWindowsEvent {
+	return ResumeWindowsEvent{
+		t: time.Now(),
+	}
+}
+
+// ---------
+
+type ChangeToLogsEvent struct {
 	t           time.Time
 	ContainerId string
 }
 
-func (e ChangeToLogsWindowEvent) When() time.Time {
+func (e ChangeToLogsEvent) When() time.Time {
 	return e.t
 }
 
-func NewChangeToLogsWindowEvent(container_id string) ChangeToLogsWindowEvent {
-	return ChangeToLogsWindowEvent{
+func NewChangeToLogsEvent(container_id string) ChangeToLogsEvent {
+	return ChangeToLogsEvent{
 		t:           time.Now(),
 		ContainerId: container_id,
 	}
@@ -36,17 +70,17 @@ func NewChangeToLogsWindowEvent(container_id string) ChangeToLogsWindowEvent {
 
 // ---------
 
-type ChangeToLogsShellEvent struct {
+type ChangeToContainerShellEvent struct {
 	t           time.Time
 	ContainerId string
 }
 
-func (e ChangeToLogsShellEvent) When() time.Time {
+func (e ChangeToContainerShellEvent) When() time.Time {
 	return e.t
 }
 
-func NewChangeToLogsShellEvent(container_id string) ChangeToLogsShellEvent {
-	return ChangeToLogsShellEvent{
+func NewChangeToContainerShellEvent(container_id string) ChangeToContainerShellEvent {
+	return ChangeToContainerShellEvent{
 		t:           time.Now(),
 		ContainerId: container_id,
 	}
@@ -54,21 +88,53 @@ func NewChangeToLogsShellEvent(container_id string) ChangeToLogsShellEvent {
 
 // ---------
 
-type ChangeToViWindowEvent struct {
+type ChangeToFileEdittorEvent struct {
 	t        time.Time
 	FilePath string
 	Sender   WindowType
 }
 
-func (e ChangeToViWindowEvent) When() time.Time {
+func (e ChangeToFileEdittorEvent) When() time.Time {
 	return e.t
 }
 
-func NewChangeToViWindowEvent(file_path string, sender_window WindowType) ChangeToViWindowEvent {
-	return ChangeToViWindowEvent{
+func NewChangeToFileEdittorEvent(file_path string, sender_window WindowType) ChangeToFileEdittorEvent {
+	return ChangeToFileEdittorEvent{
 		t:        time.Now(),
 		FilePath: file_path,
 		Sender:   sender_window,
+	}
+}
+
+// ---------
+
+type StopDrawingEvent struct {
+	t time.Time
+}
+
+func (e StopDrawingEvent) When() time.Time {
+	return e.t
+}
+
+func NewStopDrawingEvent(file_path string, sender_window WindowType) StopDrawingEvent {
+	return StopDrawingEvent{
+		t: time.Now(),
+	}
+}
+
+// ---------
+
+type StartDrawingEvent struct {
+	t time.Time
+}
+
+func (e StartDrawingEvent) When() time.Time {
+	return e.t
+}
+
+func NewStartDrawingEvent(file_path string, sender_window WindowType) StartDrawingEvent {
+	return StartDrawingEvent{
+		t: time.Now(),
 	}
 }
 

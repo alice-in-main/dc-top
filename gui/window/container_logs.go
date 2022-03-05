@@ -24,12 +24,17 @@ const (
 )
 
 type logsWriter struct {
-	screen             tcell.Screen
-	search_mode        searchMode
-	curr_re            *regexp.Regexp
+	screen       tcell.Screen
+	search_mode  searchMode
+	curr_re      *regexp.Regexp
+	search_query string
+
+	logs        [docker.NumSavedLogs][]byte
+	logs_offset int
+	lines       [100]elements.StringStyler
+
 	regex_search_chan  chan string
 	string_search_chan chan string
-	search_query       string
 	write_queue        chan []byte
 	pause              chan interface{}
 	resume             chan interface{}
@@ -38,9 +43,9 @@ type logsWriter struct {
 func newLogsWriter(screen tcell.Screen) logsWriter {
 	new_writer := logsWriter{
 		screen:             screen,
+		search_query:       "",
 		regex_search_chan:  make(chan string),
 		string_search_chan: make(chan string),
-		search_query:       "",
 		write_queue:        make(chan []byte),
 		pause:              make(chan interface{}),
 		resume:             make(chan interface{}),
@@ -108,10 +113,27 @@ func (writer *logsWriter) writeSingleLog(single_log []byte) {
 		}
 
 	}
-	fmt.Println(string(log_line_text))
+	writer.logs[writer.logs_offset] = []byte(log_line_text)
+	writer.logs_offset++
+	width, height := writer.screen.Size()
+	for i := 0; i < height; i++ {
+		writer.lines[i] = elements.TextDrawer(string(writer.logs[i]), tcell.StyleDefault)
+		for j := 0; j < width; j++ {
+			r, s := writer.lines[i](j)
+			writer.screen.SetContent(j, i, r, nil, s)
+		}
+	}
+	writer.screen.Sync()
+
+	// fmt.Println(string(log_line_text))
 }
 
-func (writer *logsWriter) logStopper(cancel context.CancelFunc) {
+func (writer *logsWriter) logStopper(cancel context.CancelFunc) error {
+	// err := keyboard.Open()
+	// if err != nil {
+	// 	return err
+	// }
+	// defer keyboard.Close()
 	for {
 		char, key, err := keyboard.GetSingleKey()
 		if err != nil && !strings.HasPrefix(err.Error(), "Unrecognized escape sequence") {
@@ -120,10 +142,11 @@ func (writer *logsWriter) logStopper(cancel context.CancelFunc) {
 		}
 		if key == keyboard.KeyEsc || key == keyboard.KeyCtrlC || char == 'q' || char == 'l' {
 			cancel()
+			// TODO: graceful exit
 			if key == keyboard.KeyCtrlC {
 				os.Exit(0)
 			}
-			return
+			return nil
 		} else if char == '/' || char == '?' {
 			writer.pause <- nil
 			search_reader := bufio.NewReader(os.Stdin)
@@ -149,56 +172,38 @@ func (writer *logsWriter) logStopper(cancel context.CancelFunc) {
 	}
 }
 
-type ContainerLogWindow struct {
+type ContainerLogs struct {
 	id      string
 	context context.Context
 	cancel  context.CancelFunc
 }
 
-func NewContainerLogWindow(id string) ContainerLogWindow {
+func NewContainerLogs(id string) ContainerLogs {
 	container_log_window_context, cancel := context.WithCancel(context.TODO())
-	return ContainerLogWindow{
+	return ContainerLogs{
 		id:      id,
 		context: container_log_window_context,
 		cancel:  cancel,
 	}
 }
 
-func (w *ContainerLogWindow) Open(s tcell.Screen) {
-	go w.main(s)
-}
-
-func (w *ContainerLogWindow) Resize() {}
-
-func (w *ContainerLogWindow) KeyPress(_ tcell.EventKey) {}
-
-func (w *ContainerLogWindow) MousePress(_ tcell.EventMouse) {}
-
-func (w *ContainerLogWindow) HandleEvent(interface{}, WindowType) (interface{}, error) {
-	log.Println("Log window got event")
-	panic(1)
-}
-
-func (w *ContainerLogWindow) Close() {
-	w.cancel()
-}
-
-func (w *ContainerLogWindow) main(screen tcell.Screen) {
-	screen.Suspend()
-	_, height := screen.Size()
-	for i := 0; i < height; i++ {
-		fmt.Println()
-	}
-	err := keyboard.Open()
-	exitIfErr(screen, err)
-	defer keyboard.Close()
-	container_log_window_context, cancel := context.WithCancel(context.TODO())
-	logs_writer := newLogsWriter(screen)
-	go logs_writer.logPrinter(container_log_window_context)
-	go logs_writer.logStopper(cancel)
-	go docker.StreamContainerLogs(w.id, &logs_writer, container_log_window_context, cancel)
-	<-container_log_window_context.Done()
-	screen.Resume()
-	log.Println("Switcing back...")
-	screen.PostEvent(NewChangeToDefaultViewEvent())
+func (w *ContainerLogs) OpenContainerLogs(screen tcell.Screen) {
+	screen.PostEvent(NewPauseWindowsEvent())
+	go func() {
+		_, height := screen.Size()
+		for i := 0; i < height; i++ {
+			fmt.Println()
+		}
+		container_log_window_context, cancel := context.WithCancel(context.TODO())
+		logs_writer := newLogsWriter(screen)
+		go logs_writer.logPrinter(container_log_window_context)
+		go func() {
+			err := logs_writer.logStopper(cancel)
+			exitIfErr(screen, err)
+		}()
+		go docker.StreamContainerLogs(w.id, &logs_writer, container_log_window_context, cancel)
+		<-container_log_window_context.Done()
+		log.Println("Switcing back...")
+		screen.PostEvent(NewResumeWindowsEvent())
+	}()
 }

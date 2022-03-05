@@ -20,7 +20,7 @@ func OpenShell(id string, ctx context.Context, shell string) error {
 	cmd.Stdout = os.Stdout
 	err := cmd.Run()
 	if err != nil {
-		log.Println("Failed to start shell ", shell, err)
+		log.Println("Failed to start shell", shell, err)
 	}
 	return err
 }

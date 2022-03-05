@@ -11,12 +11,11 @@ type WindowType uint8
 
 const (
 	ContainersHolder WindowType = iota
-	Info
-	ContainerLogs
-	ContainerShell
+	DockerInfo
+
 	Bar
 	GeneralInfo
-	Vi
+	Other
 )
 
 type WindowManager struct {
@@ -35,7 +34,7 @@ func InitWindowManager(screen tcell.Screen) WindowManager {
 		windows: map[WindowType]Window{
 			GeneralInfo:      &general_info_w,
 			ContainersHolder: &containers_w,
-			Info:             &docker_info_w,
+			DockerInfo:       &docker_info_w,
 			Bar:              &bar_w,
 		},
 		focusedWindow: ContainersHolder,
@@ -76,6 +75,18 @@ func (wm *WindowManager) ResizeAll() {
 	}
 }
 
+func (wm *WindowManager) EnableAll() {
+	for _, win := range wm.windows {
+		win.Enable()
+	}
+}
+
+func (wm *WindowManager) DisableAll() {
+	for _, win := range wm.windows {
+		win.Disable()
+	}
+}
+
 func (wm *WindowManager) CloseAll() {
 	for typE, win := range wm.windows {
 		log.Printf("Closing %+v", typE)
@@ -84,6 +95,21 @@ func (wm *WindowManager) CloseAll() {
 	wm.windows = make(map[WindowType]Window)
 }
 
+func (wm *WindowManager) PauseWindows() {
+	wm.screen.DisableMouse()
+	wm.DisableAll()
+	wm.screen.Clear()
+	wm.screen.Sync()
+}
+
+func (wm *WindowManager) ResumeWindows() {
+	wm.EnableAll()
+	wm.screen.Clear()
+	wm.screen.Sync()
+	wm.screen.EnableMouse(tcell.MouseButtonEvents)
+}
+
+// TODO: move this to other location
 func exitIfErr(screen tcell.Screen, err error) {
 	if err != nil {
 		log.Printf("a fatal error occured: %s\n", err)
