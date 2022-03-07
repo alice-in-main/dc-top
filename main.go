@@ -15,6 +15,10 @@ import (
 
 func main() {
 
+	// log.Println(utils.CutString([]byte("abfadsfasdc"), 99991))
+
+	// return
+
 	const workdir = "/tmp/dc-top-files"
 	os.RemoveAll(workdir)
 	err := os.Mkdir(workdir, 0755)

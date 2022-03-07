@@ -54,9 +54,6 @@ func Draw() {
 			handleMouseEvent(windowManager, ev)
 		case window.MessageEvent:
 			windowManager.GetWindow(ev.Receiver).HandleEvent(ev.Message, ev.Sender)
-		case window.ChangeToLogsEvent:
-			container_logs := window.NewContainerLogs(ev.ContainerId)
-			container_logs.OpenContainerLogs(s)
 		case window.PauseWindowsEvent:
 			windowManager.PauseWindows()
 		case window.ResumeWindowsEvent:
@@ -65,8 +62,17 @@ func Draw() {
 			window.OpenContainerShell(ev.ContainerId, context.TODO(), s)
 		case window.ChangeToFileEdittorEvent:
 			window.EditDcYaml(context.TODO(), s)
+		case window.ChangeToLogsWindowEvent:
+			log.Printf("Changing to logs")
+			windowManager.PauseWindows()
+			logs_window := window.NewContainerLogsWindow(ev.ContainerId)
+			windowManager.Open(window.ContainerLogs, &logs_window)
+			windowManager.SetFocusedWindow(window.ContainerLogs)
 		case window.ChangeToDefaultViewEvent:
 			log.Printf("Changing back to default")
+			windowManager.Close(window.ContainerLogs)
+			windowManager.SetFocusedWindow(window.ContainersHolder)
+			windowManager.ResumeWindows()
 		case window.FatalErrorEvent:
 			err = fmt.Errorf("a fatal error occured at %s:\n%s", ev.When(), ev.Err)
 			return
@@ -84,6 +90,8 @@ func handleKeyPress(wm window.WindowManager, key *tcell.EventKey) {
 		log.Fatal("shouldnt be here 1")
 	case window.ContainersHolder:
 		wm.GetWindow(window.ContainersHolder).KeyPress(*key)
+	case window.ContainerLogs:
+		wm.GetWindow(window.ContainerLogs).KeyPress(*key)
 	}
 }
 

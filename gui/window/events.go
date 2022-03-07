@@ -52,17 +52,17 @@ func NewResumeWindowsEvent() ResumeWindowsEvent {
 
 // ---------
 
-type ChangeToLogsEvent struct {
+type ChangeToLogsWindowEvent struct {
 	t           time.Time
 	ContainerId string
 }
 
-func (e ChangeToLogsEvent) When() time.Time {
+func (e ChangeToLogsWindowEvent) When() time.Time {
 	return e.t
 }
 
-func NewChangeToLogsEvent(container_id string) ChangeToLogsEvent {
-	return ChangeToLogsEvent{
+func NewChangeToLogsWindowEvent(container_id string) ChangeToLogsWindowEvent {
+	return ChangeToLogsWindowEvent{
 		t:           time.Now(),
 		ContainerId: container_id,
 	}

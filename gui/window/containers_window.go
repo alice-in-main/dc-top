@@ -372,7 +372,7 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 		switch ev.Rune() {
 		case 'l':
 			if state.focused_id != "" {
-				w.screen.PostEvent(NewChangeToLogsEvent(state.focused_id))
+				w.screen.PostEvent(NewChangeToLogsWindowEvent(state.focused_id))
 			}
 		case 'e':
 			if state.focused_id != "" {

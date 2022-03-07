@@ -12,9 +12,9 @@ type WindowType uint8
 const (
 	ContainersHolder WindowType = iota
 	DockerInfo
-
 	Bar
 	GeneralInfo
+	ContainerLogs
 	Other
 )
 
@@ -85,6 +85,11 @@ func (wm *WindowManager) DisableAll() {
 	for _, win := range wm.windows {
 		win.Disable()
 	}
+}
+
+func (wm *WindowManager) Close(t WindowType) {
+	wm.GetWindow(t).Close()
+	delete(wm.windows, t)
 }
 
 func (wm *WindowManager) CloseAll() {
