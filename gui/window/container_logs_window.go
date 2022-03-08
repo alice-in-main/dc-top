@@ -26,9 +26,11 @@ type logsWriter struct {
 	search_query string
 	ctx          context.Context
 
-	logs        [docker.NumSavedLogs]string
+	logs        [docker.MaxSavedLogs]string
+	styled_logs [docker.MaxSavedLogs]elements.StringStyler
 	logs_offset int
 	lines       []elements.StringStyler
+	line_offset int
 
 	regex_search_chan  chan string
 	string_search_chan chan string
@@ -44,6 +46,7 @@ func newLogsWriter(screen tcell.Screen, ctx context.Context) logsWriter {
 		screen:             screen,
 		search_query:       "",
 		logs_offset:        0,
+		line_offset:        0,
 		ctx:                ctx,
 		lines:              make([]elements.StringStyler, height),
 		regex_search_chan:  make(chan string),
@@ -99,25 +102,6 @@ func (writer *logsWriter) logPrinter() {
 }
 
 func (writer *logsWriter) writeLogs(logs []string) {
-	// const metadata_len = 8
-	// log_line_metadata := single_log[:metadata_len]
-	// var log_line_text
-	// if len(single_log) > metadata_len {
-	// 	log_line_text = string(single_log[metadata_len:])
-	// }
-	// is_stdout := log_line_metadata[0] == 1
-	// if !is_stdout {
-	// 	log_line_text = elements.Foreground(log_line_text, elements.Purple)
-	// }
-	// if writer.search_query != "" {
-	// 	if writer.search_mode == regex {
-	// 		log_line_text = writer.curr_re.ReplaceAllStringFunc(log_line_text,
-	// 			func(s string) string { return elements.Background(s, elements.B_DarkGray) })
-	// 	} else if writer.search_mode == str {
-	// 		log_line_text = strings.ReplaceAll(log_line_text, writer.search_query, elements.Background(writer.search_query, elements.B_DarkGray))
-	// 	}
-
-	// }
 	for _, l := range logs {
 		writer.saveLog(l)
 	}
@@ -126,39 +110,49 @@ func (writer *logsWriter) writeLogs(logs []string) {
 }
 
 func (writer *logsWriter) saveLog(_log string) {
-	writer.logs[writer.logs_offset] = _log
-	writer.logs_offset = (writer.logs_offset + 1) % docker.NumSavedLogs
+	const metadata_len = 8
+	if len(_log) > metadata_len {
+		metadata := _log[:metadata_len]
+		log_line_text := _log[metadata_len:]
+		is_stdout := (metadata[0] == 1)
+		var style tcell.Style
+		if is_stdout {
+			style = tcell.StyleDefault
+		} else {
+			style = tcell.StyleDefault.Background(tcell.ColorDarkRed)
+		}
+		writer.logs[writer.logs_offset] = log_line_text
+		writer.styled_logs[writer.logs_offset] = elements.TextDrawer(log_line_text, style)
+	} else {
+		writer.logs[writer.logs_offset] = ""
+		writer.styled_logs[writer.logs_offset] = elements.EmptyDrawer()
+	}
+	writer.logs_offset = (writer.logs_offset + 1) % docker.MaxSavedLogs
 }
 
 func (writer *logsWriter) updateLines() {
-	const metadata_len = 8
 	width, height := writer.screen.Size()
 	writer.lines = make([]elements.StringStyler, height)
-	log_i := writer.logs_offset - 1
-	for line_i := 0; line_i < height; {
-		curr_log := writer.logs[log_i]
+	log_i := ((writer.logs_offset - 1) - writer.line_offset) % docker.MaxSavedLogs
+	if log_i < 0 {
+		log_i = 0
+	}
+	for line_i := height - 1; line_i >= 0; {
 		log_i--
 		if log_i < 0 {
-			log_i = docker.NumSavedLogs - 1
+			log_i = docker.MaxSavedLogs - 1
 		}
-		if len(curr_log) > metadata_len {
-			log_line_text := curr_log[metadata_len:]
-			cut_log := utils.CutString([]byte(log_line_text), width)
-			for j, line := range cut_log {
-				reverse_index := height - line_i + j - len(cut_log)
-				if reverse_index < 0 {
-					break
-				}
-				writer.lines[reverse_index] = elements.TextDrawer(string(line), tcell.StyleDefault)
-			}
-			line_i += len(cut_log)
-		} else {
-			line_i++
+		log_line_text := writer.logs[log_i]
+		num_partitions := 1 + len(log_line_text)/width
+		for j := 0; j < num_partitions; j++ {
+			writer.lines[line_i] = elements.Suffix(writer.styled_logs[log_i], (num_partitions-j-1)*width)
+			line_i--
 		}
 	}
 }
 
 func (writer *logsWriter) showLines() {
+	writer.screen.Clear()
 	width, _ := writer.screen.Size()
 	for j, line := range writer.lines {
 		for i := 0; i < width; i++ {
@@ -273,6 +267,16 @@ func (w *ContainerLogsWindow) Resize() {
 func (w *ContainerLogsWindow) KeyPress(ev tcell.EventKey) {
 	key := ev.Key()
 	switch key {
+	case tcell.KeyUp:
+		log.Println("LOGS PRESSED UP")
+		w.logs_writer.line_offset++
+		w.logs_writer.write_queue <- []string{}
+	case tcell.KeyDown:
+		log.Println("LOGS PRESSED DOWN")
+		if w.logs_writer.line_offset > 0 {
+			w.logs_writer.line_offset--
+			w.logs_writer.write_queue <- []string{}
+		}
 	case tcell.KeyCtrlD:
 		w.logs_writer.stop <- nil
 	case tcell.KeyRune:

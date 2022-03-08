@@ -26,7 +26,7 @@ func (w *GeneralInfoWindow) Open(s tcell.Screen) {
 }
 
 func (w *GeneralInfoWindow) Resize() {
-	w.resize_ch <- nil
+	// w.resize_ch <- nil
 }
 
 func (w *GeneralInfoWindow) KeyPress(_ tcell.EventKey) {}

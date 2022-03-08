@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	NumSavedLogs = 1000
+	MaxSavedLogs = 1000
 )
 
 func PauseContainer(id string) error {
@@ -36,7 +36,7 @@ func StreamContainerLogs(id string, writer io.Writer, c context.Context, cancel 
 	reader, err := docker_cli.ContainerLogs(c, id, types.ContainerLogsOptions{
 		ShowStdout: true,
 		ShowStderr: true,
-		Tail:       fmt.Sprintf("%d", NumSavedLogs),
+		Tail:       fmt.Sprintf("%d", MaxSavedLogs),
 		Follow:     true,
 	})
 	if err != nil {

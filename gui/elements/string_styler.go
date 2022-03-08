@@ -17,6 +17,15 @@ func StrikeThrough(orig_styler StringStyler) StringStyler {
 	}
 }
 
+func Suffix(original StringStyler, offset int) StringStyler {
+	if original == nil {
+		return EmptyDrawer()
+	}
+	return func(i int) (rune, tcell.Style) {
+		return original(i + offset)
+	}
+}
+
 func TextDrawer(str string, style tcell.Style) StringStyler {
 	return func(i int) (rune, tcell.Style) {
 		if i < len(str) {

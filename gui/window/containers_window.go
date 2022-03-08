@@ -1,6 +1,7 @@
 package window
 
 // TODO: add start date in inspect mode
+// TODO: possible for slow sort is copying slices
 
 import (
 	"context"
