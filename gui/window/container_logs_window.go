@@ -5,56 +5,50 @@ import (
 	docker "dc-top/docker"
 	"dc-top/gui/elements"
 	"dc-top/utils"
-	"fmt"
 	"log"
-	"regexp"
 
 	"github.com/gdamore/tcell/v2"
 )
 
-type searchMode uint8
-
-const (
-	str searchMode = iota
-	regex
-)
-
 type logsWriter struct {
-	screen       tcell.Screen
-	search_mode  searchMode
-	curr_re      *regexp.Regexp
-	search_query string
 	ctx          context.Context
+	is_following bool
+	is_searching bool
+	search_box   elements.TextBox
 
-	logs        [docker.MaxSavedLogs]string
-	styled_logs [docker.MaxSavedLogs]elements.StringStyler
+	logs        [docker.MaxSavedLogs]singleLog
 	logs_offset int
+	view_offset int
 	lines       []elements.StringStyler
 	line_offset int
 
-	regex_search_chan  chan string
-	string_search_chan chan string
-	write_queue        chan []string
-	pause              chan interface{}
-	resume             chan interface{}
-	stop               chan interface{}
+	redraw_request chan interface{}
+	write_queue    chan []string
+	pause          chan interface{}
+	resume         chan interface{}
+	stop           chan interface{}
 }
 
-func newLogsWriter(screen tcell.Screen, ctx context.Context) logsWriter {
-	_, height := screen.Size()
+func newLogsWriter(ctx context.Context) logsWriter {
+	_, height := GetScreen().Size()
 	new_writer := logsWriter{
-		screen:             screen,
-		search_query:       "",
-		logs_offset:        0,
-		line_offset:        0,
-		ctx:                ctx,
-		lines:              make([]elements.StringStyler, height),
-		regex_search_chan:  make(chan string),
-		string_search_chan: make(chan string),
-		write_queue:        make(chan []string),
-		pause:              make(chan interface{}),
-		resume:             make(chan interface{}),
-		stop:               make(chan interface{}),
+		is_following: true,
+		is_searching: false,
+		logs_offset:  0,
+		view_offset:  0,
+		line_offset:  0,
+		ctx:          ctx,
+		search_box: elements.NewTextBox(
+			elements.TextDrawer("/ ", tcell.StyleDefault.Foreground(tcell.ColorGreenYellow)),
+			2,
+			tcell.StyleDefault,
+			tcell.StyleDefault.Underline(true)),
+		lines:          make([]elements.StringStyler, height),
+		redraw_request: make(chan interface{}),
+		write_queue:    make(chan []string),
+		pause:          make(chan interface{}),
+		resume:         make(chan interface{}),
+		stop:           make(chan interface{}),
 	}
 	return new_writer
 }
@@ -79,20 +73,10 @@ func (writer *logsWriter) Write(logs_batch []byte) (int, error) {
 func (writer *logsWriter) logPrinter() {
 	for {
 		select {
-		case search := <-writer.regex_search_chan:
-			writer.search_mode = regex
-			writer.search_query = search
-			re, err := regexp.Compile(writer.search_query)
-			if err != nil {
-				fmt.Println("Failed to compile regex ", writer.search_query)
-				break
-			}
-			writer.curr_re = re
-		case search := <-writer.string_search_chan:
-			writer.search_mode = str
-			writer.search_query = search
 		case logs := <-writer.write_queue:
 			writer.writeLogs(logs)
+		case <-writer.redraw_request:
+			writer.redraw()
 		case <-writer.pause:
 			<-writer.resume
 		case <-writer.ctx.Done():
@@ -105,6 +89,12 @@ func (writer *logsWriter) writeLogs(logs []string) {
 	for _, l := range logs {
 		writer.saveLog(l)
 	}
+	// if writer.is_following {
+	writer.redraw()
+	// }
+}
+
+func (writer *logsWriter) redraw() {
 	writer.updateLines()
 	writer.showLines()
 }
@@ -115,54 +105,65 @@ func (writer *logsWriter) saveLog(_log string) {
 		metadata := _log[:metadata_len]
 		log_line_text := _log[metadata_len:]
 		is_stdout := (metadata[0] == 1)
-		var style tcell.Style
-		if is_stdout {
-			style = tcell.StyleDefault
-		} else {
-			style = tcell.StyleDefault.Background(tcell.ColorDarkRed)
-		}
-		writer.logs[writer.logs_offset] = log_line_text
-		writer.styled_logs[writer.logs_offset] = elements.TextDrawer(log_line_text, style)
+		writer.logs[writer.logs_offset] = newLog(log_line_text, is_stdout)
 	} else {
-		writer.logs[writer.logs_offset] = ""
-		writer.styled_logs[writer.logs_offset] = elements.EmptyDrawer()
+		writer.logs[writer.logs_offset] = newLog("", true)
 	}
 	writer.logs_offset = (writer.logs_offset + 1) % docker.MaxSavedLogs
+	if writer.is_following {
+		writer.view_offset = writer.logs_offset
+	}
 }
 
 func (writer *logsWriter) updateLines() {
-	width, height := writer.screen.Size()
+	width, height := GetScreen().Size()
 	writer.lines = make([]elements.StringStyler, height)
-	log_i := ((writer.logs_offset - 1) - writer.line_offset) % docker.MaxSavedLogs
+	log_i := ((writer.view_offset - 1) - writer.line_offset) % docker.MaxSavedLogs
 	if log_i < 0 {
 		log_i = 0
 	}
 	for line_i := height - 1; line_i >= 0; {
+		log_line_text := writer.logs[log_i].content
+		log_line_style := tcell.StyleDefault
+		if !writer.logs[log_i].is_stdout {
+			log_line_style = log_line_style.Foreground(tcell.ColorRed)
+		}
+		num_partitions := 1 + len(log_line_text)/width
+		log_with_highlights := elements.HighlightDrawer(log_line_text, writer.search_box.Value(), log_line_style)
+		for j := 0; j < num_partitions; j++ {
+			writer.lines[line_i] = elements.Suffix(log_with_highlights, (num_partitions-j-1)*width)
+			line_i--
+			if line_i < 0 {
+				break
+			}
+		}
 		log_i--
 		if log_i < 0 {
 			log_i = docker.MaxSavedLogs - 1
-		}
-		log_line_text := writer.logs[log_i]
-		num_partitions := 1 + len(log_line_text)/width
-		for j := 0; j < num_partitions; j++ {
-			writer.lines[line_i] = elements.Suffix(writer.styled_logs[log_i], (num_partitions-j-1)*width)
-			line_i--
 		}
 	}
 }
 
 func (writer *logsWriter) showLines() {
-	writer.screen.Clear()
-	width, _ := writer.screen.Size()
+	screen := GetScreen()
+	screen.Clear()
+	width, height := screen.Size()
 	for j, line := range writer.lines {
 		for i := 0; i < width; i++ {
 			if line != nil {
 				r, s := line(i)
-				writer.screen.SetContent(i, j, r, nil, s)
+				screen.SetContent(i, j, r, nil, s)
 			}
 		}
 	}
-	writer.screen.Sync()
+	if height >= 1 && writer.is_searching {
+		search_box := writer.search_box.Style()
+		for i := 0; i < width; i++ {
+			r, s := search_box(i)
+			screen.SetContent(i, 0, r, nil, s)
+		}
+	}
+	screen.Sync()
 }
 
 func (writer *logsWriter) logStopper(cancel context.CancelFunc) error {
@@ -178,48 +179,6 @@ func (writer *logsWriter) logStopper(cancel context.CancelFunc) error {
 			return nil
 		}
 	}
-
-	// err := keyboard.Open()
-	// if err != nil {
-	// 	return err
-	// }
-	// defer keyboard.Close()
-	// for {
-	// 	char, key, err := keyboard.GetSingleKey()
-	// 	if err != nil && !strings.HasPrefix(err.Error(), "Unrecognized escape sequence") {
-	// 		log.Printf("Got error while waiting for key '%s'", err.Error())
-	// 		cancel()
-	// 	}
-	// 	if key == keyboard.KeyEsc || key == keyboard.KeyCtrlC || char == 'q' || char == 'l' {
-	// 		cancel()
-	// 		// TODO: graceful exit
-	// 		if key == keyboard.KeyCtrlC {
-	// 			os.Exit(0)
-	// 		}
-	// 		return nil
-	// 	} else if char == '/' || char == '?' {
-	// 		writer.pause <- nil
-	// 		search_reader := bufio.NewReader(os.Stdin)
-	// 		fmt.Print(string(char), " Enter search: ")
-	// 		text, err := search_reader.ReadString('\n')
-	// 		writer.resume <- nil
-	// 		if err != nil {
-	// 			log.Println("Failed to read user search", err)
-	// 			cancel()
-	// 		}
-	// 		text = text[:len(text)-1] // remove newline char
-	// 		if text != "" {
-	// 			if char == '?' {
-	// 				writer.regex_search_chan <- text
-	// 			} else {
-	// 				writer.string_search_chan <- text
-	// 			}
-	// 		}
-	// 		log.Println("ready for new search ")
-	// 	} else {
-	// 		continue
-	// 	}
-	// }
 }
 
 type ContainerLogsWindow struct {
@@ -239,53 +198,32 @@ func NewContainerLogsWindow(id string) ContainerLogsWindow {
 	}
 }
 
-func (w *ContainerLogsWindow) Open(screen tcell.Screen) {
+func (w *ContainerLogsWindow) Open() {
 	go func() {
-		_, height := screen.Size()
-		for i := 0; i < height; i++ {
-			fmt.Println()
-		}
 		container_log_window_context, cancel := context.WithCancel(context.TODO())
-		logs_writer := newLogsWriter(screen, container_log_window_context)
+		logs_writer := newLogsWriter(container_log_window_context)
 		w.logs_writer = &logs_writer
 		go logs_writer.logPrinter()
 		go func() {
 			err := logs_writer.logStopper(cancel)
-			exitIfErr(screen, err)
+			exitIfErr(err)
 		}()
 		go docker.StreamContainerLogs(w.id, &logs_writer, container_log_window_context, cancel)
 		<-container_log_window_context.Done()
 		log.Println("Switcing back...")
-		screen.PostEvent(NewChangeToDefaultViewEvent())
+		GetScreen().PostEvent(NewChangeToDefaultViewEvent())
 	}()
 }
 
 func (w *ContainerLogsWindow) Resize() {
-	w.logs_writer.write_queue <- []string{}
+	w.triggerRedraw()
 }
 
 func (w *ContainerLogsWindow) KeyPress(ev tcell.EventKey) {
-	key := ev.Key()
-	switch key {
-	case tcell.KeyUp:
-		log.Println("LOGS PRESSED UP")
-		w.logs_writer.line_offset++
-		w.logs_writer.write_queue <- []string{}
-	case tcell.KeyDown:
-		log.Println("LOGS PRESSED DOWN")
-		if w.logs_writer.line_offset > 0 {
-			w.logs_writer.line_offset--
-			w.logs_writer.write_queue <- []string{}
-		}
-	case tcell.KeyCtrlD:
-		w.logs_writer.stop <- nil
-	case tcell.KeyRune:
-		switch ev.Rune() {
-		case 'q':
-			w.logs_writer.stop <- nil
-		case 'l':
-			w.logs_writer.stop <- nil
-		}
+	if w.logs_writer.is_searching {
+		w.handleSearchKeyPress(&ev)
+	} else {
+		w.handleRegularKeyPress(&ev)
 	}
 }
 
@@ -302,3 +240,77 @@ func (w *ContainerLogsWindow) Enable() { w.logs_writer.resume <- nil }
 func (w *ContainerLogsWindow) Disable() { w.logs_writer.pause <- nil }
 
 func (w *ContainerLogsWindow) Close() { w.cancel() }
+
+func (w *ContainerLogsWindow) startFollowing() {
+	w.logs_writer.line_offset = 0
+	w.logs_writer.is_following = true
+	w.triggerRedraw()
+}
+
+func (w *ContainerLogsWindow) triggerRedraw() {
+	w.logs_writer.write_queue <- []string{}
+}
+
+func (w *ContainerLogsWindow) handleRegularKeyPress(ev *tcell.EventKey) {
+	key := ev.Key()
+	switch key {
+	case tcell.KeyEnter:
+		w.startFollowing()
+	case tcell.KeyUp:
+		w.logs_writer.line_offset++
+		w.logs_writer.is_following = false
+		w.triggerRedraw()
+	case tcell.KeyDown:
+		if w.logs_writer.line_offset > 0 {
+			w.logs_writer.line_offset--
+			w.logs_writer.is_following = false
+			w.triggerRedraw()
+		}
+	case tcell.KeyCtrlD:
+		w.logs_writer.stop <- nil
+	case tcell.KeyRune:
+		switch ev.Rune() {
+		case 'f':
+			w.startFollowing()
+		case '/':
+			w.logs_writer.is_searching = true
+			w.triggerRedraw()
+		case 'c':
+			w.logs_writer.search_box.Reset()
+			w.triggerRedraw()
+		case 'q':
+			w.logs_writer.stop <- nil
+		case 'l':
+			w.logs_writer.stop <- nil
+		}
+	}
+}
+
+func (w *ContainerLogsWindow) handleSearchKeyPress(ev *tcell.EventKey) {
+	key := ev.Key()
+	switch key {
+	case tcell.KeyCtrlD:
+		w.logs_writer.search_box.Reset()
+		w.logs_writer.is_searching = false
+	case tcell.KeyEscape:
+		w.logs_writer.search_box.Reset()
+		w.logs_writer.is_searching = false
+	case tcell.KeyEnter:
+		w.logs_writer.is_searching = false
+	default:
+		w.logs_writer.search_box.HandleKey(ev)
+	}
+	w.triggerRedraw()
+}
+
+type singleLog struct {
+	content   string
+	is_stdout bool
+}
+
+func newLog(content string, is_stdout bool) singleLog {
+	return singleLog{
+		content:   content,
+		is_stdout: is_stdout,
+	}
+}

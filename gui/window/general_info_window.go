@@ -21,8 +21,8 @@ func NewGeneralInfoWindow(context context.Context) GeneralInfoWindow {
 	}
 }
 
-func (w *GeneralInfoWindow) Open(s tcell.Screen) {
-	go w.main(s)
+func (w *GeneralInfoWindow) Open() {
+	go w.main()
 }
 
 func (w *GeneralInfoWindow) Resize() {
@@ -54,20 +54,20 @@ type generalInfoState struct {
 	dc_mode_status string
 }
 
-func (w *GeneralInfoWindow) main(s tcell.Screen) {
-	x1, y1, x2, y2 := GeneralInfoWindowSize(s)
+func (w *GeneralInfoWindow) main() {
+	x1, y1, x2, y2 := GeneralInfoWindowSize()
 	state := generalInfoState{
 		window_state:   NewWindow(x1, y1, x2, y2),
 		version:        "dc-top v0.1",
 		dc_mode_status: getDcModeStatus(),
 	}
-	drawGeneralInfo(s, state)
+	drawGeneralInfo(state)
 	for {
 		select {
 		case <-w.resize_ch:
-			x1, y1, x2, y2 := GeneralInfoWindowSize(s)
+			x1, y1, x2, y2 := GeneralInfoWindowSize()
 			state.window_state.SetBorders(x1, y1, x2, y2)
-			drawGeneralInfo(s, state)
+			drawGeneralInfo(state)
 		case <-w.context.Done():
 			log.Printf("General info window stopped drwaing...\n")
 			return
@@ -83,8 +83,8 @@ func getDcModeStatus() string {
 	}
 }
 
-func drawGeneralInfo(screen tcell.Screen, state generalInfoState) {
-	DrawContents(screen, &state.window_state, generalInfoDrawerGenerator(&state))
+func drawGeneralInfo(state generalInfoState) {
+	DrawContents(&state.window_state, generalInfoDrawerGenerator(&state))
 }
 
 func generalInfoDrawerGenerator(state *generalInfoState) func(x, y int) (rune, tcell.Style) {

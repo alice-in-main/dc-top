@@ -2,6 +2,7 @@ package window
 
 // TODO: add start date in inspect mode
 // TODO: possible for slow sort is copying slices
+// TODO: add arrows for sorted by
 
 import (
 	"context"
@@ -36,7 +37,6 @@ const (
 
 type ContainersWindow struct {
 	//common
-	screen                  tcell.Screen
 	cached_state            tableState
 	resize_chan             chan interface{}
 	new_container_data_chan chan docker.ContainerData
@@ -54,11 +54,12 @@ type tableState struct {
 	window_state WindowState
 	focused_id   string
 	//containers view
-	is_enabled             bool
-	window_mode            windowMode
-	keyboard_mode          keyboardMode
-	search_buffer          string
-	search_buffer_index    int
+	is_enabled    bool
+	window_mode   windowMode
+	keyboard_mode keyboardMode
+	search_box    elements.TextBox
+	// search_buffer          string
+	// search_buffer_index    int
 	index_of_top_container int
 	table_height           int
 	containers_data        docker.ContainerData
@@ -84,9 +85,8 @@ func NewContainersWindow() ContainersWindow {
 	}
 }
 
-func (w *ContainersWindow) Open(s tcell.Screen) {
-	w.screen = s
-	go w.main(s)
+func (w *ContainersWindow) Open() {
+	go w.main()
 }
 
 func (w *ContainersWindow) Resize() {
@@ -128,7 +128,7 @@ func (w *ContainersWindow) HandleEvent(ev interface{}, sender WindowType) (inter
 			totalSystemCpuUsage: system_cpu_usage,
 			totalMemUsage:       total_mem_usage,
 		}
-		w.screen.PostEvent(NewMessageEvent(sender, ContainersHolder, summary))
+		GetScreen().PostEvent(NewMessageEvent(sender, ContainersHolder, summary))
 	default:
 		log.Fatal("Got unknown event in holder", ev)
 	}
@@ -149,18 +149,18 @@ func (w *ContainersWindow) Close() {
 	w.stop_chan <- nil
 }
 
-func (w *ContainersWindow) drawer(screen tcell.Screen, c context.Context) {
+func (w *ContainersWindow) drawer(c context.Context) {
 	for {
 		select {
 		case state := <-w.draw_queue:
 			if state.is_enabled {
-				DrawBorders(screen, &state.window_state)
+				DrawBorders(&state.window_state)
 				drawer_func, err := dockerStatsDrawerGenerator(state)
 				if err != nil {
 					log.Printf("Got error %s while drawing\n", err)
 				}
-				DrawContents(screen, &state.window_state, drawer_func)
-				screen.Show()
+				DrawContents(&state.window_state, drawer_func)
+				GetScreen().Show()
 			}
 		case <-c.Done():
 			log.Printf("Containers window stopped drwaing...\n")
@@ -175,11 +175,11 @@ func (w *ContainersWindow) dockerDataStreamer(c context.Context) {
 		case state := <-w.data_request_chan:
 			var new_data docker.ContainerData
 			up_to_date, err := state.containers_data.AreIdsUpToDate()
-			exitIfErr(w.screen, err)
+			exitIfErr(err)
 			if !up_to_date {
 				log.Printf("Ids changed, getting new container stats")
 				new_data, err = docker.GetContainers(&state.containers_data)
-				exitIfErr(w.screen, err)
+				exitIfErr(err)
 			} else {
 				state.containers_data.UpdateStats()
 				new_data = state.containers_data
@@ -201,7 +201,7 @@ func (w *ContainersWindow) dockerDataStreamer(c context.Context) {
 
 func handleResize(w *ContainersWindow, table_state tableState) tableState {
 	log.Printf("Resize request\n")
-	x1, y1, x2, y2 := ContainerWindowSize(w.screen)
+	x1, y1, x2, y2 := ContainerWindowSize()
 	table_state.table_height = calcTableHeight(y1, y2)
 	table_state.inspect_height = y2 - y1 - 2 + 1
 	log.Printf("table height is %d\n", table_state.table_height)
@@ -218,7 +218,7 @@ func handleResize(w *ContainersWindow, table_state tableState) tableState {
 func handleNewData(new_data *docker.ContainerData, w *ContainersWindow, table_state tableState) tableState {
 	log.Printf("Got new data\n")
 	table_state.containers_data = *new_data
-	table_state.filtered_data = table_state.containers_data.Filter(table_state.search_buffer)
+	table_state.filtered_data = table_state.containers_data.Filter(table_state.search_box.Value())
 	if !new_data.Contains(table_state.focused_id) {
 		table_state.focused_id = ""
 		table_state.window_mode = containers
@@ -248,7 +248,10 @@ func handleChangeIndex(is_next bool, table_state *tableState) {
 	} else {
 		index, err := findIndexOfId(table_state.filtered_data, table_state.focused_id)
 		if err != nil {
-			return
+			if table_state.containers_data.Len() == 0 {
+				return
+			}
+			index = 0
 		}
 		if is_next {
 			new_index = index + 1
@@ -370,25 +373,26 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 			}
 		}
 	case tcell.KeyRune:
+		screen := GetScreen()
 		switch ev.Rune() {
 		case 'l':
 			if state.focused_id != "" {
-				w.screen.PostEvent(NewChangeToLogsWindowEvent(state.focused_id))
+				screen.PostEvent(NewChangeToLogsWindowEvent(state.focused_id))
 			}
 		case 'e':
 			if state.focused_id != "" {
-				w.screen.PostEvent(NewChangeToContainerShellEvent(state.focused_id))
+				screen.PostEvent(NewChangeToContainerShellEvent(state.focused_id))
 			}
 		case 'v':
 			if compose.DcModeEnabled() {
 				if !compose.ValidateYaml(context.TODO()) {
-					w.screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, ErrorMessage{Msg: []rune("docker compose yaml syntax is invalid")}))
+					screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, ErrorMessage{Msg: []rune("docker compose yaml syntax is invalid")}))
 				} else {
 					compose.CreateBackupYaml()
-					w.screen.PostEvent(NewChangeToFileEdittorEvent(compose.DcYamlPath(), ContainersHolder))
+					screen.PostEvent(NewChangeToFileEdittorEvent(compose.DcYamlPath(), ContainersHolder))
 				}
 			} else {
-				w.screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, ErrorMessage{Msg: []rune("dc mode is disabled")}))
+				screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, ErrorMessage{Msg: []rune("dc mode is disabled")}))
 			}
 		case 'i':
 			if state.window_mode == containers {
@@ -420,12 +424,12 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 				handleNewIndex(state.containers_data.Len()-1, state)
 			}
 		case 'c':
-			resetSearchBuffer(w, state)
-			state.filtered_data = state.containers_data.Filter(state.search_buffer)
+			state.search_box.Reset()
+			state.filtered_data = state.containers_data.Filter(state.search_box.Value())
+			screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, InfoMessage{Msg: []rune("Cleared search")}))
 		case '/':
-			// TODO fix search scrolling
-			resetSearchBuffer(w, state)
-			w.screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, InfoMessage{Msg: []rune("Switched to search mode...")}))
+			state.search_box.Reset()
+			screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, InfoMessage{Msg: []rune("Switched to search mode...")}))
 			state.keyboard_mode = search
 		}
 	}
@@ -435,59 +439,41 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 func (state *tableState) searchKeyPress(ev *tcell.EventKey, w *ContainersWindow) {
 	key := ev.Key()
 	switch key {
-	case tcell.KeyRune:
-		state.search_buffer = state.search_buffer[:state.search_buffer_index] + string(ev.Rune()) + state.search_buffer[state.search_buffer_index:]
-		state.search_buffer_index++
-	case tcell.KeyLeft:
-		if state.search_buffer_index > 0 {
-			state.search_buffer_index--
-		}
-	case tcell.KeyRight:
-		if state.search_buffer_index < len(state.search_buffer) {
-			state.search_buffer_index++
-		}
-	case tcell.KeyBackspace:
-		if state.search_buffer_index > 0 {
-			state.search_buffer = state.search_buffer[:state.search_buffer_index-1] + state.search_buffer[state.search_buffer_index:]
-			state.search_buffer_index--
-		}
-	case tcell.KeyBackspace2:
-		if state.search_buffer_index > 0 {
-			state.search_buffer = state.search_buffer[:state.search_buffer_index-1] + state.search_buffer[state.search_buffer_index:]
-			state.search_buffer_index--
-		}
-	case tcell.KeyDelete:
-		if state.search_buffer_index < len(state.search_buffer) {
-			state.search_buffer = state.search_buffer[:state.search_buffer_index] + state.search_buffer[state.search_buffer_index+1:]
-		}
 	case tcell.KeyEnter:
 		state.keyboard_mode = regular
-		if state.search_buffer != "" {
-			w.screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, InfoMessage{Msg: []rune(fmt.Sprintf("Searching for %s", state.search_buffer))}))
+		if state.search_box.Value() != "" {
+			GetScreen().PostEvent(NewMessageEvent(Bar, ContainersHolder, InfoMessage{Msg: []rune(fmt.Sprintf("Searching for %s", state.search_box.Value()))}))
 		}
 	case tcell.KeyEscape:
 		state.keyboard_mode = regular
-		resetSearchBuffer(w, state)
+		state.search_box.Reset()
 	case tcell.KeyCtrlD:
 		state.keyboard_mode = regular
-		resetSearchBuffer(w, state)
+		state.search_box.Reset()
+	default:
+		state.search_box.HandleKey(ev)
 	}
-	state.filtered_data = state.containers_data.Filter(state.search_buffer)
+	state.filtered_data = state.containers_data.Filter(state.search_box.Value())
 }
 
 func calcTableHeight(top, buttom int) int {
 	return buttom - top - 4 + 1 - 1
 }
 
-func (w *ContainersWindow) main(s tcell.Screen) {
-	x1, y1, x2, y2 := ContainerWindowSize(s)
+func (w *ContainersWindow) main() {
+	x1, y1, x2, y2 := ContainerWindowSize()
 	window_state := NewWindow(x1, y1, x2, y2)
 	data, err := docker.GetContainers(nil)
-	exitIfErr(w.screen, err)
+	exitIfErr(err)
 	state := tableState{
-		is_enabled:             true,
-		containers_data:        data,
-		filtered_data:          data.Filter(""),
+		is_enabled:      true,
+		containers_data: data,
+		filtered_data:   data.Filter(""),
+		search_box: elements.NewTextBox(
+			elements.TextDrawer(" /", tcell.StyleDefault.Foreground(tcell.ColorYellow)),
+			2,
+			tcell.StyleDefault,
+			tcell.StyleDefault.Background(tcell.ColorWhite).Foreground(tcell.ColorBlack)),
 		index_of_top_container: 0,
 		table_height:           calcTableHeight(y1, y2),
 		window_state:           window_state,
@@ -501,7 +487,7 @@ func (w *ContainersWindow) main(s tcell.Screen) {
 	state.containers_data.SortData(state.main_sort_type, state.secondary_sort_type)
 	window_context, cancel := context.WithCancel(context.TODO())
 	w.cached_state = state
-	go w.drawer(s, window_context)
+	go w.drawer(window_context)
 	go w.dockerDataStreamer(window_context)
 	go func() { w.new_container_data_chan <- state.containers_data }()
 	for {
@@ -520,7 +506,7 @@ func (w *ContainersWindow) main(s tcell.Screen) {
 			state = handleMouseEvent(&mouse_event, w, state)
 		case keyboard_event := <-w.keyboard_chan:
 			state, err = handleKeyboardEvent(&keyboard_event, w, state)
-			exitIfErr(w.screen, err)
+			exitIfErr(err)
 		case <-w.stop_chan:
 			log.Printf("Stopping all containers window routines\n")
 			cancel()
@@ -711,12 +697,8 @@ func generateTable(state *tableState) []elements.StringStyler {
 func dockerStatsDrawerGenerator(state tableState) (func(x, y int) (rune, tcell.Style), error) {
 	if state.window_mode == containers {
 		data_table := generateTable(&state)
-		search_row := elements.TextDrawer(" /", tcell.StyleDefault.Foreground(tcell.ColorYellow)).Concat(2, elements.TextBoxDrawer(
-			state.search_buffer,
-			state.search_buffer_index,
-			tcell.StyleDefault,
-			tcell.StyleDefault.Background(tcell.ColorWhite).Foreground(tcell.ColorBlack)))
-		search_filter_message := elements.TextDrawer(fmt.Sprintf("Showing only containers containing '%s'", state.search_buffer), tcell.StyleDefault)
+		search_row := state.search_box.Style()
+		search_filter_message := elements.TextDrawer(fmt.Sprintf("Showing only containers containing '%s'", state.search_box.Value()), tcell.StyleDefault)
 
 		return func(x, y int) (rune, tcell.Style) {
 			if y == 0 || y == 1 {
@@ -725,7 +707,7 @@ func dockerStatsDrawerGenerator(state tableState) (func(x, y int) (rune, tcell.S
 			if y == state.table_height+2 {
 				if state.keyboard_mode == search {
 					return search_row(x)
-				} else if state.keyboard_mode == regular && state.search_buffer != "" {
+				} else if state.keyboard_mode == regular && state.search_box.Value() != "" {
 					return search_filter_message(x)
 				}
 			}
@@ -949,12 +931,6 @@ func updateIndices(state *tableState, curr_index int) {
 		state.index_of_top_container -= (index_of_buttom - state.containers_data.Len() + 1)
 	}
 	log.Printf("CURR: %d, TOP: %d, BUTTOM: %d\n", curr_index, state.index_of_top_container, index_of_buttom)
-}
-
-func resetSearchBuffer(w *ContainersWindow, state *tableState) {
-	state.search_buffer = ""
-	state.search_buffer_index = 0
-	w.screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, InfoMessage{Msg: []rune("Cleared search")}))
 }
 
 func findIndexOfId(data []docker.ContainerDatum, id string) (int, error) {

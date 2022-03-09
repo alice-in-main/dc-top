@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"math"
+	"strings"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -85,6 +86,36 @@ func RuneNRepeater(r rune, n int, s tcell.Style) StringStyler {
 	}
 }
 
+func HighlightDrawer(str string, substr string, default_style tcell.Style) StringStyler {
+	if substr == "" {
+		return TextDrawer(str, default_style)
+	}
+	substr_len := len(substr)
+	highlighted_indices := make([]bool, len(str))
+	log.Printf("String: %s; Substring: %s\n", str, substr)
+	for i, next_i := 0, strings.Index(str, substr); i < len(str) && next_i != -1; next_i = strings.Index(str[i:], substr) {
+		i += next_i
+		for j := i; j < i+substr_len; j++ {
+			log.Printf("%d is highlighted\n", j)
+			highlighted_indices[j] = true
+		}
+		i += substr_len
+	}
+	return func(i int) (rune, tcell.Style) {
+		if i < len(str) {
+			r := rune(str[i])
+			var s tcell.Style
+			if highlighted_indices[i] {
+				s = default_style.Reverse(true)
+			} else {
+				s = default_style
+			}
+			return r, s
+		}
+		return '\x00', tcell.StyleDefault
+	}
+}
+
 func PercentageBarDrawer(description string, percentage float64, bar_len int, extra_info []rune) StringStyler {
 	var high_percentage float64 = 80.0
 	var mid_percentage float64 = 50.0
@@ -123,23 +154,6 @@ func ValuesBarDrawer(description string, min_val float64, max_val float64, curr_
 	normalized_max := max_val - min_val
 	normalized_curr := curr_val - min_val
 	return PercentageBarDrawer(description, 100.0*normalized_curr/normalized_max, bar_len, extra_info)
-}
-
-func TextBoxDrawer(text string, cursor_index int, default_style tcell.Style, cursor_style tcell.Style) StringStyler {
-	return func(i int) (rune, tcell.Style) {
-		var r rune = ' '
-		var s tcell.Style = default_style
-
-		if i < len(text) {
-			r = rune(text[i])
-		}
-
-		if i == cursor_index {
-			s = cursor_style
-		}
-
-		return r, s
-	}
 }
 
 func (s1 StringStyler) Concat(stich_index int, s2 StringStyler) StringStyler {

@@ -21,10 +21,9 @@ const (
 type WindowManager struct {
 	windows       map[WindowType]Window
 	focusedWindow WindowType
-	screen        tcell.Screen
 }
 
-func InitWindowManager(screen tcell.Screen) WindowManager {
+func InitWindowManager() WindowManager {
 	general_info_w := NewGeneralInfoWindow(context.Background())
 	containers_w := NewContainersWindow()
 	docker_info_w := NewDockerInfoWindow()
@@ -38,7 +37,6 @@ func InitWindowManager(screen tcell.Screen) WindowManager {
 			Bar:              &bar_w,
 		},
 		focusedWindow: ContainersHolder,
-		screen:        screen,
 	}
 }
 
@@ -57,7 +55,7 @@ func (wm *WindowManager) SetFocusedWindow(focusedWindow WindowType) {
 
 func (wm *WindowManager) OpenAll() {
 	for _, win := range wm.windows {
-		win.Open(wm.screen)
+		win.Open()
 	}
 }
 
@@ -66,7 +64,7 @@ func (wm *WindowManager) Open(t WindowType, new_window Window) {
 		old_window.Close()
 	}
 	wm.windows[t] = new_window
-	new_window.Open(wm.screen)
+	new_window.Open()
 }
 
 func (wm *WindowManager) ResizeAll() {
@@ -101,23 +99,17 @@ func (wm *WindowManager) CloseAll() {
 }
 
 func (wm *WindowManager) PauseWindows() {
-	wm.screen.DisableMouse()
+	screen := GetScreen()
+	screen.DisableMouse()
 	wm.DisableAll()
-	wm.screen.Clear()
-	wm.screen.Sync()
+	screen.Clear()
+	screen.Sync()
 }
 
 func (wm *WindowManager) ResumeWindows() {
+	screen := GetScreen()
 	wm.EnableAll()
-	wm.screen.Clear()
-	wm.screen.Sync()
-	wm.screen.EnableMouse(tcell.MouseButtonEvents)
-}
-
-// TODO: move this to other location
-func exitIfErr(screen tcell.Screen, err error) {
-	if err != nil {
-		log.Printf("a fatal error occured: %s\n", err)
-		screen.PostEvent(NewFatalErrorEvent(err))
-	}
+	screen.Clear()
+	screen.Sync()
+	screen.EnableMouse(tcell.MouseButtonEvents)
 }

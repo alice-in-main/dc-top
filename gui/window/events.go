@@ -1,6 +1,7 @@
 package window
 
 import (
+	"log"
 	"time"
 )
 
@@ -175,5 +176,12 @@ func NewFatalErrorEvent(err error) FatalErrorEvent {
 	return FatalErrorEvent{
 		t:   time.Now(),
 		Err: err,
+	}
+}
+
+func exitIfErr(err error) {
+	if err != nil {
+		log.Printf("a fatal error occured: %s\n", err)
+		GetScreen().PostEvent(NewFatalErrorEvent(err))
 	}
 }

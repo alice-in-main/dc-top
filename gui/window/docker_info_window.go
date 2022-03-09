@@ -32,8 +32,8 @@ func NewDockerInfoWindow() DockerInfoWindow {
 	}
 }
 
-func (w *DockerInfoWindow) Open(s tcell.Screen) {
-	go w.main(s)
+func (w *DockerInfoWindow) Open() {
+	go w.main()
 }
 
 func (w *DockerInfoWindow) Resize() {
@@ -72,9 +72,10 @@ func (w *DockerInfoWindow) Close() {
 	w.stop_chan <- nil
 }
 
-func (w *DockerInfoWindow) main(s tcell.Screen) {
+func (w *DockerInfoWindow) main() {
+	s := GetScreen()
 	is_enabled := true
-	x1, y1, x2, y2 := DockerInfoWindowSize(s)
+	x1, y1, x2, y2 := DockerInfoWindowSize()
 	var state dockerInfoState = dockerInfoState{
 		window_state: NewWindow(x1, y1, x2, y2),
 	}
@@ -85,17 +86,17 @@ func (w *DockerInfoWindow) main(s tcell.Screen) {
 			log.Printf("changed docker info to %t", is_enabled)
 		case <-w.resize_chan:
 			if is_enabled {
-				x1, y1, x2, y2 := DockerInfoWindowSize(s)
+				x1, y1, x2, y2 := DockerInfoWindowSize()
 				state.window_state.SetBorders(x1, y1, x2, y2)
-				dockerInfoWindowDraw(s, state)
+				dockerInfoWindowDraw(state)
 			}
 		case summary := <-w.new_stats_chan:
 			if is_enabled {
 				state.docker_resource_summary = summary
 				info, err := docker.GetDockerInfo()
-				exitIfErr(s, err)
+				exitIfErr(err)
 				state.docker_info = info
-				dockerInfoWindowDraw(s, state)
+				dockerInfoWindowDraw(state)
 			}
 		case <-tick.C:
 			var getTotalStatsRequest = getTotalStats{}
@@ -108,10 +109,10 @@ func (w *DockerInfoWindow) main(s tcell.Screen) {
 	}
 }
 
-func dockerInfoWindowDraw(screen tcell.Screen, state dockerInfoState) {
-	DrawBorders(screen, &state.window_state)
-	DrawContents(screen, &state.window_state, dockerInfoDrawerGenerator(state))
-	screen.Show()
+func dockerInfoWindowDraw(state dockerInfoState) {
+	DrawBorders(&state.window_state)
+	DrawContents(&state.window_state, dockerInfoDrawerGenerator(state))
+	GetScreen().Show()
 }
 
 func dockerInfoDrawerGenerator(state dockerInfoState) func(x, y int) (rune, tcell.Style) {

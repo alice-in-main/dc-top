@@ -23,8 +23,8 @@ func NewBarWindow(context context.Context) BarWindow {
 	}
 }
 
-func (w *BarWindow) Open(s tcell.Screen) {
-	go w.main(s)
+func (w *BarWindow) Open() {
+	go w.main()
 }
 
 func (w *BarWindow) Resize() {
@@ -55,13 +55,13 @@ func (w *BarWindow) Enable() {
 
 func (w *BarWindow) Close() {}
 
-func (w *BarWindow) main(s tcell.Screen) {
-	x1, y1, x2, y2 := ContainersBarWindowSize(s)
+func (w *BarWindow) main() {
+	x1, y1, x2, y2 := ContainersBarWindowSize()
 	var state = barState{
 		window_state: NewWindow(x1, y1, x2, y2),
 		message:      _emptyMessage{},
 	}
-	drawBar(s, state)
+	drawBar(state)
 
 	clear_timer := time.NewTicker(5 * time.Second)
 	defer clear_timer.Stop()
@@ -70,19 +70,19 @@ func (w *BarWindow) main(s tcell.Screen) {
 	for {
 		select {
 		case <-w.resize_ch:
-			x1, y1, x2, y2 := ContainersBarWindowSize(s)
+			x1, y1, x2, y2 := ContainersBarWindowSize()
 			state.window_state.SetBorders(x1, y1, x2, y2)
-			drawBar(s, state)
+			drawBar(state)
 		case message_event := <-w.message_chan:
 			state.message = message_event
 			if should_clear < 5 {
 				should_clear++
 			}
-			drawBar(s, state)
+			drawBar(state)
 		case <-clear_timer.C:
 			if should_clear == 0 {
 				state.message = _emptyMessage{}
-				drawBar(s, state)
+				drawBar(state)
 			} else {
 				should_clear--
 			}
@@ -98,11 +98,11 @@ type barState struct {
 	message      BarMessage
 }
 
-func drawBar(screen tcell.Screen, state barState) {
-	DrawContents(screen, &state.window_state, generateBarDrawer(screen, state))
+func drawBar(state barState) {
+	DrawContents(&state.window_state, generateBarDrawer(state))
 }
 
-func generateBarDrawer(screen tcell.Screen, state barState) func(x, y int) (rune, tcell.Style) {
+func generateBarDrawer(state barState) func(x, y int) (rune, tcell.Style) {
 	return func(x, y int) (rune, tcell.Style) {
 		if y == 0 {
 			return state.message.Styler()(x)

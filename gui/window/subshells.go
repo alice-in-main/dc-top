@@ -11,10 +11,10 @@ import (
 	"syscall"
 
 	"github.com/creack/pty"
-	"github.com/gdamore/tcell/v2"
 )
 
-func OpenContainerShell(id string, ctx context.Context, screen tcell.Screen) {
+func OpenContainerShell(id string, ctx context.Context) {
+	screen := GetScreen()
 	screen.PostEvent(NewPauseWindowsEvent())
 	go func() {
 		cmd := exec.CommandContext(context.TODO(), "docker", "exec", "-it", id, "sh")
@@ -26,7 +26,8 @@ func OpenContainerShell(id string, ctx context.Context, screen tcell.Screen) {
 	}()
 }
 
-func EditDcYaml(ctx context.Context, screen tcell.Screen) {
+func EditDcYaml(ctx context.Context) {
+	screen := GetScreen()
 	if compose.DcModeEnabled() {
 		screen.PostEvent(NewPauseWindowsEvent())
 		go func() {

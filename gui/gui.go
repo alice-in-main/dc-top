@@ -9,25 +9,25 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-//TODO: make screen global
 func Draw() {
-	s, err := tcell.NewScreen()
+	screen, err := tcell.NewScreen()
 	if err != nil {
 		log.Printf("%+v", err)
 		panic(1)
 	}
-	if err = s.Init(); err != nil {
+	if err = screen.Init(); err != nil {
 		log.Printf("%+v", err)
 		panic(1)
 	}
-	s.EnableMouse(tcell.MouseButtonEvents)
+	window.InitScreen(screen)
+	screen.EnableMouse(tcell.MouseButtonEvents)
 
-	windowManager := window.InitWindowManager(s)
+	windowManager := window.InitWindowManager()
 	windowManager.OpenAll()
 
 	finalize := func() {
 		windowManager.CloseAll()
-		s.Fini()
+		screen.Fini()
 		log.Println("Finished drawing")
 		if err != nil {
 			fmt.Println(err.Error())
@@ -36,12 +36,12 @@ func Draw() {
 	defer finalize()
 
 	for {
-		ev := s.PollEvent()
+		ev := screen.PollEvent()
 		switch ev := ev.(type) {
 		case *tcell.EventResize:
-			s.Clear()
+			screen.Clear()
 			windowManager.ResizeAll()
-			s.Sync()
+			screen.Sync()
 		case *tcell.EventKey:
 			key := ev.Key()
 			switch key {
@@ -59,9 +59,9 @@ func Draw() {
 		case window.ResumeWindowsEvent:
 			windowManager.ResumeWindows()
 		case window.ChangeToContainerShellEvent:
-			window.OpenContainerShell(ev.ContainerId, context.TODO(), s)
+			window.OpenContainerShell(ev.ContainerId, context.TODO())
 		case window.ChangeToFileEdittorEvent:
-			window.EditDcYaml(context.TODO(), s)
+			window.EditDcYaml(context.TODO())
 		case window.ChangeToLogsWindowEvent:
 			log.Printf("Changing to logs")
 			windowManager.PauseWindows()
