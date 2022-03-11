@@ -142,7 +142,6 @@ func inputParser(screen tcell.Screen, highjacked_conn types.HijackedResponse, co
 				highjacked_conn.Conn.Write([]byte{126})
 			case tcell.KeyRune:
 				a := string(ev.Rune())
-				// TODO: fix sh
 				// if strings.ContainsAny(a, "\n") {
 				// 	continue
 				// }
