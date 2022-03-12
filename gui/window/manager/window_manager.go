@@ -1,55 +1,34 @@
-package window
+package manager
 
 import (
-	"context"
+	"dc-top/gui/window"
 	"log"
 
 	"github.com/gdamore/tcell/v2"
 )
 
-type WindowType uint8
-
-const (
-	ContainersHolder WindowType = iota
-	DockerInfo
-	Bar
-	GeneralInfo
-	ContainerLogs
-	Other
-)
-
 type WindowManager struct {
-	windows       map[WindowType]Window
-	focusedWindow WindowType
+	windows       map[window.WindowType]window.Window
+	focusedWindow window.WindowType
 }
 
-func InitWindowManager() WindowManager {
-	general_info_w := NewGeneralInfoWindow(context.Background())
-	containers_w := NewContainersWindow()
-	docker_info_w := NewDockerInfoWindow()
-	bar_w := NewBarWindow(context.Background())
-
+func InitWindowManager(windows map[window.WindowType]window.Window, focused window.WindowType) WindowManager {
 	return WindowManager{
-		windows: map[WindowType]Window{
-			GeneralInfo:      &general_info_w,
-			ContainersHolder: &containers_w,
-			DockerInfo:       &docker_info_w,
-			Bar:              &bar_w,
-		},
-		focusedWindow: ContainersHolder,
+		windows:       windows,
+		focusedWindow: focused,
 	}
 }
 
-func (wm *WindowManager) GetWindow(wt WindowType) Window {
+func (wm *WindowManager) GetWindow(wt window.WindowType) window.Window {
 	w := wm.windows[wt]
 	return w
 }
 
-func (wm *WindowManager) GetFocusedWindow() WindowType {
+func (wm *WindowManager) GetFocusedWindow() window.WindowType {
 	return wm.focusedWindow
 }
 
-func (wm *WindowManager) SetFocusedWindow(focusedWindow WindowType) {
+func (wm *WindowManager) SetFocusedWindow(focusedWindow window.WindowType) {
 	wm.focusedWindow = focusedWindow
 }
 
@@ -59,7 +38,7 @@ func (wm *WindowManager) OpenAll() {
 	}
 }
 
-func (wm *WindowManager) Open(t WindowType, new_window Window) {
+func (wm *WindowManager) Open(t window.WindowType, new_window window.Window) {
 	if old_window, ok := wm.windows[t]; ok {
 		old_window.Close()
 	}
@@ -85,7 +64,7 @@ func (wm *WindowManager) DisableAll() {
 	}
 }
 
-func (wm *WindowManager) Close(t WindowType) {
+func (wm *WindowManager) Close(t window.WindowType) {
 	wm.GetWindow(t).Close()
 	delete(wm.windows, t)
 }
@@ -95,11 +74,11 @@ func (wm *WindowManager) CloseAll() {
 		log.Printf("Closing %+v", typE)
 		win.Close()
 	}
-	wm.windows = make(map[WindowType]Window)
+	wm.windows = make(map[window.WindowType]window.Window)
 }
 
 func (wm *WindowManager) PauseWindows() {
-	screen := GetScreen()
+	screen := window.GetScreen()
 	screen.DisableMouse()
 	wm.DisableAll()
 	screen.Clear()
@@ -107,7 +86,7 @@ func (wm *WindowManager) PauseWindows() {
 }
 
 func (wm *WindowManager) ResumeWindows() {
-	screen := GetScreen()
+	screen := window.GetScreen()
 	wm.EnableAll()
 	screen.Clear()
 	screen.Sync()

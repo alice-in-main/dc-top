@@ -1,8 +1,10 @@
-package window
+package subshells
 
 import (
 	"context"
 	"dc-top/docker/compose"
+	"dc-top/gui/window"
+	"dc-top/gui/window/bar_window"
 	"io"
 	"log"
 	"os"
@@ -14,22 +16,22 @@ import (
 )
 
 func OpenContainerShell(id string, ctx context.Context) {
-	screen := GetScreen()
-	screen.PostEvent(NewPauseWindowsEvent())
+	screen := window.GetScreen()
+	screen.PostEvent(window.NewPauseWindowsEvent())
 	go func() {
 		cmd := exec.CommandContext(context.TODO(), "docker", "exec", "-it", id, "sh")
 		err := runCmdInPty(cmd, "clear\n")
 		if err != nil {
 			log.Fatal(err)
 		}
-		screen.PostEvent(NewResumeWindowsEvent())
+		screen.PostEvent(window.NewResumeWindowsEvent())
 	}()
 }
 
 func EditDcYaml(ctx context.Context) {
-	screen := GetScreen()
+	screen := window.GetScreen()
 	if compose.DcModeEnabled() {
-		screen.PostEvent(NewPauseWindowsEvent())
+		screen.PostEvent(window.NewPauseWindowsEvent())
 		go func() {
 			compose.CreateBackupYaml()
 			cmd := exec.CommandContext(context.TODO(), "vim", compose.DcYamlPath())
@@ -37,17 +39,17 @@ func EditDcYaml(ctx context.Context) {
 			if err != nil {
 				log.Fatal(err)
 			}
-			screen.PostEvent(NewResumeWindowsEvent())
+			screen.PostEvent(window.NewResumeWindowsEvent())
 			if compose.ValidateYaml(context.TODO()) {
-				screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, InfoMessage{Msg: []rune("restarting docker-compose")}))
+				bar_window.Info([]rune("restarting docker-compose"))
 				compose.Up(context.TODO())
 			} else {
-				screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, ErrorMessage{Msg: []rune("docker compose yaml is invalid")}))
+				bar_window.Info([]rune("docker compose yaml is invalid"))
 				compose.RestoreFromBackup()
 			}
 		}()
 	} else {
-		screen.PostEvent(NewMessageEvent(Bar, ContainersHolder, ErrorMessage{Msg: []rune("docker compose mode is disabled")}))
+		bar_window.Info([]rune("docker compose mode is disabled"))
 	}
 }
 

@@ -179,7 +179,7 @@ func NewFatalErrorEvent(err error) FatalErrorEvent {
 	}
 }
 
-func exitIfErr(err error) {
+func ExitIfErr(err error) {
 	if err != nil {
 		log.Printf("a fatal error occured: %s\n", err)
 		GetScreen().PostEvent(NewFatalErrorEvent(err))

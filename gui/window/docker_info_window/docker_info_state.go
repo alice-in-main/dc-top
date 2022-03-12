@@ -1,118 +1,25 @@
-package window
+package docker_info_window
 
 import (
 	docker "dc-top/docker"
 	"dc-top/gui/elements"
+	"dc-top/gui/window"
+	"dc-top/gui/window/containers_window"
 	"fmt"
-	"log"
-	"time"
 
 	"github.com/gdamore/tcell/v2"
 )
 
-type DockerInfoWindow struct {
-	resize_chan    chan interface{}
-	new_stats_chan chan totalStatsSummary
-	stop_chan      chan interface{}
-	enable_toggle  chan bool
-}
-
 type dockerInfoState struct {
-	window_state            WindowState
+	window_state            window.WindowState
 	docker_info             docker.DockerInfo
-	docker_resource_summary totalStatsSummary
-}
-
-func NewDockerInfoWindow() DockerInfoWindow {
-	return DockerInfoWindow{
-		resize_chan:    make(chan interface{}),
-		new_stats_chan: make(chan totalStatsSummary),
-		stop_chan:      make(chan interface{}),
-		enable_toggle:  make(chan bool),
-	}
-}
-
-func (w *DockerInfoWindow) Open() {
-	go w.main()
-}
-
-func (w *DockerInfoWindow) Resize() {
-	w.resize_chan <- nil
-}
-
-func (w *DockerInfoWindow) KeyPress(key tcell.EventKey) {
-	log.Fatal("docker info key press isn't implemented")
-}
-
-func (w *DockerInfoWindow) MousePress(tcell.EventMouse) {
-	log.Fatal("docker info mouse press isn't implemented")
-}
-
-func (w *DockerInfoWindow) HandleEvent(ev interface{}, wt WindowType) (interface{}, error) {
-	switch ev := ev.(type) {
-	case totalStatsSummary:
-		w.new_stats_chan <- ev
-	default:
-		log.Fatalln("Got unknown event in info", ev)
-	}
-	return nil, nil
-}
-
-func (w *DockerInfoWindow) Disable() {
-	log.Printf("Disable DockerInfoWindow...")
-	w.enable_toggle <- false
-}
-
-func (w *DockerInfoWindow) Enable() {
-	log.Printf("Enable DockerInfoWindow...")
-	w.enable_toggle <- true
-}
-
-func (w *DockerInfoWindow) Close() {
-	w.stop_chan <- nil
-}
-
-func (w *DockerInfoWindow) main() {
-	s := GetScreen()
-	is_enabled := true
-	x1, y1, x2, y2 := DockerInfoWindowSize()
-	var state dockerInfoState = dockerInfoState{
-		window_state: NewWindow(x1, y1, x2, y2),
-	}
-	tick := time.NewTicker(1000 * time.Millisecond)
-	for {
-		select {
-		case is_enabled = <-w.enable_toggle:
-			log.Printf("changed docker info to %t", is_enabled)
-		case <-w.resize_chan:
-			if is_enabled {
-				x1, y1, x2, y2 := DockerInfoWindowSize()
-				state.window_state.SetBorders(x1, y1, x2, y2)
-				dockerInfoWindowDraw(state)
-			}
-		case summary := <-w.new_stats_chan:
-			if is_enabled {
-				state.docker_resource_summary = summary
-				info, err := docker.GetDockerInfo()
-				exitIfErr(err)
-				state.docker_info = info
-				dockerInfoWindowDraw(state)
-			}
-		case <-tick.C:
-			var getTotalStatsRequest = getTotalStats{}
-			s.PostEvent(NewMessageEvent(ContainersHolder, DockerInfo, getTotalStatsRequest))
-		case <-w.stop_chan:
-			tick.Stop()
-			log.Println("Docker info stopped drawing")
-			return
-		}
-	}
+	docker_resource_summary containers_window.TotalStatsSummary
 }
 
 func dockerInfoWindowDraw(state dockerInfoState) {
-	DrawBorders(&state.window_state)
-	DrawContents(&state.window_state, dockerInfoDrawerGenerator(state))
-	GetScreen().Show()
+	window.DrawBorders(&state.window_state)
+	window.DrawContents(&state.window_state, dockerInfoDrawerGenerator(state))
+	window.GetScreen().Show()
 }
 
 func dockerInfoDrawerGenerator(state dockerInfoState) func(x, y int) (rune, tcell.Style) {
@@ -157,7 +64,7 @@ func generateTotalContainerStats(state *dockerInfoState) []elements.StringStyler
 }
 
 func generateResourceUsage(state *dockerInfoState) []elements.StringStyler {
-	window_width := Width(&state.window_state)
+	window_width := window.Width(&state.window_state)
 	max_desc_len := 25
 	bar_len := window_width - max_desc_len
 	if bar_len < 0 {
@@ -166,9 +73,9 @@ func generateResourceUsage(state *dockerInfoState) []elements.StringStyler {
 		bar_len = 40
 	}
 
-	docker_cpu_usage := float64(state.docker_resource_summary.totalCpuUsage)
-	system_cpu_usage := float64(state.docker_resource_summary.totalSystemCpuUsage)
-	docker_mem_usage := float64(state.docker_resource_summary.totalMemUsage)
+	docker_cpu_usage := float64(state.docker_resource_summary.TotalCpuUsage)
+	system_cpu_usage := float64(state.docker_resource_summary.TotalSystemCpuUsage)
+	docker_mem_usage := float64(state.docker_resource_summary.TotalMemUsage)
 	system_mem_usage := float64(state.docker_info.Info.MemTotal)
 
 	info_arr := make([]elements.StringStyler, 0)

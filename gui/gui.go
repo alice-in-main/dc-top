@@ -3,6 +3,13 @@ package gui
 import (
 	"context"
 	"dc-top/gui/window"
+	"dc-top/gui/window/bar_window"
+	"dc-top/gui/window/container_logs_window"
+	"dc-top/gui/window/containers_window"
+	"dc-top/gui/window/docker_info_window"
+	"dc-top/gui/window/general_info_window"
+	"dc-top/gui/window/manager"
+	"dc-top/gui/window/subshells"
 	"fmt"
 	"log"
 
@@ -22,7 +29,7 @@ func Draw() {
 	window.InitScreen(screen)
 	screen.EnableMouse(tcell.MouseButtonEvents)
 
-	windowManager := window.InitWindowManager()
+	windowManager := initWindowManager()
 	windowManager.OpenAll()
 
 	finalize := func() {
@@ -59,13 +66,13 @@ func Draw() {
 		case window.ResumeWindowsEvent:
 			windowManager.ResumeWindows()
 		case window.ChangeToContainerShellEvent:
-			window.OpenContainerShell(ev.ContainerId, context.TODO())
+			subshells.OpenContainerShell(ev.ContainerId, context.TODO())
 		case window.ChangeToFileEdittorEvent:
-			window.EditDcYaml(context.TODO())
+			subshells.EditDcYaml(context.TODO())
 		case window.ChangeToLogsWindowEvent:
 			log.Printf("Changing to logs")
 			windowManager.PauseWindows()
-			logs_window := window.NewContainerLogsWindow(ev.ContainerId)
+			logs_window := container_logs_window.NewContainerLogsWindow(ev.ContainerId)
 			windowManager.Open(window.ContainerLogs, &logs_window)
 			windowManager.SetFocusedWindow(window.ContainerLogs)
 		case window.ChangeToDefaultViewEvent:
@@ -84,7 +91,7 @@ func Draw() {
 	}
 }
 
-func handleKeyPress(wm window.WindowManager, key *tcell.EventKey) {
+func handleKeyPress(wm manager.WindowManager, key *tcell.EventKey) {
 	switch wm.GetFocusedWindow() {
 	case window.DockerInfo:
 		log.Fatal("shouldnt be here 1")
@@ -95,11 +102,27 @@ func handleKeyPress(wm window.WindowManager, key *tcell.EventKey) {
 	}
 }
 
-func handleMouseEvent(wm window.WindowManager, ev *tcell.EventMouse) {
+func handleMouseEvent(wm manager.WindowManager, ev *tcell.EventMouse) {
 	switch wm.GetFocusedWindow() {
 	case window.DockerInfo:
 		log.Fatal("shouldnt be here 2")
 	case window.ContainersHolder:
 		wm.GetWindow(window.ContainersHolder).MousePress(*ev)
 	}
+}
+
+func initWindowManager() manager.WindowManager {
+	general_info_w := general_info_window.NewGeneralInfoWindow(context.Background())
+	containers_w := containers_window.NewContainersWindow()
+	docker_info_w := docker_info_window.NewDockerInfoWindow()
+	bar_w := bar_window.NewBarWindow(context.Background())
+
+	windows := map[window.WindowType]window.Window{
+		window.GeneralInfo:      &general_info_w,
+		window.ContainersHolder: &containers_w,
+		window.DockerInfo:       &docker_info_w,
+		window.Bar:              &bar_w,
+	}
+
+	return manager.InitWindowManager(windows, window.ContainersHolder)
 }

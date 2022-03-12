@@ -1,9 +1,10 @@
-package window
+package container_logs_window
 
 import (
 	"context"
 	docker "dc-top/docker"
 	"dc-top/gui/elements"
+	"dc-top/gui/window"
 	"dc-top/utils"
 	"log"
 
@@ -32,7 +33,7 @@ type logsWriter struct {
 }
 
 func newLogsWriter(ctx context.Context) logsWriter {
-	_, height := GetScreen().Size()
+	_, height := window.GetScreen().Size()
 	new_writer := logsWriter{
 		is_following: true,
 		is_searching: false,
@@ -50,9 +51,7 @@ func newLogsWriter(ctx context.Context) logsWriter {
 		redraw_request: make(chan interface{}),
 		write_queue:    make(chan []string),
 		enable_toggle:  make(chan bool),
-		// pause:          make(chan interface{}),
-		// resume:         make(chan interface{}),
-		stop: make(chan interface{}),
+		stop:           make(chan interface{}),
 	}
 	return new_writer
 }
@@ -81,8 +80,6 @@ func (writer *logsWriter) logPrinter() {
 			writer.writeLogs(logs)
 		case <-writer.redraw_request:
 			writer.redraw()
-		// case <-writer.pause:
-		// 	<-writer.resume
 		case is_enabled := <-writer.enable_toggle:
 			writer.is_enabled = is_enabled
 		case <-writer.ctx.Done():
@@ -123,7 +120,7 @@ func (writer *logsWriter) saveLog(_log string) {
 }
 
 func (writer *logsWriter) updateLines() {
-	width, height := GetScreen().Size()
+	width, height := window.GetScreen().Size()
 	writer.lines = make([]elements.StringStyler, height)
 	log_i := (writer.view_offset - 1) % docker.MaxSavedLogs
 	if log_i < 0 {
@@ -152,7 +149,7 @@ func (writer *logsWriter) updateLines() {
 }
 
 func (writer *logsWriter) showLines() {
-	screen := GetScreen()
+	screen := window.GetScreen()
 	screen.Clear()
 	width, height := screen.Size()
 	for j, line := range writer.lines {
@@ -219,12 +216,12 @@ func (w *ContainerLogsWindow) Open() {
 		go logs_writer.logPrinter()
 		go func() {
 			err := logs_writer.logStopper(cancel)
-			exitIfErr(err)
+			window.ExitIfErr(err)
 		}()
 		go docker.StreamContainerLogs(w.id, &logs_writer, container_log_window_context, cancel)
 		<-container_log_window_context.Done()
 		log.Println("Switcing back...")
-		GetScreen().PostEvent(NewChangeToDefaultViewEvent())
+		window.GetScreen().PostEvent(window.NewChangeToDefaultViewEvent())
 	}()
 }
 
@@ -244,7 +241,7 @@ func (w *ContainerLogsWindow) MousePress(tcell.EventMouse) {
 	panic("unimplemented MousePress for logs window")
 }
 
-func (w *ContainerLogsWindow) HandleEvent(event interface{}, sender WindowType) (interface{}, error) {
+func (w *ContainerLogsWindow) HandleEvent(event interface{}, sender window.WindowType) (interface{}, error) {
 	panic("unimplemented HandleEvent for logs window")
 }
 
