@@ -9,7 +9,6 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
-	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
@@ -94,13 +93,22 @@ func NewContainerData() (ContainerData, error) {
 		data:                container_data,
 		main_sort_type:      State,
 		secondary_sort_type: Name,
-		// docker compose mode:
-		dc_services: dc_services,
-		dc_filters:  dc_filters,
+		dc_services:         dc_services,
+		dc_filters:          dc_filters,
 	}
 
 	return new_containers_data, err
 }
+
+// func (containers *ContainerData) Clone() ContainerData {
+// 	// var copy ContainerData
+// 	// copier.CopyWithOption(&copy, containers, copier.Option{IgnoreEmpty: true, DeepCopy: true})
+// 	// return copy
+// 	clone := *containers
+// 	copy(clone.data, containers.data)
+
+// 	return clone
+// }
 
 func (containers *ContainerData) Len() int {
 	return len(containers.data)
@@ -127,15 +135,20 @@ func (containers *ContainerData) GetData() []ContainerDatum {
 	return containers.data
 }
 
-func (containers *ContainerData) SortData(main_sort_type, secondary_sort_type SortType) {
-	start := time.Now()
+func (containers *ContainerData) GetSortedData(main_sort_type, secondary_sort_type SortType) ContainerData {
+	var data_copy = make([]ContainerDatum, containers.Len())
+	copy(data_copy, containers.data)
 
-	containers.main_sort_type = main_sort_type
-	containers.secondary_sort_type = secondary_sort_type
-	sort.Stable(containers)
+	new_data := ContainerData{
+		data:                data_copy,
+		main_sort_type:      main_sort_type,
+		secondary_sort_type: secondary_sort_type,
+		dc_services:         containers.dc_services,
+		dc_filters:          containers.dc_filters,
+	}
+	sort.Stable(&new_data)
 
-	elapsed := time.Since(start)
-	log.Printf("It took %dmicrosecconds to sort data", elapsed.Microseconds())
+	return new_data
 }
 
 func (containers *ContainerData) Filter(substr string) []ContainerDatum {
@@ -160,8 +173,22 @@ func (containers *ContainerData) UpdateStats() {
 	}
 }
 
-func (containers *ContainerData) AreIdsUpToDate() (bool, error) {
+func (containers *ContainerData) GetUpdatedStats() ContainerData {
+	new_data := *containers
+	new_data.data = make([]ContainerDatum, containers.Len())
+	copy(new_data.data, containers.data)
+	for i, datum := range containers.data {
+		new_datum, err := UpdatedDatum(datum)
+		if err != nil {
+			log.Printf("Got error %s while fetching new data", err)
+		}
 
+		new_data.data[i] = new_datum
+	}
+	return new_data
+}
+
+func (containers *ContainerData) AreIdsUpToDate() (bool, error) {
 	preserved_container_options := types.ContainerListOptions{All: true, Quiet: true, Filters: filters.NewArgs()}
 	all_containers_options := types.ContainerListOptions{All: true, Quiet: true}
 

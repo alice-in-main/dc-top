@@ -92,11 +92,9 @@ func HighlightDrawer(str string, substr string, default_style tcell.Style) Strin
 	}
 	substr_len := len(substr)
 	highlighted_indices := make([]bool, len(str))
-	log.Printf("String: %s; Substring: %s\n", str, substr)
 	for i, next_i := 0, strings.Index(str, substr); i < len(str) && next_i != -1; next_i = strings.Index(str[i:], substr) {
 		i += next_i
 		for j := i; j < i+substr_len; j++ {
-			log.Printf("%d is highlighted\n", j)
 			highlighted_indices[j] = true
 		}
 		i += substr_len

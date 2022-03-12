@@ -4,6 +4,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"unsafe"
 )
 
 func FindByte(needle byte, haystack []byte) int {
@@ -65,4 +66,10 @@ func CopyFile(src, dst string) error {
 		return err
 	}
 	return out.Close()
+}
+
+func DeepCopy(s string) string {
+	b := make([]byte, len(s))
+	copy(b, s)
+	return *(*string)(unsafe.Pointer(&b))
 }

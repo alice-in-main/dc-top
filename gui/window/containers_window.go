@@ -183,6 +183,7 @@ func (w *ContainersWindow) dockerDataStreamer(c context.Context) {
 			} else {
 				state.containers_data.UpdateStats()
 				new_data = state.containers_data
+				// new_data = state.containers_data.GetUpdatedStats()
 			}
 			select {
 			case <-c.Done():
@@ -323,6 +324,7 @@ func handleMouseEvent(ev *tcell.EventMouse, w *ContainersWindow, table_state tab
 		if new_sort_type != docker.None && table_state.main_sort_type != new_sort_type {
 			table_state.secondary_sort_type = table_state.main_sort_type
 			table_state.main_sort_type = new_sort_type
+			log.Print("Updated sort types")
 		}
 	case y > 2 && y < table_state.containers_data.Len()+3:
 		i := table_state.index_of_top_container + y - 3
@@ -484,7 +486,7 @@ func (w *ContainersWindow) main() {
 		top_line_inspect:       0,
 		inspect_height:         y2 - y1 - 2 + 1,
 	}
-	state.containers_data.SortData(state.main_sort_type, state.secondary_sort_type)
+	state.containers_data = data.GetSortedData(state.main_sort_type, state.secondary_sort_type)
 	window_context, cancel := context.WithCancel(context.TODO())
 	w.cached_state = state
 	go w.drawer(window_context)
@@ -497,13 +499,15 @@ func (w *ContainersWindow) main() {
 		case <-w.resize_chan:
 			state = handleResize(w, state)
 		case new_data := <-w.new_container_data_chan:
+			new_data = new_data.GetSortedData(state.main_sort_type, state.secondary_sort_type)
 			state = handleNewData(&new_data, w, state)
 			w.cached_state = state
-			state.containers_data.SortData(state.main_sort_type, state.secondary_sort_type)
 			w.data_request_chan <- state
 		case mouse_event := <-w.mouse_chan:
 			log.Println("Handling mouse event")
 			state = handleMouseEvent(&mouse_event, w, state)
+			state.containers_data = state.containers_data.GetSortedData(state.main_sort_type, state.secondary_sort_type)
+			state.filtered_data = state.containers_data.Filter(state.search_box.Value())
 		case keyboard_event := <-w.keyboard_chan:
 			state, err = handleKeyboardEvent(&keyboard_event, w, state)
 			exitIfErr(err)

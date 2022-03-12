@@ -10,14 +10,16 @@ import (
 )
 
 type GeneralInfoWindow struct {
-	context   context.Context
-	resize_ch chan interface{}
+	context       context.Context
+	resize_ch     chan interface{}
+	enable_toggle chan bool
 }
 
 func NewGeneralInfoWindow(context context.Context) GeneralInfoWindow {
 	return GeneralInfoWindow{
-		context:   context,
-		resize_ch: make(chan interface{}),
+		context:       context,
+		resize_ch:     make(chan interface{}),
+		enable_toggle: make(chan bool),
 	}
 }
 
@@ -26,7 +28,7 @@ func (w *GeneralInfoWindow) Open() {
 }
 
 func (w *GeneralInfoWindow) Resize() {
-	// w.resize_ch <- nil
+	w.resize_ch <- nil
 }
 
 func (w *GeneralInfoWindow) KeyPress(_ tcell.EventKey) {}
@@ -34,22 +36,24 @@ func (w *GeneralInfoWindow) KeyPress(_ tcell.EventKey) {}
 func (w *GeneralInfoWindow) MousePress(_ tcell.EventMouse) {}
 
 func (w *GeneralInfoWindow) HandleEvent(interface{}, WindowType) (interface{}, error) {
-	log.Println("General info window got event")
 	panic(1)
 }
 
 func (w *GeneralInfoWindow) Disable() {
 	log.Printf("Disable GeneralInfoWindow...")
+	w.enable_toggle <- false
 }
 
 func (w *GeneralInfoWindow) Enable() {
 	log.Printf("Enable GeneralInfoWindow...")
+	w.enable_toggle <- true
 }
 
 func (w *GeneralInfoWindow) Close() {}
 
 type generalInfoState struct {
 	window_state   WindowState
+	is_enabled     bool
 	version        string
 	dc_mode_status string
 }
@@ -58,6 +62,7 @@ func (w *GeneralInfoWindow) main() {
 	x1, y1, x2, y2 := GeneralInfoWindowSize()
 	state := generalInfoState{
 		window_state:   NewWindow(x1, y1, x2, y2),
+		is_enabled:     true,
 		version:        "dc-top v0.1",
 		dc_mode_status: getDcModeStatus(),
 	}
@@ -68,6 +73,11 @@ func (w *GeneralInfoWindow) main() {
 			x1, y1, x2, y2 := GeneralInfoWindowSize()
 			state.window_state.SetBorders(x1, y1, x2, y2)
 			drawGeneralInfo(state)
+		case is_enabled := <-w.enable_toggle:
+			state.is_enabled = is_enabled
+			if is_enabled {
+				drawGeneralInfo(state)
+			}
 		case <-w.context.Done():
 			log.Printf("General info window stopped drwaing...\n")
 			return
@@ -84,7 +94,9 @@ func getDcModeStatus() string {
 }
 
 func drawGeneralInfo(state generalInfoState) {
-	DrawContents(&state.window_state, generalInfoDrawerGenerator(&state))
+	if state.is_enabled {
+		DrawContents(&state.window_state, generalInfoDrawerGenerator(&state))
+	}
 }
 
 func generalInfoDrawerGenerator(state *generalInfoState) func(x, y int) (rune, tcell.Style) {

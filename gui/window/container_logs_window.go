@@ -14,19 +14,21 @@ type logsWriter struct {
 	ctx          context.Context
 	is_following bool
 	is_searching bool
+	is_enabled   bool
 	search_box   elements.TextBox
 
-	logs        [docker.MaxSavedLogs]singleLog
-	logs_offset int
-	view_offset int
-	lines       []elements.StringStyler
-	line_offset int
+	logs         [docker.MaxSavedLogs]singleLog
+	logs_offset  int
+	logs_counter int
+	view_offset  int
+	lines        []elements.StringStyler
 
 	redraw_request chan interface{}
 	write_queue    chan []string
-	pause          chan interface{}
-	resume         chan interface{}
-	stop           chan interface{}
+	// pause          chan interface{}
+	// resume         chan interface{}
+	enable_toggle chan bool
+	stop          chan interface{}
 }
 
 func newLogsWriter(ctx context.Context) logsWriter {
@@ -34,9 +36,10 @@ func newLogsWriter(ctx context.Context) logsWriter {
 	new_writer := logsWriter{
 		is_following: true,
 		is_searching: false,
+		is_enabled:   true,
 		logs_offset:  0,
+		logs_counter: 0,
 		view_offset:  0,
-		line_offset:  0,
 		ctx:          ctx,
 		search_box: elements.NewTextBox(
 			elements.TextDrawer("/ ", tcell.StyleDefault.Foreground(tcell.ColorGreenYellow)),
@@ -46,9 +49,10 @@ func newLogsWriter(ctx context.Context) logsWriter {
 		lines:          make([]elements.StringStyler, height),
 		redraw_request: make(chan interface{}),
 		write_queue:    make(chan []string),
-		pause:          make(chan interface{}),
-		resume:         make(chan interface{}),
-		stop:           make(chan interface{}),
+		enable_toggle:  make(chan bool),
+		// pause:          make(chan interface{}),
+		// resume:         make(chan interface{}),
+		stop: make(chan interface{}),
 	}
 	return new_writer
 }
@@ -77,8 +81,10 @@ func (writer *logsWriter) logPrinter() {
 			writer.writeLogs(logs)
 		case <-writer.redraw_request:
 			writer.redraw()
-		case <-writer.pause:
-			<-writer.resume
+		// case <-writer.pause:
+		// 	<-writer.resume
+		case is_enabled := <-writer.enable_toggle:
+			writer.is_enabled = is_enabled
 		case <-writer.ctx.Done():
 			return
 		}
@@ -89,9 +95,9 @@ func (writer *logsWriter) writeLogs(logs []string) {
 	for _, l := range logs {
 		writer.saveLog(l)
 	}
-	// if writer.is_following {
-	writer.redraw()
-	// }
+	if writer.is_following {
+		writer.redraw()
+	}
 }
 
 func (writer *logsWriter) redraw() {
@@ -110,17 +116,18 @@ func (writer *logsWriter) saveLog(_log string) {
 		writer.logs[writer.logs_offset] = newLog("", true)
 	}
 	writer.logs_offset = (writer.logs_offset + 1) % docker.MaxSavedLogs
+	writer.logs_counter++
 	if writer.is_following {
-		writer.view_offset = writer.logs_offset
+		writer.view_offset = writer.logs_counter
 	}
 }
 
 func (writer *logsWriter) updateLines() {
 	width, height := GetScreen().Size()
 	writer.lines = make([]elements.StringStyler, height)
-	log_i := ((writer.view_offset - 1) - writer.line_offset) % docker.MaxSavedLogs
+	log_i := (writer.view_offset - 1) % docker.MaxSavedLogs
 	if log_i < 0 {
-		log_i = 0
+		log_i = docker.MaxSavedLogs + log_i
 	}
 	for line_i := height - 1; line_i >= 0; {
 		log_line_text := writer.logs[log_i].content
@@ -160,6 +167,12 @@ func (writer *logsWriter) showLines() {
 		search_box := writer.search_box.Style()
 		for i := 0; i < width; i++ {
 			r, s := search_box(i)
+			screen.SetContent(i, 0, r, nil, s)
+		}
+	} else if height >= 1 && !writer.is_following {
+		not_following_message := elements.TextDrawer("Currently not following logs. Press 'f' to start following.", tcell.StyleDefault.Background(tcell.ColorGreen).Bold(true))
+		for i := 0; i < width; i++ {
+			r, s := not_following_message(i)
 			screen.SetContent(i, 0, r, nil, s)
 		}
 	}
@@ -235,21 +248,11 @@ func (w *ContainerLogsWindow) HandleEvent(event interface{}, sender WindowType) 
 	panic("unimplemented HandleEvent for logs window")
 }
 
-func (w *ContainerLogsWindow) Enable() { w.logs_writer.resume <- nil }
+func (w *ContainerLogsWindow) Enable() { w.logs_writer.enable_toggle <- true }
 
-func (w *ContainerLogsWindow) Disable() { w.logs_writer.pause <- nil }
+func (w *ContainerLogsWindow) Disable() { w.logs_writer.enable_toggle <- false }
 
 func (w *ContainerLogsWindow) Close() { w.cancel() }
-
-func (w *ContainerLogsWindow) startFollowing() {
-	w.logs_writer.line_offset = 0
-	w.logs_writer.is_following = true
-	w.triggerRedraw()
-}
-
-func (w *ContainerLogsWindow) triggerRedraw() {
-	w.logs_writer.write_queue <- []string{}
-}
 
 func (w *ContainerLogsWindow) handleRegularKeyPress(ev *tcell.EventKey) {
 	key := ev.Key()
@@ -257,12 +260,15 @@ func (w *ContainerLogsWindow) handleRegularKeyPress(ev *tcell.EventKey) {
 	case tcell.KeyEnter:
 		w.startFollowing()
 	case tcell.KeyUp:
-		w.logs_writer.line_offset++
-		w.logs_writer.is_following = false
-		w.triggerRedraw()
+		log.Printf("view_offset: %d, logs_counter: %d. %d >= (%d - %d)", w.logs_writer.view_offset, w.logs_writer.logs_counter, w.logs_writer.view_offset, w.logs_writer.logs_counter, docker.MaxSavedLogs)
+		if w.logs_writer.view_offset >= (w.logs_writer.logs_counter - docker.MaxSavedLogs) {
+			w.logs_writer.view_offset--
+			w.logs_writer.is_following = false
+			w.triggerRedraw()
+		}
 	case tcell.KeyDown:
-		if w.logs_writer.line_offset > 0 {
-			w.logs_writer.line_offset--
+		if w.logs_writer.view_offset < w.logs_writer.logs_counter {
+			w.logs_writer.view_offset++
 			w.logs_writer.is_following = false
 			w.triggerRedraw()
 		}
@@ -270,6 +276,10 @@ func (w *ContainerLogsWindow) handleRegularKeyPress(ev *tcell.EventKey) {
 		w.logs_writer.stop <- nil
 	case tcell.KeyRune:
 		switch ev.Rune() {
+		case 't':
+			for i, _log := range w.logs_writer.logs {
+				log.Print(i, _log)
+			}
 		case 'f':
 			w.startFollowing()
 		case '/':
@@ -301,6 +311,16 @@ func (w *ContainerLogsWindow) handleSearchKeyPress(ev *tcell.EventKey) {
 		w.logs_writer.search_box.HandleKey(ev)
 	}
 	w.triggerRedraw()
+}
+
+func (w *ContainerLogsWindow) startFollowing() {
+	w.logs_writer.is_following = true
+	w.logs_writer.view_offset = w.logs_writer.logs_counter
+	w.triggerRedraw()
+}
+
+func (w *ContainerLogsWindow) triggerRedraw() {
+	w.logs_writer.redraw_request <- nil
 }
 
 type singleLog struct {

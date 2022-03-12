@@ -10,16 +10,18 @@ import (
 )
 
 type BarWindow struct {
-	context      context.Context
-	resize_ch    chan interface{}
-	message_chan chan BarMessage
+	context       context.Context
+	resize_ch     chan interface{}
+	message_chan  chan BarMessage
+	enable_toggle chan bool
 }
 
 func NewBarWindow(context context.Context) BarWindow {
 	return BarWindow{
-		context:      context,
-		resize_ch:    make(chan interface{}),
-		message_chan: make(chan BarMessage),
+		context:       context,
+		resize_ch:     make(chan interface{}),
+		message_chan:  make(chan BarMessage),
+		enable_toggle: make(chan bool),
 	}
 }
 
@@ -47,10 +49,12 @@ func (w *BarWindow) HandleEvent(ev interface{}, wt WindowType) (interface{}, err
 
 func (w *BarWindow) Disable() {
 	log.Printf("Disable bar...")
+	w.enable_toggle <- false
 }
 
 func (w *BarWindow) Enable() {
 	log.Printf("Enable bar...")
+	w.enable_toggle <- true
 }
 
 func (w *BarWindow) Close() {}
@@ -79,6 +83,8 @@ func (w *BarWindow) main() {
 				should_clear++
 			}
 			drawBar(state)
+		case is_enabled := <-w.enable_toggle:
+			state.is_enabled = is_enabled
 		case <-clear_timer.C:
 			if should_clear == 0 {
 				state.message = _emptyMessage{}
@@ -96,10 +102,13 @@ func (w *BarWindow) main() {
 type barState struct {
 	window_state WindowState
 	message      BarMessage
+	is_enabled   bool
 }
 
 func drawBar(state barState) {
-	DrawContents(&state.window_state, generateBarDrawer(state))
+	if state.is_enabled {
+		DrawContents(&state.window_state, generateBarDrawer(state))
+	}
 }
 
 func generateBarDrawer(state barState) func(x, y int) (rune, tcell.Style) {
