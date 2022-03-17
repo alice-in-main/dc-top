@@ -6,6 +6,7 @@ import (
 
 type Window interface {
 	Open()
+	Dimensions() Dimensions
 	Resize()
 	KeyPress(tcell.EventKey)
 	MousePress(tcell.EventMouse)

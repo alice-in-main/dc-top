@@ -73,3 +73,9 @@ func DeepCopy(s string) string {
 	copy(b, s)
 	return *(*string)(unsafe.Pointer(&b))
 }
+
+func ZeroIfNegative(n *int) {
+	if *n < 0 {
+		*n = 0
+	}
+}

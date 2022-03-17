@@ -2,14 +2,9 @@ package gui
 
 import (
 	"context"
-	"dc-top/gui/window"
-	"dc-top/gui/window/bar_window"
-	"dc-top/gui/window/container_logs_window"
-	"dc-top/gui/window/containers_window"
-	"dc-top/gui/window/docker_info_window"
-	"dc-top/gui/window/general_info_window"
-	"dc-top/gui/window/manager"
-	"dc-top/gui/window/subshells"
+	"dc-top/gui/view"
+	"dc-top/gui/view/window"
+	"dc-top/gui/view/window/subshells"
 	"fmt"
 	"log"
 
@@ -20,20 +15,19 @@ func Draw() {
 	screen, err := tcell.NewScreen()
 	if err != nil {
 		log.Printf("%+v", err)
-		panic(1)
+		panic(fmt.Sprintf("%+v", err))
 	}
 	if err = screen.Init(); err != nil {
 		log.Printf("%+v", err)
-		panic(1)
+		panic(fmt.Sprintf("%+v", err))
 	}
 	window.InitScreen(screen)
 	screen.EnableMouse(tcell.MouseButtonEvents)
 
-	windowManager := initWindowManager()
-	windowManager.OpenAll()
+	view.InitDefaultView()
 
 	finalize := func() {
-		windowManager.CloseAll()
+		view.CloseAll()
 		screen.Fini()
 		log.Println("Finished drawing")
 		if err != nil {
@@ -47,7 +41,7 @@ func Draw() {
 		switch ev := ev.(type) {
 		case *tcell.EventResize:
 			screen.Clear()
-			windowManager.ResizeAll()
+			view.CurrentView().Resize()
 			screen.Sync()
 		case *tcell.EventKey:
 			key := ev.Key()
@@ -55,31 +49,27 @@ func Draw() {
 			case tcell.KeyCtrlC:
 				return
 			default:
-				handleKeyPress(windowManager, ev)
+				view.HandleKeyPress(ev)
 			}
 		case *tcell.EventMouse:
-			handleMouseEvent(windowManager, ev)
+			view.HandleMouseEvent(ev)
 		case window.MessageEvent:
-			windowManager.GetWindow(ev.Receiver).HandleEvent(ev.Message, ev.Sender)
+			log.Println(ev.Message)
+			if view.CurrentView().Exists(ev.Receiver) {
+				view.CurrentView().GetWindow(ev.Receiver).HandleEvent(ev.Message, ev.Sender)
+			}
 		case window.PauseWindowsEvent:
-			windowManager.PauseWindows()
+			view.CurrentView().PauseWindows()
 		case window.ResumeWindowsEvent:
-			windowManager.ResumeWindows()
+			view.CurrentView().ResumeWindows()
 		case window.ChangeToContainerShellEvent:
 			subshells.OpenContainerShell(ev.ContainerId, context.TODO())
 		case window.ChangeToFileEdittorEvent:
 			subshells.EditDcYaml(context.TODO())
 		case window.ChangeToLogsWindowEvent:
-			log.Printf("Changing to logs")
-			windowManager.PauseWindows()
-			logs_window := container_logs_window.NewContainerLogsWindow(ev.ContainerId)
-			windowManager.Open(window.ContainerLogs, &logs_window)
-			windowManager.SetFocusedWindow(window.ContainerLogs)
+			view.ChangeToLogView(ev.ContainerId)
 		case window.ChangeToDefaultViewEvent:
-			log.Printf("Changing back to default")
-			windowManager.Close(window.ContainerLogs)
-			windowManager.SetFocusedWindow(window.ContainersHolder)
-			windowManager.ResumeWindows()
+			view.RunDefaultView()
 		case window.FatalErrorEvent:
 			err = fmt.Errorf("a fatal error occured at %s:\n%s", ev.When(), ev.Err)
 			return
@@ -89,40 +79,4 @@ func Draw() {
 			log.Printf("GUI got event '%T: %s' and ignored it\n", ev, ev)
 		}
 	}
-}
-
-func handleKeyPress(wm manager.WindowManager, key *tcell.EventKey) {
-	switch wm.GetFocusedWindow() {
-	case window.DockerInfo:
-		log.Fatal("shouldnt be here 1")
-	case window.ContainersHolder:
-		wm.GetWindow(window.ContainersHolder).KeyPress(*key)
-	case window.ContainerLogs:
-		wm.GetWindow(window.ContainerLogs).KeyPress(*key)
-	}
-}
-
-func handleMouseEvent(wm manager.WindowManager, ev *tcell.EventMouse) {
-	switch wm.GetFocusedWindow() {
-	case window.DockerInfo:
-		log.Fatal("shouldnt be here 2")
-	case window.ContainersHolder:
-		wm.GetWindow(window.ContainersHolder).MousePress(*ev)
-	}
-}
-
-func initWindowManager() manager.WindowManager {
-	general_info_w := general_info_window.NewGeneralInfoWindow(context.Background())
-	containers_w := containers_window.NewContainersWindow()
-	docker_info_w := docker_info_window.NewDockerInfoWindow()
-	bar_w := bar_window.NewBarWindow(context.Background())
-
-	windows := map[window.WindowType]window.Window{
-		window.GeneralInfo:      &general_info_w,
-		window.ContainersHolder: &containers_w,
-		window.DockerInfo:       &docker_info_w,
-		window.Bar:              &bar_w,
-	}
-
-	return manager.InitWindowManager(windows, window.ContainersHolder)
 }

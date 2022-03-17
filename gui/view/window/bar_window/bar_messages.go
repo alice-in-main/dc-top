@@ -2,7 +2,7 @@ package bar_window
 
 import (
 	"dc-top/gui/elements"
-	"dc-top/gui/window"
+	"dc-top/gui/view/window"
 
 	"github.com/gdamore/tcell/v2"
 )

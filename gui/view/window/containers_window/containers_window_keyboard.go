@@ -3,8 +3,8 @@ package containers_window
 import (
 	"context"
 	"dc-top/docker/compose"
-	"dc-top/gui/window"
-	"dc-top/gui/window/bar_window"
+	"dc-top/gui/view/window"
+	"dc-top/gui/view/window/bar_window"
 	"fmt"
 	"log"
 
@@ -114,6 +114,8 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 			state.search_box.Reset()
 			bar_window.Info([]rune("Switched to search mode..."))
 			state.keyboard_mode = search
+		case 'r':
+			state.is_reverse_sort = !state.is_reverse_sort
 		}
 	}
 	return nil

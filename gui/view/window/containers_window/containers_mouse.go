@@ -2,20 +2,20 @@ package containers_window
 
 import (
 	docker "dc-top/docker"
-	"dc-top/gui/window"
+	"dc-top/gui/view/window"
 	"log"
 
 	"github.com/gdamore/tcell/v2"
 )
 
 func handleMouseEvent(ev *tcell.EventMouse, w *ContainersWindow, table_state tableState) tableState {
-	if table_state.window_state.IsOutbounds(ev) {
+	if w.dimensions.IsOutbounds(ev) {
 		x, y := ev.Position()
 		log.Printf("outbounds mouse event %d,%d", x, y)
 		return table_state
 	}
-	x, y := table_state.window_state.RelativeMousePosition(ev)
-	total_width := window.Width(&table_state.window_state)
+	x, y := w.dimensions.RelativeMousePosition(ev)
+	total_width := window.Width(&w.dimensions)
 	log.Printf("Handling mouse event that happened on %d, %d", x, y)
 	switch {
 	case y == 1:
@@ -56,4 +56,15 @@ func getSortTypeFromMousePress(total_width, x int) docker.SortType {
 		cummulative_size = next_cummulative_size
 	}
 	return docker.None
+}
+
+func getCellWidths(total_width int) []int {
+	return []int{
+		int(id_cell_percent * float64(total_width)),
+		int(state_cell_percent * float64(total_width)),
+		int(name_cell_percent * float64(total_width)),
+		int(image_cell_percent * float64(total_width)),
+		int(memory_cell_percent * float64(total_width)),
+		int(cpu_cell_percent * float64(total_width)),
+	}
 }

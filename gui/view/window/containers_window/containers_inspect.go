@@ -3,7 +3,6 @@ package containers_window
 import (
 	docker "dc-top/docker"
 	"dc-top/gui/elements"
-	"dc-top/gui/window"
 	"fmt"
 	"sort"
 	"strings"
@@ -13,7 +12,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-func generatePrettyInspectInfo(state tableState) (map[int]elements.StringStyler, error) {
+func generatePrettyInspectInfo(state tableState, window_width int) (map[int]elements.StringStyler, error) {
 	var info map[int]elements.StringStyler = make(map[int]elements.StringStyler)
 
 	var info_arr []elements.StringStyler = make([]elements.StringStyler, 0)
@@ -24,19 +23,20 @@ func generatePrettyInspectInfo(state tableState) (map[int]elements.StringStyler,
 	}
 	stats := state.containers_data.GetData()[index]
 	inspect_info := stats.InspectData()
-	window_width := window.Width(&state.window_state)
 
 	if inspect_info.ContainerJSONBase == nil {
 		return info, fmt.Errorf("inspection ended")
 	}
 
-	info_arr = append(info_arr,
-		elements.TextDrawer("Name: "+stats.CachedStats().Name, tcell.StyleDefault),
-		elements.TextDrawer("ID: "+stats.ID(), tcell.StyleDefault),
-		elements.TextDrawer("Image: "+stats.Image(), tcell.StyleDefault),
-		elements.TextDrawer("State: "+stats.State(), tcell.StyleDefault),
-		elements.TextDrawer(fmt.Sprintf("Restart count: %d", inspect_info.RestartCount), tcell.StyleDefault),
-	)
+	basic_info_table := elements.TableWithoutSeperator(window_width, []float64{0.2, 0.8}, [][]elements.StringStyler{
+		{elements.TextDrawer("Name:", tcell.StyleDefault), elements.TextDrawer(stats.CachedStats().Name, tcell.StyleDefault)},
+		{elements.TextDrawer("ID:", tcell.StyleDefault), elements.TextDrawer(stats.ID(), tcell.StyleDefault)},
+		{elements.TextDrawer("Image:", tcell.StyleDefault), elements.TextDrawer(stats.Image(), tcell.StyleDefault)},
+		{elements.TextDrawer("State:", tcell.StyleDefault), elements.TextDrawer(stats.State(), tcell.StyleDefault)},
+		{elements.TextDrawer("Start date:", tcell.StyleDefault), elements.TextDrawer(inspect_info.Created, tcell.StyleDefault)},
+		{elements.TextDrawer("Restart count:", tcell.StyleDefault), elements.IntegerDrawer(inspect_info.RestartCount, tcell.StyleDefault)},
+	})
+	info_arr = append(info_arr, basic_info_table...)
 	cpu_usage := stats.CachedStats().Cpu.ContainerUsage.TotalUsage - stats.CachedStats().PreCpu.ContainerUsage.TotalUsage
 	cpu_quota := inspect_info.HostConfig.NanoCPUs
 	cpu_limit := stats.CachedStats().Cpu.SystemUsage - stats.CachedStats().PreCpu.SystemUsage

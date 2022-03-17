@@ -1,7 +1,7 @@
 package manager
 
 import (
-	"dc-top/gui/window"
+	"dc-top/gui/view/window"
 	"log"
 
 	"github.com/gdamore/tcell/v2"

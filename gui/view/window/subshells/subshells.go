@@ -3,8 +3,8 @@ package subshells
 import (
 	"context"
 	"dc-top/docker/compose"
-	"dc-top/gui/window"
-	"dc-top/gui/window/bar_window"
+	"dc-top/gui/view/window"
+	"dc-top/gui/view/window/bar_window"
 	"io"
 	"log"
 	"os"

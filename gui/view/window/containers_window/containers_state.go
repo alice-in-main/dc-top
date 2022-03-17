@@ -3,14 +3,14 @@ package containers_window
 import (
 	docker "dc-top/docker"
 	"dc-top/gui/elements"
-	"dc-top/gui/window"
+	"dc-top/gui/view/window"
 	"log"
 )
 
 type tableState struct {
 	//common
-	window_state window.WindowState
-	focused_id   string
+	// window_state window.WindowDim
+	focused_id string
 	//containers view
 	is_enabled    bool
 	window_mode   windowMode
@@ -24,11 +24,12 @@ type tableState struct {
 	filtered_data          []docker.ContainerDatum
 	main_sort_type         docker.SortType
 	secondary_sort_type    docker.SortType
+	is_reverse_sort        bool
 	top_line_inspect       int
 	inspect_height         int
 }
 
-func handleResize(w *ContainersWindow, table_state tableState) tableState {
+func handleResize(win *ContainersWindow, table_state tableState) tableState {
 	log.Printf("Resize request\n")
 	x1, y1, x2, y2 := window.ContainerWindowSize()
 	table_state.table_height = calcTableHeight(y1, y2)
@@ -40,7 +41,7 @@ func handleResize(w *ContainersWindow, table_state tableState) tableState {
 			break
 		}
 	}
-	table_state.window_state.SetBorders(x1, y1, x2, y2)
+	win.dimensions.SetBorders(x1, y1, x2, y2)
 	return table_state
 }
 

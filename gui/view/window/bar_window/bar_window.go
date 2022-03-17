@@ -2,7 +2,7 @@ package bar_window
 
 import (
 	"context"
-	"dc-top/gui/window"
+	"dc-top/gui/view/window"
 	"log"
 	"time"
 
@@ -10,23 +10,29 @@ import (
 )
 
 type BarWindow struct {
-	context       context.Context
-	resize_ch     chan interface{}
-	message_chan  chan BarMessage
-	enable_toggle chan bool
+	dimensions_generator func() window.Dimensions
+	context              context.Context
+	resize_ch            chan interface{}
+	message_chan         chan BarMessage
+	enable_toggle        chan bool
 }
 
-func NewBarWindow(context context.Context) BarWindow {
+func NewBarWindow(context context.Context, dimensions_generator func() window.Dimensions) BarWindow {
 	return BarWindow{
-		context:       context,
-		resize_ch:     make(chan interface{}),
-		message_chan:  make(chan BarMessage),
-		enable_toggle: make(chan bool),
+		dimensions_generator: dimensions_generator,
+		context:              context,
+		resize_ch:            make(chan interface{}),
+		message_chan:         make(chan BarMessage),
+		enable_toggle:        make(chan bool),
 	}
 }
 
 func (w *BarWindow) Open() {
 	go w.main()
+}
+
+func (w *BarWindow) Dimensions() window.Dimensions {
+	return w.dimensions_generator()
 }
 
 func (w *BarWindow) Resize() {
@@ -60,12 +66,11 @@ func (w *BarWindow) Enable() {
 func (w *BarWindow) Close() {}
 
 func (w *BarWindow) main() {
-	x1, y1, x2, y2 := window.ContainersBarWindowSize()
 	var state = barState{
-		window_state: window.NewWindow(x1, y1, x2, y2),
-		message:      _emptyMessage{},
+		message:    _emptyMessage{},
+		is_enabled: true,
 	}
-	drawBar(state)
+	w.drawBar(state)
 
 	clear_timer := time.NewTicker(5 * time.Second)
 	defer clear_timer.Stop()
@@ -74,21 +79,19 @@ func (w *BarWindow) main() {
 	for {
 		select {
 		case <-w.resize_ch:
-			x1, y1, x2, y2 := window.ContainersBarWindowSize()
-			state.window_state.SetBorders(x1, y1, x2, y2)
-			drawBar(state)
+			w.drawBar(state)
 		case message_event := <-w.message_chan:
 			state.message = message_event
 			if should_clear < 5 {
 				should_clear++
 			}
-			drawBar(state)
+			w.drawBar(state)
 		case is_enabled := <-w.enable_toggle:
 			state.is_enabled = is_enabled
 		case <-clear_timer.C:
 			if should_clear == 0 {
 				state.message = _emptyMessage{}
-				drawBar(state)
+				w.drawBar(state)
 			} else {
 				should_clear--
 			}
@@ -96,5 +99,12 @@ func (w *BarWindow) main() {
 			log.Printf("Bar window stopped drwaing...\n")
 			return
 		}
+	}
+}
+
+func (w *BarWindow) drawBar(state barState) {
+	if state.is_enabled {
+		tmp_dimensions := w.dimensions_generator()
+		window.DrawContents(&tmp_dimensions, generateBarDrawer(state))
 	}
 }

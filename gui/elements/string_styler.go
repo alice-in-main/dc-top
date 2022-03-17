@@ -153,13 +153,3 @@ func ValuesBarDrawer(description string, min_val float64, max_val float64, curr_
 	normalized_curr := curr_val - min_val
 	return PercentageBarDrawer(description, 100.0*normalized_curr/normalized_max, bar_len, extra_info)
 }
-
-func (s1 StringStyler) Concat(stich_index int, s2 StringStyler) StringStyler {
-	return func(x int) (r rune, s tcell.Style) {
-		if x < stich_index {
-			return s1(x)
-		} else {
-			return s2(x - stich_index)
-		}
-	}
-}

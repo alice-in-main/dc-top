@@ -2,8 +2,8 @@ package docker_info_window
 
 import (
 	docker "dc-top/docker"
-	"dc-top/gui/window"
-	"dc-top/gui/window/containers_window"
+	"dc-top/gui/view/window"
+	"dc-top/gui/view/window/containers_window"
 	"log"
 	"time"
 
@@ -11,6 +11,7 @@ import (
 )
 
 type DockerInfoWindow struct {
+	dimensions     window.Dimensions
 	resize_chan    chan interface{}
 	new_stats_chan chan containers_window.TotalStatsSummary
 	stop_chan      chan interface{}
@@ -18,7 +19,9 @@ type DockerInfoWindow struct {
 }
 
 func NewDockerInfoWindow() DockerInfoWindow {
+	x1, y1, x2, y2 := window.DockerInfoWindowSize()
 	return DockerInfoWindow{
+		dimensions:     window.NewDimensions(x1, y1, x2, y2, true),
 		resize_chan:    make(chan interface{}),
 		new_stats_chan: make(chan containers_window.TotalStatsSummary),
 		stop_chan:      make(chan interface{}),
@@ -28,6 +31,10 @@ func NewDockerInfoWindow() DockerInfoWindow {
 
 func (w *DockerInfoWindow) Open() {
 	go w.main()
+}
+
+func (w *DockerInfoWindow) Dimensions() window.Dimensions {
+	return w.dimensions
 }
 
 func (w *DockerInfoWindow) Resize() {
@@ -69,23 +76,20 @@ func (w *DockerInfoWindow) Close() {
 func (w *DockerInfoWindow) main() {
 	s := window.GetScreen()
 	is_enabled := true
-	x1, y1, x2, y2 := window.DockerInfoWindowSize()
-	var state dockerInfoState = dockerInfoState{
-		window_state: window.NewWindow(x1, y1, x2, y2),
-	}
+	var state dockerInfoState = dockerInfoState{}
 	tick := time.NewTicker(1000 * time.Millisecond)
 	for {
 		select {
 		case is_enabled = <-w.enable_toggle:
 			log.Printf("changed docker info to %t", is_enabled)
 			if is_enabled {
-				dockerInfoWindowDraw(state)
+				w.dockerInfoWindowDraw(state)
 			}
 		case <-w.resize_chan:
 			x1, y1, x2, y2 := window.DockerInfoWindowSize()
-			state.window_state.SetBorders(x1, y1, x2, y2)
+			w.dimensions.SetBorders(x1, y1, x2, y2)
 			if is_enabled {
-				dockerInfoWindowDraw(state)
+				w.dockerInfoWindowDraw(state)
 			}
 		case summary := <-w.new_stats_chan:
 			state.docker_resource_summary = summary
@@ -93,7 +97,7 @@ func (w *DockerInfoWindow) main() {
 				info, err := docker.GetDockerInfo()
 				window.ExitIfErr(err)
 				state.docker_info = info
-				dockerInfoWindowDraw(state)
+				w.dockerInfoWindowDraw(state)
 			}
 		case <-tick.C:
 			var GetTotalStatsRequest = containers_window.GetTotalStats{}
@@ -104,4 +108,10 @@ func (w *DockerInfoWindow) main() {
 			return
 		}
 	}
+}
+
+func (w *DockerInfoWindow) dockerInfoWindowDraw(state dockerInfoState) {
+	window.DrawBorders(&w.dimensions)
+	window.DrawContents(&w.dimensions, dockerInfoDrawerGenerator(state, window.Width(&w.dimensions)))
+	window.GetScreen().Show()
 }

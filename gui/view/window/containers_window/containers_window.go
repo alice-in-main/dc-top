@@ -1,18 +1,19 @@
 package containers_window
 
-// TODO: add start date in inspect mode
-// TODO: possible for slow sort is copying slices
-// TODO: add arrows for sorted by
-
 import (
 	"context"
 	docker "dc-top/docker"
 	"dc-top/gui/elements"
-	"dc-top/gui/window"
+	"dc-top/gui/view/window"
 	"log"
 
 	"github.com/gdamore/tcell/v2"
 )
+
+// TODO: improve performance by opening stats streams only for new containers
+// TODO: add erros when failed to exec into container
+// TODO: add restarts
+// TODO: fix resource NaNs and sorting
 
 type windowMode uint8
 
@@ -23,6 +24,7 @@ const (
 
 type ContainersWindow struct {
 	//common
+	dimensions              window.Dimensions
 	cached_state            tableState
 	resize_chan             chan interface{}
 	new_container_data_chan chan docker.ContainerData
@@ -36,8 +38,10 @@ type ContainersWindow struct {
 }
 
 func NewContainersWindow() ContainersWindow {
+	x1, y1, x2, y2 := window.ContainerWindowSize()
 	return ContainersWindow{
 		//common
+		dimensions:              window.NewDimensions(x1, y1, x2, y2, true),
 		resize_chan:             make(chan interface{}),
 		draw_queue:              make(chan tableState),
 		enable_toggle:           make(chan bool),
@@ -52,6 +56,10 @@ func NewContainersWindow() ContainersWindow {
 
 func (w *ContainersWindow) Open() {
 	go w.main()
+}
+
+func (w *ContainersWindow) Dimensions() window.Dimensions {
+	return w.dimensions
 }
 
 func (w *ContainersWindow) Resize() {
@@ -119,12 +127,12 @@ func (w *ContainersWindow) drawer(c context.Context) {
 		select {
 		case state := <-w.draw_queue:
 			if state.is_enabled {
-				window.DrawBorders(&state.window_state)
-				drawer_func, err := dockerStatsDrawerGenerator(state)
+				window.DrawBorders(&w.dimensions)
+				drawer_func, err := dockerStatsDrawerGenerator(state, window.Width(&w.dimensions))
 				if err != nil {
 					log.Printf("Got error %s while drawing\n", err)
 				}
-				window.DrawContents(&state.window_state, drawer_func)
+				window.DrawContents(&w.dimensions, drawer_func)
 				window.GetScreen().Show()
 			}
 		case <-c.Done():
@@ -165,8 +173,7 @@ func (w *ContainersWindow) dockerDataStreamer(c context.Context) {
 }
 
 func (w *ContainersWindow) main() {
-	x1, y1, x2, y2 := window.ContainerWindowSize()
-	window_state := window.NewWindow(x1, y1, x2, y2)
+	_, y1, _, y2 := window.ContainerWindowSize()
 	data, err := docker.GetContainers(nil)
 	window.ExitIfErr(err)
 	state := tableState{
@@ -180,15 +187,15 @@ func (w *ContainersWindow) main() {
 			tcell.StyleDefault.Background(tcell.ColorWhite).Foreground(tcell.ColorBlack)),
 		index_of_top_container: 0,
 		table_height:           calcTableHeight(y1, y2),
-		window_state:           window_state,
 		main_sort_type:         docker.State,
 		secondary_sort_type:    docker.Name,
+		is_reverse_sort:        false,
 		window_mode:            containers,
 		keyboard_mode:          regular,
 		top_line_inspect:       0,
 		inspect_height:         y2 - y1 - 2 + 1,
 	}
-	state.containers_data = data.GetSortedData(state.main_sort_type, state.secondary_sort_type)
+	state.containers_data = data.GetSortedData(state.main_sort_type, state.secondary_sort_type, false)
 	window_context, cancel := context.WithCancel(context.TODO())
 	w.cached_state = state
 	go w.drawer(window_context)
@@ -201,17 +208,19 @@ func (w *ContainersWindow) main() {
 		case <-w.resize_chan:
 			state = handleResize(w, state)
 		case new_data := <-w.new_container_data_chan:
-			new_data = new_data.GetSortedData(state.main_sort_type, state.secondary_sort_type)
+			new_data = new_data.GetSortedData(state.main_sort_type, state.secondary_sort_type, state.is_reverse_sort)
 			state = handleNewData(&new_data, w, state)
 			w.cached_state = state
 			w.data_request_chan <- state
 		case mouse_event := <-w.mouse_chan:
 			log.Println("Handling mouse event")
 			state = handleMouseEvent(&mouse_event, w, state)
-			state.containers_data = state.containers_data.GetSortedData(state.main_sort_type, state.secondary_sort_type)
+			state.containers_data = state.containers_data.GetSortedData(state.main_sort_type, state.secondary_sort_type, state.is_reverse_sort)
 			state.filtered_data = state.containers_data.Filter(state.search_box.Value())
 		case keyboard_event := <-w.keyboard_chan:
 			state, err = handleKeyboardEvent(&keyboard_event, w, state)
+			state.containers_data = state.containers_data.GetSortedData(state.main_sort_type, state.secondary_sort_type, state.is_reverse_sort)
+			state.filtered_data = state.containers_data.Filter(state.search_box.Value())
 			window.ExitIfErr(err)
 		case <-w.stop_chan:
 			log.Printf("Stopping all containers window routines\n")

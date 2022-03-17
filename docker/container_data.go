@@ -23,17 +23,6 @@ type ContainerData struct {
 	dc_filters  *filters.Args
 }
 
-type SortType uint8
-
-const (
-	Name SortType = iota
-	Memory
-	Cpu
-	Image
-	State
-	None
-)
-
 func NewContainerData() (ContainerData, error) {
 	var container_list_options = types.ContainerListOptions{All: true}
 	var dc_services *compose.Services = nil
@@ -100,16 +89,6 @@ func NewContainerData() (ContainerData, error) {
 	return new_containers_data, err
 }
 
-// func (containers *ContainerData) Clone() ContainerData {
-// 	// var copy ContainerData
-// 	// copier.CopyWithOption(&copy, containers, copier.Option{IgnoreEmpty: true, DeepCopy: true})
-// 	// return copy
-// 	clone := *containers
-// 	copy(clone.data, containers.data)
-
-// 	return clone
-// }
-
 func (containers *ContainerData) Len() int {
 	return len(containers.data)
 }
@@ -135,7 +114,7 @@ func (containers *ContainerData) GetData() []ContainerDatum {
 	return containers.data
 }
 
-func (containers *ContainerData) GetSortedData(main_sort_type, secondary_sort_type SortType) ContainerData {
+func (containers *ContainerData) GetSortedData(main_sort_type, secondary_sort_type SortType, reverse bool) ContainerData {
 	var data_copy = make([]ContainerDatum, containers.Len())
 	copy(data_copy, containers.data)
 
@@ -146,7 +125,11 @@ func (containers *ContainerData) GetSortedData(main_sort_type, secondary_sort_ty
 		dc_services:         containers.dc_services,
 		dc_filters:          containers.dc_filters,
 	}
-	sort.Stable(&new_data)
+	if reverse {
+		sort.Stable(sort.Reverse(&new_data))
+	} else {
+		sort.Stable(&new_data)
+	}
 
 	return new_data
 }
@@ -167,25 +150,11 @@ func (containers *ContainerData) UpdateStats() {
 		new_datum, err := UpdatedDatum(datum)
 		if err != nil {
 			log.Printf("Got error %s while fetching new data", err)
+			continue
 		}
 
 		containers.data[i] = new_datum
 	}
-}
-
-func (containers *ContainerData) GetUpdatedStats() ContainerData {
-	new_data := *containers
-	new_data.data = make([]ContainerDatum, containers.Len())
-	copy(new_data.data, containers.data)
-	for i, datum := range containers.data {
-		new_datum, err := UpdatedDatum(datum)
-		if err != nil {
-			log.Printf("Got error %s while fetching new data", err)
-		}
-
-		new_data.data[i] = new_datum
-	}
-	return new_data
 }
 
 func (containers *ContainerData) AreIdsUpToDate() (bool, error) {
