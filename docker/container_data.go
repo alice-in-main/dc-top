@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -223,7 +224,7 @@ func lessAux(sort_by SortType, i, j *ContainerDatum) bool {
 			stats_j := j.CachedStats()
 			usage_i := MemoryUsagePercentage(&stats_i.Memory)
 			usage_j := MemoryUsagePercentage(&stats_j.Memory)
-			return usage_i > usage_j
+			return usage_i > usage_j || (!math.IsNaN(usage_i) && math.IsNaN(usage_j))
 		}
 	case Cpu:
 		{
@@ -231,7 +232,7 @@ func lessAux(sort_by SortType, i, j *ContainerDatum) bool {
 			stats_j := j.CachedStats()
 			usage_i := CpuUsagePercentage(&stats_i.Cpu, &stats_i.PreCpu, &i.inspection)
 			usage_j := CpuUsagePercentage(&stats_j.Cpu, &stats_j.PreCpu, &j.inspection)
-			return usage_i > usage_j
+			return usage_i > usage_j || (!math.IsNaN(usage_i) && math.IsNaN(usage_j))
 		}
 	case State:
 		{

@@ -4,6 +4,8 @@ import (
 	"context"
 	docker "dc-top/docker"
 	"dc-top/gui/view/window"
+	"dc-top/gui/view/window/bar_window"
+	"fmt"
 	"log"
 
 	"github.com/gdamore/tcell/v2"
@@ -106,6 +108,7 @@ func (w *ContainerLogsWindow) handleRegularKeyPress(ev *tcell.EventKey) {
 			w.triggerRedraw()
 		case 'c':
 			w.logs_writer.search_box.Reset()
+			bar_window.Info([]rune("Cleared search"))
 			w.triggerRedraw()
 		case 'q':
 			w.logs_writer.stop <- nil
@@ -125,6 +128,7 @@ func (w *ContainerLogsWindow) handleSearchKeyPress(ev *tcell.EventKey) {
 		w.logs_writer.search_box.Reset()
 		w.logs_writer.is_searching = false
 	case tcell.KeyEnter:
+		bar_window.Info([]rune(fmt.Sprintf("Searching for '%s'", w.logs_writer.search_box.Value())))
 		w.logs_writer.is_searching = false
 	default:
 		w.logs_writer.search_box.HandleKey(ev)

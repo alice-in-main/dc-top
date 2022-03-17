@@ -12,15 +12,17 @@ import (
 type BarWindow struct {
 	dimensions_generator func() window.Dimensions
 	context              context.Context
+	cancel               context.CancelFunc
 	resize_ch            chan interface{}
 	message_chan         chan BarMessage
 	enable_toggle        chan bool
 }
 
-func NewBarWindow(context context.Context, dimensions_generator func() window.Dimensions) BarWindow {
+func NewBarWindow(context context.Context, cancel context.CancelFunc, dimensions_generator func() window.Dimensions) BarWindow {
 	return BarWindow{
 		dimensions_generator: dimensions_generator,
 		context:              context,
+		cancel:               cancel,
 		resize_ch:            make(chan interface{}),
 		message_chan:         make(chan BarMessage),
 		enable_toggle:        make(chan bool),
@@ -63,7 +65,9 @@ func (w *BarWindow) Enable() {
 	w.enable_toggle <- true
 }
 
-func (w *BarWindow) Close() {}
+func (w *BarWindow) Close() {
+	w.cancel()
+}
 
 func (w *BarWindow) main() {
 	var state = barState{
@@ -80,6 +84,7 @@ func (w *BarWindow) main() {
 		select {
 		case <-w.resize_ch:
 			w.drawBar(state)
+			window.GetScreen().Show()
 		case message_event := <-w.message_chan:
 			state.message = message_event
 			if should_clear < 5 {
@@ -95,6 +100,7 @@ func (w *BarWindow) main() {
 			} else {
 				should_clear--
 			}
+			window.GetScreen().Show()
 		case <-w.context.Done():
 			log.Printf("Bar window stopped drwaing...\n")
 			return

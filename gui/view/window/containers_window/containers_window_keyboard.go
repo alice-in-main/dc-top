@@ -92,6 +92,10 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 			if state.focused_id != "" {
 				handlePause(state.focused_id)
 			}
+		case 'r':
+			if state.focused_id != "" {
+				handleRestart(state.focused_id)
+			}
 		case 's':
 			if state.focused_id != "" {
 				handleStop(state.focused_id)
@@ -114,7 +118,7 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 			state.search_box.Reset()
 			bar_window.Info([]rune("Switched to search mode..."))
 			state.keyboard_mode = search
-		case 'r':
+		case '!':
 			state.is_reverse_sort = !state.is_reverse_sort
 		}
 	}

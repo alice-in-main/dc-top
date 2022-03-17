@@ -12,8 +12,6 @@ import (
 
 // TODO: improve performance by opening stats streams only for new containers
 // TODO: add erros when failed to exec into container
-// TODO: add restarts
-// TODO: fix resource NaNs and sorting
 
 type windowMode uint8
 

@@ -27,6 +27,11 @@ func StopContainer(id string) error {
 	return docker_cli.ContainerStop(context.TODO(), id, &duration)
 }
 
+func RestartContainer(id string) error {
+	duration := 10 * time.Second
+	return docker_cli.ContainerRestart(context.TODO(), id, &duration)
+}
+
 func DeleteContainer(id string) error {
 	return docker_cli.ContainerRemove(context.TODO(), id,
 		types.ContainerRemoveOptions{RemoveVolumes: true, RemoveLinks: false, Force: true})

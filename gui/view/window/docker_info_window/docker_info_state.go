@@ -69,11 +69,18 @@ func generateResourceUsage(state *dockerInfoState, window_width int) []elements.
 	docker_mem_usage := float64(state.docker_resource_summary.TotalMemUsage)
 	system_mem_usage := float64(state.docker_info.Info.MemTotal)
 
+	calc_usage := func(use, total float64) float64 {
+		if total == 0.0 {
+			return 0.0
+		}
+		return 100.0 * use / total
+	}
+
 	info_arr := make([]elements.StringStyler, 0)
 	info_arr = append(info_arr, elements.TextDrawer("Resources summary:", tcell.StyleDefault.Underline(true)))
 	info_arr = append(info_arr, elements.TextDrawer(fmt.Sprintf("Number of CPUs: %d", state.docker_info.Info.NCPU), tcell.StyleDefault))
-	info_arr = append(info_arr, elements.ValuesBarDrawer("Total CPU usage: ", 0, system_cpu_usage, docker_cpu_usage, bar_len, []rune(fmt.Sprintf(" %.2f%%", 100.0*docker_cpu_usage/system_cpu_usage))))
-	info_arr = append(info_arr, elements.ValuesBarDrawer("Total Mem usage: ", 0, system_mem_usage, docker_mem_usage, bar_len, []rune(fmt.Sprintf(" %.2f%%", 100.0*docker_mem_usage/system_mem_usage))))
+	info_arr = append(info_arr, elements.ValuesBarDrawer("Total CPU usage: ", 0, system_cpu_usage, docker_cpu_usage, bar_len, []rune(fmt.Sprintf(" %.2f%%", calc_usage(docker_cpu_usage, system_cpu_usage)))))
+	info_arr = append(info_arr, elements.ValuesBarDrawer("Total Mem usage: ", 0, system_mem_usage, docker_mem_usage, bar_len, []rune(fmt.Sprintf(" %.2f%%", calc_usage(docker_mem_usage, system_mem_usage)))))
 	info_arr = append(info_arr, elements.EmptyDrawer())
 	return info_arr
 }

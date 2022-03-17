@@ -121,6 +121,9 @@ func PercentageBarDrawer(description string, percentage float64, bar_len int, ex
 	loading_bar_rune := '\u2584'
 	desc_len := len(description)
 	extra_info_len := len(extra_info)
+	if math.IsNaN(percentage) {
+		percentage = 0.0
+	}
 	return func(i int) (rune, tcell.Style) {
 		if i < desc_len {
 			return rune(description[i]), tcell.StyleDefault
@@ -140,8 +143,6 @@ func PercentageBarDrawer(description string, percentage float64, bar_len int, ex
 			return loading_bar_rune, tcell.StyleDefault.Foreground(tcell.ColorYellow)
 		case percentage >= low_percentage:
 			return loading_bar_rune, tcell.StyleDefault.Foreground(tcell.ColorGreen)
-		case math.IsNaN(percentage):
-			return '\x00', tcell.StyleDefault
 		}
 		log.Printf("Illegal bar state: got %f percentage and %d bar length\n", percentage, bar_len)
 		panic(1)

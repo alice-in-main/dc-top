@@ -37,7 +37,8 @@ func InitDefaultView() {
 		x1, y1, x2, y2 := window.ContainersBarWindowSize()
 		return window.NewDimensions(x1, y1, x2, y2, false)
 	}
-	def_bar_w := bar_window.NewBarWindow(context.Background(), bar_dimensions_generator)
+	ctx, cancel := context.WithCancel(context.TODO())
+	def_bar_w := bar_window.NewBarWindow(ctx, cancel, bar_dimensions_generator)
 
 	default_view := NewView(map[window.WindowType]window.Window{
 		window.GeneralInfo:      &def_general_info_w,
@@ -62,7 +63,8 @@ func ChangeToLogView(container_id string) {
 		x1, y1, x2, y2 := window.LogsBarWindowSize()
 		return window.NewDimensions(x1, y1, x2, y2, false)
 	}
-	logs_bar_w := bar_window.NewBarWindow(context.Background(), bar_dimensions_generator)
+	ctx, cancel := context.WithCancel(context.TODO())
+	logs_bar_w := bar_window.NewBarWindow(ctx, cancel, bar_dimensions_generator)
 	logs_view := NewView(map[window.WindowType]window.Window{
 		window.ContainerLogs: &logs_window,
 		window.Bar:           &logs_bar_w,

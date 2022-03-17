@@ -54,7 +54,6 @@ func Draw() {
 		case *tcell.EventMouse:
 			view.HandleMouseEvent(ev)
 		case window.MessageEvent:
-			log.Println(ev.Message)
 			if view.CurrentView().Exists(ev.Receiver) {
 				view.CurrentView().GetWindow(ev.Receiver).HandleEvent(ev.Message, ev.Sender)
 			}
