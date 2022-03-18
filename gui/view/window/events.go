@@ -71,6 +71,22 @@ func NewChangeToLogsWindowEvent(container_id string) ChangeToLogsWindowEvent {
 
 // ---------
 
+type ChangeToMainHelpEvent struct {
+	t time.Time
+}
+
+func (e ChangeToMainHelpEvent) When() time.Time {
+	return e.t
+}
+
+func NewChangeToMainHelpEvent() ChangeToMainHelpEvent {
+	return ChangeToMainHelpEvent{
+		t: time.Now(),
+	}
+}
+
+// ---------
+
 type ChangeToContainerShellEvent struct {
 	t           time.Time
 	ContainerId string

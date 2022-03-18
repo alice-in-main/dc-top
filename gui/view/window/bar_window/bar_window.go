@@ -33,10 +33,6 @@ func (w *BarWindow) Open() {
 	go w.main()
 }
 
-func (w *BarWindow) Dimensions() window.Dimensions {
-	return w.dimensions_generator()
-}
-
 func (w *BarWindow) Resize() {
 	w.resize_ch <- nil
 }
@@ -83,28 +79,25 @@ func (w *BarWindow) main() {
 	for {
 		select {
 		case <-w.resize_ch:
-			w.drawBar(state)
-			window.GetScreen().Show()
 		case message_event := <-w.message_chan:
 			state.message = message_event
 			if should_clear < 5 {
 				should_clear++
 			}
-			w.drawBar(state)
 		case is_enabled := <-w.enable_toggle:
 			state.is_enabled = is_enabled
 		case <-clear_timer.C:
 			if should_clear == 0 {
 				state.message = _emptyMessage{}
-				w.drawBar(state)
 			} else {
 				should_clear--
 			}
-			window.GetScreen().Show()
 		case <-w.context.Done():
 			log.Printf("Bar window stopped drwaing...\n")
 			return
 		}
+		w.drawBar(state)
+		window.GetScreen().Show()
 	}
 }
 

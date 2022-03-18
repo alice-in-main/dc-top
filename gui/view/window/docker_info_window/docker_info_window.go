@@ -33,10 +33,6 @@ func (w *DockerInfoWindow) Open() {
 	go w.main()
 }
 
-func (w *DockerInfoWindow) Dimensions() window.Dimensions {
-	return w.dimensions
-}
-
 func (w *DockerInfoWindow) Resize() {
 	w.resize_chan <- nil
 }
@@ -111,7 +107,6 @@ func (w *DockerInfoWindow) main() {
 }
 
 func (w *DockerInfoWindow) dockerInfoWindowDraw(state dockerInfoState) {
-	window.DrawBorders(&w.dimensions)
 	window.DrawContents(&w.dimensions, dockerInfoDrawerGenerator(state, window.Width(&w.dimensions)))
 	window.GetScreen().Show()
 }

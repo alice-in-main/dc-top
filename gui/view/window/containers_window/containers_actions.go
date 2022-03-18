@@ -56,9 +56,6 @@ func handleRestart(id string) {
 	go func(id_to_stop string) {
 		if err := docker.RestartContainer(id_to_stop); err != nil {
 			log.Printf("Got error '%s' when trying to container delete %s", err, id_to_stop)
-			if !strings.Contains(err.Error(), "is already in progress") && !strings.Contains(err.Error(), "No such container") {
-				panic(err)
-			}
 		}
 	}(id)
 }

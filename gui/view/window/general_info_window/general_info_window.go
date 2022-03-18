@@ -29,10 +29,6 @@ func (w *GeneralInfoWindow) Open() {
 	go w.main()
 }
 
-func (w *GeneralInfoWindow) Dimensions() window.Dimensions {
-	return w.dimensions
-}
-
 func (w *GeneralInfoWindow) Resize() {
 	w.resize_ch <- nil
 }

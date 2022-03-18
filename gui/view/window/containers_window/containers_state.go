@@ -9,15 +9,12 @@ import (
 
 type tableState struct {
 	//common
-	// window_state window.WindowDim
-	focused_id string
-	//containers view
 	is_enabled    bool
 	window_mode   windowMode
 	keyboard_mode keyboardMode
-	search_box    elements.TextBox
-	// search_buffer          string
-	// search_buffer_index    int
+	focused_id    string
+	//containers view
+	search_box             elements.TextBox
 	index_of_top_container int
 	table_height           int
 	containers_data        docker.ContainerData
@@ -35,13 +32,8 @@ func handleResize(win *ContainersWindow, table_state tableState) tableState {
 	table_state.table_height = calcTableHeight(y1, y2)
 	table_state.inspect_height = y2 - y1 - 2 + 1
 	log.Printf("table height is %d\n", table_state.table_height)
-	for i, datum := range table_state.containers_data.GetData() {
-		if datum.ID() == table_state.focused_id {
-			updateIndices(&table_state, i)
-			break
-		}
-	}
 	win.dimensions.SetBorders(x1, y1, x2, y2)
+	restartIndex(&table_state)
 	return table_state
 }
 
@@ -54,16 +46,6 @@ func handleNewData(new_data *docker.ContainerData, w *ContainersWindow, table_st
 		table_state.window_mode = containers
 	}
 	return table_state
-}
-
-func handleNewIndex(new_index int, table_state *tableState) {
-	if new_index < 0 {
-		new_index = len(table_state.filtered_data) - 1
-	} else if new_index >= len(table_state.filtered_data) {
-		new_index = 0
-	}
-	table_state.focused_id = table_state.filtered_data[new_index].ID()
-	updateIndices(table_state, new_index)
 }
 
 func handleChangeIndex(is_next bool, table_state *tableState) {
@@ -92,10 +74,31 @@ func handleChangeIndex(is_next bool, table_state *tableState) {
 	handleNewIndex(new_index, table_state)
 }
 
+func handleNewIndex(new_index int, table_state *tableState) {
+	if new_index < 0 {
+		new_index = len(table_state.filtered_data) - 1
+	} else if new_index >= len(table_state.filtered_data) {
+		new_index = 0
+	}
+	table_state.focused_id = table_state.filtered_data[new_index].ID()
+	updateIndices(table_state, new_index)
+}
+
+func restartIndex(state *tableState) {
+	index, err := findIndexOfId(state.filtered_data, state.focused_id)
+	if err != nil {
+		if len(state.filtered_data) == 0 {
+			return
+		}
+		index = 0
+	}
+	handleNewIndex(index, state)
+}
+
 func updateIndices(state *tableState, curr_index int) {
 	index_of_buttom := state.index_of_top_container + state.table_height - 1
 	if curr_index < state.index_of_top_container {
-		state.index_of_top_container = curr_index
+		state.index_of_top_container = 0
 	} else if curr_index >= index_of_buttom {
 		state.index_of_top_container = curr_index - state.table_height + 1
 	}

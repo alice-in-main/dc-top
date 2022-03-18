@@ -20,11 +20,7 @@ func handleMouseEvent(ev *tcell.EventMouse, w *ContainersWindow, table_state tab
 	switch {
 	case y == 1:
 		var new_sort_type docker.SortType = getSortTypeFromMousePress(total_width, x)
-		if new_sort_type != docker.None && table_state.main_sort_type != new_sort_type {
-			table_state.secondary_sort_type = table_state.main_sort_type
-			table_state.main_sort_type = new_sort_type
-			log.Print("Updated sort types")
-		}
+		updateSortType(&table_state, new_sort_type)
 	case y > 2 && y < table_state.containers_data.Len()+3:
 		i := table_state.index_of_top_container + y - 3
 		if i >= table_state.containers_data.Len() {

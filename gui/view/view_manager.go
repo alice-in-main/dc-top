@@ -8,6 +8,7 @@ import (
 	"dc-top/gui/view/window/containers_window"
 	"dc-top/gui/view/window/docker_info_window"
 	"dc-top/gui/view/window/general_info_window"
+	"dc-top/gui/view/window/help_window"
 	"log"
 	"sync"
 
@@ -17,8 +18,10 @@ import (
 type _viewName uint8
 
 const (
-	def _viewName = iota
+	main _viewName = iota
 	logs
+	main_help
+	logs_help
 )
 
 var _views map[_viewName]*View = make(map[_viewName]*View)
@@ -33,6 +36,16 @@ func InitDefaultView() {
 	def_containers_w := containers_window.NewContainersWindow()
 	def_docker_info_w := docker_info_window.NewDockerInfoWindow()
 
+	controls := help_window.MainControls()
+	def_help_w := help_window.NewHelpWindow(
+		context.TODO(),
+		controls,
+		func() window.Dimensions {
+			x1, y1, x2, y2 := window.MainHelpWindowSize()
+			return window.NewDimensions(x1, y1, x2, y2, true)
+		},
+	)
+
 	bar_dimensions_generator := func() window.Dimensions {
 		x1, y1, x2, y2 := window.ContainersBarWindowSize()
 		return window.NewDimensions(x1, y1, x2, y2, false)
@@ -45,20 +58,50 @@ func InitDefaultView() {
 		window.ContainersHolder: &def_containers_w,
 		window.DockerInfo:       &def_docker_info_w,
 		window.Bar:              &def_bar_w,
+		window.Help:             &def_help_w,
 	}, window.ContainersHolder)
 
-	_views[def] = &default_view
-	_curr_view = def
+	_views[main] = &default_view
+	_curr_view = main
 	_views[_curr_view].Open()
 }
 
-func ChangeToLogView(container_id string) {
+func ReturnDefaultView() {
 	_lock.Lock()
 	defer _lock.Unlock()
-	log.Printf("Changing to logs")
-	_views[def].PauseWindows()
-	logs_window := container_logs_window.NewContainerLogsWindow(container_id)
+	log.Printf("Returning to default view")
+	if _curr_view != main {
+		log.Printf("Closing %d view and returning to default", _curr_view)
+		_views[_curr_view].Close()
+		_curr_view = main
+		window.GetScreen().Clear()
+		_views[main].ResumeWindows()
+	} else {
+		log.Printf("Tried to run default view when already running default view")
+	}
+}
 
+func DisplayMainHelp() {
+	log.Printf("Changing to main help")
+	controls := help_window.MainControls()
+	help_window := help_window.NewHelpWindow(
+		context.TODO(),
+		controls,
+		func() window.Dimensions {
+			width, height := window.GetScreen().Size()
+			x1, y1, x2, y2 := width/3, height/3, 2*width/3, (height/3 + len(controls) + 3)
+			return window.NewDimensions(x1, y1, x2, y2, true)
+		},
+	)
+	main_help_view := NewView(map[window.WindowType]window.Window{
+		window.Help: &help_window,
+	}, window.Help)
+	changeView(main_help, main, &main_help_view)
+}
+
+func ChangeToLogView(container_id string) {
+	log.Printf("Changing to logs")
+	logs_window := container_logs_window.NewContainerLogsWindow(container_id)
 	bar_dimensions_generator := func() window.Dimensions {
 		x1, y1, x2, y2 := window.LogsBarWindowSize()
 		return window.NewDimensions(x1, y1, x2, y2, false)
@@ -69,41 +112,30 @@ func ChangeToLogView(container_id string) {
 		window.ContainerLogs: &logs_window,
 		window.Bar:           &logs_bar_w,
 	}, window.ContainerLogs)
-	_views[logs] = &logs_view
-	_curr_view = logs
-	logs_view.Open()
-}
-
-func RunDefaultView() {
-	_lock.Lock()
-	defer _lock.Unlock()
-	log.Printf("Returning to default view")
-	if _curr_view != def {
-		log.Printf("Closing %d view and returning to default", _curr_view)
-		_views[_curr_view].Close()
-		_curr_view = def
-		_views[def].ResumeWindows()
-	} else {
-		log.Printf("Tried to run default view when already running default view")
-	}
+	changeView(logs, main, &logs_view)
 }
 
 func HandleKeyPress(key *tcell.EventKey) {
 	_lock.Lock()
 	defer _lock.Unlock()
-	switch _curr_view {
-	case def:
-		DefaultView().GetWindow(window.ContainersHolder).KeyPress(*key)
-	case logs:
-		LogView().GetWindow(window.ContainerLogs).KeyPress(*key)
-	}
+	_views[_curr_view].GetWindow(_views[_curr_view].GetFocusedWindow()).KeyPress(*key)
+	// switch _curr_view {
+	// case main:
+	// 	DefaultView().GetWindow(window.ContainersHolder).KeyPress(*key)
+	// case logs:
+	// 	LogView().GetWindow(window.ContainerLogs).KeyPress(*key)
+	// case main_help:
+	// 	LogView().GetWindow(window.Help).KeyPress(*key)
+	// case logs_help:
+	// 	LogView().GetWindow(window.ContainerLogs).KeyPress(*key)
+	// }
 }
 
 func HandleMouseEvent(ev *tcell.EventMouse) {
 	_lock.Lock()
 	defer _lock.Unlock()
 	switch _curr_view {
-	case def:
+	case main:
 		DefaultView().GetWindow(window.ContainersHolder).MousePress(*ev)
 	}
 }
@@ -115,7 +147,7 @@ func CurrentView() *View {
 }
 
 func DefaultView() *View {
-	return _views[def]
+	return _views[main]
 }
 
 func LogView() *View {
@@ -126,4 +158,13 @@ func CloseAll() {
 	for _, view := range _views {
 		view.Close()
 	}
+}
+
+func changeView(new_view_key, prev_view_key _viewName, view *View) {
+	_lock.Lock()
+	defer _lock.Unlock()
+	_views[prev_view_key].PauseWindows()
+	_views[new_view_key] = view
+	_curr_view = new_view_key
+	view.Open()
 }

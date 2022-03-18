@@ -11,8 +11,6 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
-// TODO: add vim style search
-
 type ContainerLogsWindow struct {
 	id          string
 	logs_writer *logsWriter
@@ -47,18 +45,12 @@ func (w *ContainerLogsWindow) Open() {
 	}()
 }
 
-func (w *ContainerLogsWindow) Dimensions() window.Dimensions {
-	return w.logs_writer.dimensions
-}
-
 func (w *ContainerLogsWindow) Resize() {
-	x1, y1, x2, y2 := window.LogsWindowSize()
-	w.logs_writer.dimensions.SetBorders(x1, y1, x2, y2)
 	w.triggerRedraw()
 }
 
 func (w *ContainerLogsWindow) KeyPress(ev tcell.EventKey) {
-	if w.logs_writer.is_searching {
+	if w.logs_writer.is_typing {
 		w.handleSearchKeyPress(&ev)
 	} else {
 		w.handleRegularKeyPress(&ev)
@@ -88,14 +80,12 @@ func (w *ContainerLogsWindow) handleRegularKeyPress(ev *tcell.EventKey) {
 		log.Printf("view_offset: %d, logs_counter: %d. %d >= (%d - %d)", w.logs_writer.view_offset, w.logs_writer.logs_counter, w.logs_writer.view_offset, w.logs_writer.logs_counter, docker.MaxSavedLogs)
 		if w.logs_writer.view_offset >= (w.logs_writer.logs_counter - docker.MaxSavedLogs) {
 			w.logs_writer.view_offset--
-			w.logs_writer.is_following = false
-			w.triggerRedraw()
+			w.stopFollowing()
 		}
 	case tcell.KeyDown:
 		if w.logs_writer.view_offset < w.logs_writer.logs_counter {
 			w.logs_writer.view_offset++
-			w.logs_writer.is_following = false
-			w.triggerRedraw()
+			w.stopFollowing()
 		}
 	case tcell.KeyCtrlD:
 		w.logs_writer.stop <- nil
@@ -104,12 +94,24 @@ func (w *ContainerLogsWindow) handleRegularKeyPress(ev *tcell.EventKey) {
 		case 'f':
 			w.startFollowing()
 		case '/':
-			w.logs_writer.is_searching = true
+			w.logs_writer.is_typing = true
 			w.triggerRedraw()
 		case 'c':
 			w.logs_writer.search_box.Reset()
 			bar_window.Info([]rune("Cleared search"))
 			w.triggerRedraw()
+		case 'n':
+			if w.logs_writer.is_looking {
+				w.logs_writer.next_search <- nil
+			} else {
+				w.logs_writer.lookup_request <- nil
+			}
+		case 'N':
+			if w.logs_writer.is_looking {
+				w.logs_writer.prev_search <- nil
+			} else {
+				w.logs_writer.lookup_request <- nil
+			}
 		case 'q':
 			w.logs_writer.stop <- nil
 		case 'l':
@@ -123,13 +125,13 @@ func (w *ContainerLogsWindow) handleSearchKeyPress(ev *tcell.EventKey) {
 	switch key {
 	case tcell.KeyCtrlD:
 		w.logs_writer.search_box.Reset()
-		w.logs_writer.is_searching = false
+		w.logs_writer.is_typing = false
 	case tcell.KeyEscape:
 		w.logs_writer.search_box.Reset()
-		w.logs_writer.is_searching = false
+		w.logs_writer.is_typing = false
 	case tcell.KeyEnter:
 		bar_window.Info([]rune(fmt.Sprintf("Searching for '%s'", w.logs_writer.search_box.Value())))
-		w.logs_writer.is_searching = false
+		w.logs_writer.is_typing = false
 	default:
 		w.logs_writer.search_box.HandleKey(ev)
 	}
@@ -138,7 +140,14 @@ func (w *ContainerLogsWindow) handleSearchKeyPress(ev *tcell.EventKey) {
 
 func (w *ContainerLogsWindow) startFollowing() {
 	w.logs_writer.is_following = true
-	w.logs_writer.view_offset = w.logs_writer.logs_counter
+	w.logs_writer.view_offset = w.logs_writer.logs_counter - 1
+	bar_window.Info([]rune("Following..."))
+	w.triggerRedraw()
+}
+
+func (w *ContainerLogsWindow) stopFollowing() {
+	w.logs_writer.is_following = false
+	bar_window.Info([]rune("Stopped following logs"))
 	w.triggerRedraw()
 }
 

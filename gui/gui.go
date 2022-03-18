@@ -67,8 +67,10 @@ func Draw() {
 			subshells.EditDcYaml(context.TODO())
 		case window.ChangeToLogsWindowEvent:
 			view.ChangeToLogView(ev.ContainerId)
+		case window.ChangeToMainHelpEvent:
+			view.DisplayMainHelp()
 		case window.ChangeToDefaultViewEvent:
-			view.RunDefaultView()
+			view.ReturnDefaultView()
 		case window.FatalErrorEvent:
 			err = fmt.Errorf("a fatal error occured at %s:\n%s", ev.When(), ev.Err)
 			return

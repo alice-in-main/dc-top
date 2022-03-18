@@ -2,6 +2,7 @@ package containers_window
 
 import (
 	"context"
+	"dc-top/docker"
 	"dc-top/docker/compose"
 	"dc-top/gui/view/window"
 	"dc-top/gui/view/window/bar_window"
@@ -62,9 +63,18 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 			if state.focused_id != "" {
 				screen.PostEvent(window.NewChangeToLogsWindowEvent(state.focused_id))
 			}
+		case 'h':
+			if state.focused_id != "" {
+				screen.PostEvent(window.NewChangeToMainHelpEvent())
+			}
 		case 'e':
 			if state.focused_id != "" {
-				screen.PostEvent(window.NewChangeToContainerShellEvent(state.focused_id))
+				index, err := findIndexOfId(state.containers_data.GetData(), state.focused_id)
+				if err != nil || state.containers_data.GetData()[index].State() != "running" {
+					bar_window.Err([]rune(fmt.Sprintf("Container %s isn't running", state.containers_data.GetData()[index].CachedStats().Name)))
+				} else {
+					screen.PostEvent(window.NewChangeToContainerShellEvent(state.focused_id))
+				}
 			}
 		case 'v':
 			if compose.DcModeEnabled() {
@@ -121,6 +131,16 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 		case '!':
 			state.is_reverse_sort = !state.is_reverse_sort
 		}
+	case tcell.KeyF1:
+		updateSortType(state, docker.State)
+	case tcell.KeyF2:
+		updateSortType(state, docker.Name)
+	case tcell.KeyF3:
+		updateSortType(state, docker.Image)
+	case tcell.KeyF4:
+		updateSortType(state, docker.Memory)
+	case tcell.KeyF5:
+		updateSortType(state, docker.Cpu)
 	}
 	return nil
 }
@@ -143,4 +163,5 @@ func (state *tableState) searchKeyPress(ev *tcell.EventKey, w *ContainersWindow)
 		state.search_box.HandleKey(ev)
 	}
 	state.filtered_data = state.containers_data.Filter(state.search_box.Value())
+	restartIndex(state)
 }

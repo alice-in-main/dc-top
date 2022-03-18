@@ -8,10 +8,12 @@ import (
 	"log"
 
 	"github.com/gdamore/tcell/v2"
+	"golang.org/x/sync/semaphore"
 )
 
 // TODO: improve performance by opening stats streams only for new containers
-// TODO: add erros when failed to exec into container
+// TODO: add loading screen
+// TODO: help in log window
 
 type windowMode uint8
 
@@ -28,7 +30,9 @@ type ContainersWindow struct {
 	new_container_data_chan chan docker.ContainerData
 	data_request_chan       chan tableState
 	draw_queue              chan tableState
+	drawer_semaphore        *semaphore.Weighted
 	enable_toggle           chan bool
+	skip_draw               chan interface{}
 	stop_chan               chan interface{}
 	//containers view
 	mouse_chan    chan tcell.EventMouse
@@ -42,7 +46,9 @@ func NewContainersWindow() ContainersWindow {
 		dimensions:              window.NewDimensions(x1, y1, x2, y2, true),
 		resize_chan:             make(chan interface{}),
 		draw_queue:              make(chan tableState),
+		drawer_semaphore:        semaphore.NewWeighted(1),
 		enable_toggle:           make(chan bool),
+		skip_draw:               make(chan interface{}),
 		stop_chan:               make(chan interface{}),
 		new_container_data_chan: make(chan docker.ContainerData),
 		//containers view
@@ -54,10 +60,6 @@ func NewContainersWindow() ContainersWindow {
 
 func (w *ContainersWindow) Open() {
 	go w.main()
-}
-
-func (w *ContainersWindow) Dimensions() window.Dimensions {
-	return w.dimensions
 }
 
 func (w *ContainersWindow) Resize() {
@@ -109,6 +111,8 @@ func (w *ContainersWindow) HandleEvent(ev interface{}, sender window.WindowType)
 func (w *ContainersWindow) Disable() {
 	log.Printf("Disable containers...")
 	w.enable_toggle <- false
+	w.drawer_semaphore.Acquire(context.Background(), 1)
+	w.drawer_semaphore.Release(1)
 }
 
 func (w *ContainersWindow) Enable() {
@@ -124,8 +128,8 @@ func (w *ContainersWindow) drawer(c context.Context) {
 	for {
 		select {
 		case state := <-w.draw_queue:
+			w.drawer_semaphore.Acquire(c, 1)
 			if state.is_enabled {
-				window.DrawBorders(&w.dimensions)
 				drawer_func, err := dockerStatsDrawerGenerator(state, window.Width(&w.dimensions))
 				if err != nil {
 					log.Printf("Got error %s while drawing\n", err)
@@ -133,6 +137,7 @@ func (w *ContainersWindow) drawer(c context.Context) {
 				window.DrawContents(&w.dimensions, drawer_func)
 				window.GetScreen().Show()
 			}
+			w.drawer_semaphore.Release(1)
 		case <-c.Done():
 			log.Printf("Containers window stopped drwaing...\n")
 			return
@@ -217,9 +222,9 @@ func (w *ContainersWindow) main() {
 			state.filtered_data = state.containers_data.Filter(state.search_box.Value())
 		case keyboard_event := <-w.keyboard_chan:
 			state, err = handleKeyboardEvent(&keyboard_event, w, state)
+			window.ExitIfErr(err)
 			state.containers_data = state.containers_data.GetSortedData(state.main_sort_type, state.secondary_sort_type, state.is_reverse_sort)
 			state.filtered_data = state.containers_data.Filter(state.search_box.Value())
-			window.ExitIfErr(err)
 		case <-w.stop_chan:
 			log.Printf("Stopping all containers window routines\n")
 			cancel()

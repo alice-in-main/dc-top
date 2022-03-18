@@ -5,7 +5,9 @@ import (
 	docker "dc-top/docker"
 	"dc-top/gui/elements"
 	"dc-top/gui/view/window"
+	"dc-top/gui/view/window/bar_window"
 	"dc-top/utils"
+	"fmt"
 	"log"
 
 	"github.com/gdamore/tcell/v2"
@@ -14,9 +16,9 @@ import (
 type logsWriter struct {
 	ctx          context.Context
 	is_following bool
-	is_searching bool
+	is_typing    bool
 	is_enabled   bool
-	search_box   elements.TextBox
+	is_looking   bool
 	dimensions   window.Dimensions
 
 	logs_container LogContainer
@@ -24,6 +26,11 @@ type logsWriter struct {
 	logs_counter   int
 	view_offset    int
 	lines          []elements.StringStyler
+
+	search_box     elements.TextBox
+	lookup_request chan interface{}
+	next_search    chan interface{}
+	prev_search    chan interface{}
 
 	redraw_request chan interface{}
 	write_queue    chan []string
@@ -36,21 +43,28 @@ func newLogsWriter(ctx context.Context) logsWriter {
 	height := y2 - y1
 	logs_container := NewArrStringSearcher(docker.MaxSavedLogs)
 	new_writer := logsWriter{
-		is_following:   true,
-		is_searching:   false,
-		is_enabled:     true,
-		dimensions:     window.NewDimensions(x1, y1, x2, y2, false),
+		ctx:          ctx,
+		is_following: true,
+		is_typing:    false,
+		is_enabled:   true,
+		is_looking:   false,
+		dimensions:   window.NewDimensions(x1, y1, x2, y2, false),
+
 		logs_container: &logs_container,
 		logs_offset:    0,
 		logs_counter:   0,
 		view_offset:    0,
-		ctx:            ctx,
+		lines:          make([]elements.StringStyler, height),
+
 		search_box: elements.NewTextBox(
 			elements.TextDrawer("/ ", tcell.StyleDefault.Foreground(tcell.ColorGreenYellow)),
 			2,
 			tcell.StyleDefault,
 			tcell.StyleDefault.Underline(true)),
-		lines:          make([]elements.StringStyler, height),
+		lookup_request: make(chan interface{}),
+		next_search:    make(chan interface{}),
+		prev_search:    make(chan interface{}),
+
 		redraw_request: make(chan interface{}),
 		write_queue:    make(chan []string),
 		enable_toggle:  make(chan bool),
@@ -79,6 +93,17 @@ func (writer *logsWriter) Write(logs_batch []byte) (int, error) {
 func (writer *logsWriter) logPrinter() {
 	for {
 		select {
+		case <-writer.lookup_request:
+			if writer.search_box.Value() == "" {
+				break
+			}
+			writer.is_following = false
+			indices := writer.logs_container.Search(writer.search_box.Value())
+			bar_window.Info([]rune(fmt.Sprintf("Found %d results for %s", len(indices), writer.search_box.Value())))
+			if len(indices) > 0 {
+				writer.handleLookup(indices)
+			}
+			writer.redraw()
 		case logs := <-writer.write_queue:
 			writer.writeLogs(logs)
 		case <-writer.redraw_request:
@@ -91,6 +116,37 @@ func (writer *logsWriter) logPrinter() {
 	}
 }
 
+func (writer *logsWriter) handleLookup(result_indices []int) {
+	writer.is_looking = true
+	defer func() { writer.is_looking = false }()
+	i := 0
+	writer.view_offset = result_indices[i]
+	writer.redraw()
+	for {
+		select {
+		case <-writer.next_search:
+			if i == len(result_indices)-1 {
+				i = 0
+			} else {
+				i++
+			}
+		case <-writer.prev_search:
+			if i == 0 {
+				i = len(result_indices) - 1
+			} else {
+				i--
+			}
+		case <-writer.redraw_request:
+			return
+		case <-writer.ctx.Done():
+			return
+		}
+		bar_window.Info([]rune(fmt.Sprintf("Showing result %d/%d", i+1, len(result_indices))))
+		writer.view_offset = result_indices[i]
+		writer.redraw()
+	}
+}
+
 func (writer *logsWriter) writeLogs(logs []string) {
 	for _, l := range logs {
 		writer.saveLog(l)
@@ -98,11 +154,6 @@ func (writer *logsWriter) writeLogs(logs []string) {
 	if writer.is_following {
 		writer.redraw()
 	}
-}
-
-func (writer *logsWriter) redraw() {
-	writer.updateLines()
-	writer.showLines()
 }
 
 func (writer *logsWriter) saveLog(_log string) {
@@ -120,15 +171,20 @@ func (writer *logsWriter) saveLog(_log string) {
 	writer.logs_offset = (writer.logs_offset + 1) % docker.MaxSavedLogs
 	writer.logs_counter++
 	if writer.is_following {
-		writer.view_offset = writer.logs_counter
+		writer.view_offset = writer.logs_counter - 1
 	}
+}
+
+func (writer *logsWriter) redraw() {
+	writer.updateLines()
+	writer.showLines()
 }
 
 func (writer *logsWriter) updateLines() {
 	width := window.Width(&writer.dimensions)
 	height := window.Height(&writer.dimensions)
 	writer.lines = make([]elements.StringStyler, height)
-	log_i := (writer.view_offset - 1) % docker.MaxSavedLogs
+	log_i := writer.view_offset % docker.MaxSavedLogs
 	if log_i < 0 {
 		log_i = docker.MaxSavedLogs + log_i
 	}
@@ -156,13 +212,13 @@ func (writer *logsWriter) updateLines() {
 
 func (writer *logsWriter) showLines() {
 	height := window.Height(&writer.dimensions)
+	search_box := writer.search_box.Style()
+	not_following_message := elements.TextDrawer("Currently not following logs. Press 'f' to start following.", tcell.StyleDefault.Background(tcell.ColorGreen).Bold(true))
 	log_drawer := func(i int, j int) (rune, tcell.Style) {
 		if j == 0 {
-			if height >= 1 && writer.is_searching {
-				search_box := writer.search_box.Style()
+			if height >= 1 && writer.is_typing {
 				return search_box(i)
 			} else if height >= 1 && !writer.is_following {
-				not_following_message := elements.TextDrawer("Currently not following logs. Press 'f' to start following.", tcell.StyleDefault.Background(tcell.ColorGreen).Bold(true))
 				return not_following_message(i)
 			}
 		}

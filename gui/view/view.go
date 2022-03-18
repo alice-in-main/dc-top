@@ -73,14 +73,11 @@ func (view *View) PauseWindows() {
 	screen := window.GetScreen()
 	screen.DisableMouse()
 	view.Disable()
-	screen.Clear()
-	screen.Sync()
 }
 
 func (view *View) ResumeWindows() {
 	screen := window.GetScreen()
 	view.Enable()
-	screen.Clear()
-	screen.Sync()
 	screen.EnableMouse(tcell.MouseButtonEvents)
+	screen.Sync()
 }

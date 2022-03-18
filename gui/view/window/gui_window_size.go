@@ -17,7 +17,12 @@ func ContainersBarWindowSize() (x1, y1, x2, y2 int) {
 
 func DockerInfoWindowSize() (x1, y1, x2, y2 int) {
 	width, height := GetScreen().Size()
-	return 1, int(0.7*float64(height) + 2), (width - 2) / 2, height - 1
+	return 1, int(0.7*float64(height) + 2), (width-2)/2 - 1, height - 1
+}
+
+func MainHelpWindowSize() (x1, y1, x2, y2 int) {
+	width, height := GetScreen().Size()
+	return (width-2)/2 + 1, int(0.7*float64(height) + 2), (width - 2), height - 1
 }
 
 func LogsWindowSize() (x1, y1, x2, y2 int) {

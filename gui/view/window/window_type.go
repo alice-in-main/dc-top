@@ -8,5 +8,6 @@ const (
 	Bar
 	GeneralInfo
 	ContainerLogs
+	Help
 	Other
 )
