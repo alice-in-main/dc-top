@@ -24,3 +24,16 @@ func MainControls() []Control {
 		{"F[1-5]", "Sort by column"},
 	}
 }
+
+func LogControls() []Control {
+	return []Control{
+		{"'h'", "Display controls"},
+		{"'l' or 'q'", "Exit current logs"},
+		{"'/'", "Search inside logs"},
+		{"'c'", "Clear search"},
+		{"'n'", "Jump to next search result"},
+		{"'N'", "Jump to previous search result"},
+		{"Up/Down", "Browse logs"},
+		{"'f'", "Resume following logs"},
+	}
+}

@@ -58,7 +58,7 @@ func (w *HelpWindow) KeyPress(ev tcell.EventKey) {
 		return
 	}
 to_default:
-	window.GetScreen().PostEvent(window.NewChangeToDefaultViewEvent())
+	window.GetScreen().PostEvent(window.NewReturnUpperViewEvent())
 }
 
 func (w *HelpWindow) MousePress(_ tcell.EventMouse) {}

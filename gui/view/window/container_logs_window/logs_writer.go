@@ -107,9 +107,14 @@ func (writer *logsWriter) logPrinter() {
 		case logs := <-writer.write_queue:
 			writer.writeLogs(logs)
 		case <-writer.redraw_request:
-			writer.redraw()
+			if writer.is_enabled {
+				writer.redraw()
+			}
 		case is_enabled := <-writer.enable_toggle:
 			writer.is_enabled = is_enabled
+			if writer.is_enabled {
+				writer.redraw()
+			}
 		case <-writer.ctx.Done():
 			return
 		}
@@ -151,7 +156,7 @@ func (writer *logsWriter) writeLogs(logs []string) {
 	for _, l := range logs {
 		writer.saveLog(l)
 	}
-	if writer.is_following {
+	if writer.is_following && writer.is_enabled {
 		writer.redraw()
 	}
 }

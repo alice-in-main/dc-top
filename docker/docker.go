@@ -35,3 +35,7 @@ func GetDockerInfo() (DockerInfo, error) {
 	}
 	return NewDockerInfo(docker_info), nil
 }
+
+func Close() {
+	docker_cli.Close()
+}

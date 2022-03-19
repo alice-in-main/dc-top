@@ -5,40 +5,28 @@ import (
 	"dc-top/gui/view"
 	"dc-top/gui/view/window"
 	"dc-top/gui/view/window/subshells"
-	"fmt"
 	"log"
 
 	"github.com/gdamore/tcell/v2"
 )
 
 func Draw() {
-	screen, err := tcell.NewScreen()
-	if err != nil {
-		log.Printf("%+v", err)
-		panic(fmt.Sprintf("%+v", err))
-	}
-	if err = screen.Init(); err != nil {
-		log.Printf("%+v", err)
-		panic(fmt.Sprintf("%+v", err))
-	}
-	window.InitScreen(screen)
+	screen := window.GetScreen()
 	screen.EnableMouse(tcell.MouseButtonEvents)
 
 	view.InitDefaultView()
 
 	finalize := func() {
 		view.CloseAll()
-		screen.Fini()
 		log.Println("Finished drawing")
-		if err != nil {
-			fmt.Println(err.Error())
-		}
 	}
 	defer finalize()
 
 	for {
 		ev := screen.PollEvent()
 		switch ev := ev.(type) {
+		case *ReadinessCheck:
+			ev.Ack <- nil
 		case *tcell.EventResize:
 			screen.Clear()
 			view.CurrentView().Resize()
@@ -69,10 +57,12 @@ func Draw() {
 			view.ChangeToLogView(ev.ContainerId)
 		case window.ChangeToMainHelpEvent:
 			view.DisplayMainHelp()
-		case window.ChangeToDefaultViewEvent:
-			view.ReturnDefaultView()
+		case window.ChangeToLogsHelpEvent:
+			view.DisplayLogHelp()
+		case window.ReturnUpperViewEvent:
+			view.ReturnToUpperView()
 		case window.FatalErrorEvent:
-			err = fmt.Errorf("a fatal error occured at %s:\n%s", ev.When(), ev.Err)
+			log.Printf("a fatal error occured at %s:\n%s", ev.When(), ev.Err)
 			return
 		case *tcell.EventError:
 			log.Printf("GUI error '%T: %s'\n", ev, ev)

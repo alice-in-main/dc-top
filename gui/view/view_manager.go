@@ -22,23 +22,31 @@ const (
 	logs
 	main_help
 	logs_help
+	none
 )
 
 var _views map[_viewName]*View = make(map[_viewName]*View)
-var _curr_view _viewName
+
+// var _curr_view _viewName
+
+// var _prev_view _viewName
+var _view_stack viewStack = newStack()
 var _lock sync.Mutex
 
 func InitDefaultView() {
 	_lock.Lock()
 	defer _lock.Unlock()
+
+	default_view_ctx, default_view_cancel := context.WithCancel(context.TODO())
+
 	log.Printf("Initiating default view")
-	def_general_info_w := general_info_window.NewGeneralInfoWindow(context.Background())
+	def_general_info_w := general_info_window.NewGeneralInfoWindow(default_view_ctx)
 	def_containers_w := containers_window.NewContainersWindow()
 	def_docker_info_w := docker_info_window.NewDockerInfoWindow()
 
 	controls := help_window.MainControls()
 	def_help_w := help_window.NewHelpWindow(
-		context.TODO(),
+		default_view_ctx,
 		controls,
 		func() window.Dimensions {
 			x1, y1, x2, y2 := window.MainHelpWindowSize()
@@ -62,41 +70,27 @@ func InitDefaultView() {
 	}, window.ContainersHolder)
 
 	_views[main] = &default_view
-	_curr_view = main
-	_views[_curr_view].Open()
+	_view_stack.push(main)
+	default_view.Open()
 }
 
-func ReturnDefaultView() {
+func ReturnToUpperView() {
 	_lock.Lock()
 	defer _lock.Unlock()
-	log.Printf("Returning to default view")
-	if _curr_view != main {
-		log.Printf("Closing %d view and returning to default", _curr_view)
-		_views[_curr_view].Close()
-		_curr_view = main
+	if _view_stack.peek() != none {
+		log.Println("Returning to previous view")
+		_views[currentViewName()].Close()
+		_view_stack.pop()
 		window.GetScreen().Clear()
-		_views[main].ResumeWindows()
+		_views[currentViewName()].ResumeWindows()
 	} else {
-		log.Printf("Tried to run default view when already running default view")
+		log.Println("Illegal upper view attempt")
 	}
 }
 
 func DisplayMainHelp() {
 	log.Printf("Changing to main help")
-	controls := help_window.MainControls()
-	help_window := help_window.NewHelpWindow(
-		context.TODO(),
-		controls,
-		func() window.Dimensions {
-			width, height := window.GetScreen().Size()
-			x1, y1, x2, y2 := width/3, height/3, 2*width/3, (height/3 + len(controls) + 3)
-			return window.NewDimensions(x1, y1, x2, y2, true)
-		},
-	)
-	main_help_view := NewView(map[window.WindowType]window.Window{
-		window.Help: &help_window,
-	}, window.Help)
-	changeView(main_help, main, &main_help_view)
+	changeToHelpView(main_help, main, help_window.MainControls())
 }
 
 func ChangeToLogView(container_id string) {
@@ -115,26 +109,21 @@ func ChangeToLogView(container_id string) {
 	changeView(logs, main, &logs_view)
 }
 
+func DisplayLogHelp() {
+	log.Printf("Changing to log help")
+	changeToHelpView(logs_help, logs, help_window.LogControls())
+}
+
 func HandleKeyPress(key *tcell.EventKey) {
 	_lock.Lock()
 	defer _lock.Unlock()
-	_views[_curr_view].GetWindow(_views[_curr_view].GetFocusedWindow()).KeyPress(*key)
-	// switch _curr_view {
-	// case main:
-	// 	DefaultView().GetWindow(window.ContainersHolder).KeyPress(*key)
-	// case logs:
-	// 	LogView().GetWindow(window.ContainerLogs).KeyPress(*key)
-	// case main_help:
-	// 	LogView().GetWindow(window.Help).KeyPress(*key)
-	// case logs_help:
-	// 	LogView().GetWindow(window.ContainerLogs).KeyPress(*key)
-	// }
+	_views[currentViewName()].GetWindow(_views[currentViewName()].GetFocusedWindow()).KeyPress(*key)
 }
 
 func HandleMouseEvent(ev *tcell.EventMouse) {
 	_lock.Lock()
 	defer _lock.Unlock()
-	switch _curr_view {
+	switch currentViewName() {
 	case main:
 		DefaultView().GetWindow(window.ContainersHolder).MousePress(*ev)
 	}
@@ -143,7 +132,7 @@ func HandleMouseEvent(ev *tcell.EventMouse) {
 func CurrentView() *View {
 	_lock.Lock()
 	defer _lock.Unlock()
-	return _views[_curr_view]
+	return _views[currentViewName()]
 }
 
 func DefaultView() *View {
@@ -160,11 +149,31 @@ func CloseAll() {
 	}
 }
 
+func changeToHelpView(new_view_key, prev_view_key _viewName, controls []help_window.Control) {
+	help_window := help_window.NewHelpWindow(
+		context.TODO(),
+		controls,
+		func() window.Dimensions {
+			width, height := window.GetScreen().Size()
+			x1, y1, x2, y2 := width/3, height/3, 2*width/3, (height/3 + len(controls) + 3)
+			return window.NewDimensions(x1, y1, x2, y2, true)
+		},
+	)
+	help_view := NewView(map[window.WindowType]window.Window{
+		window.Help: &help_window,
+	}, window.Help)
+	changeView(new_view_key, prev_view_key, &help_view)
+}
+
 func changeView(new_view_key, prev_view_key _viewName, view *View) {
 	_lock.Lock()
 	defer _lock.Unlock()
 	_views[prev_view_key].PauseWindows()
 	_views[new_view_key] = view
-	_curr_view = new_view_key
+	_view_stack.push(new_view_key)
 	view.Open()
+}
+
+func currentViewName() _viewName {
+	return _view_stack.peek()
 }

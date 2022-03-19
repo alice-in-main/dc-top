@@ -15,3 +15,12 @@ func InitScreen(screen tcell.Screen) {
 func GetScreen() tcell.Screen {
 	return _screen
 }
+
+func CloseScreen() {
+	if _screen != nil {
+		_screen.Fini()
+		_screen = nil
+	} else {
+		panic("Tried to close nil screen")
+	}
+}

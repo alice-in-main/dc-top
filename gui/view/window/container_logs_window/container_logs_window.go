@@ -41,7 +41,7 @@ func (w *ContainerLogsWindow) Open() {
 		go docker.StreamContainerLogs(w.id, &logs_writer, container_log_window_context, cancel)
 		<-container_log_window_context.Done()
 		log.Println("Switcing back...")
-		window.GetScreen().PostEvent(window.NewChangeToDefaultViewEvent())
+		window.GetScreen().PostEvent(window.NewReturnUpperViewEvent())
 	}()
 }
 
@@ -91,6 +91,8 @@ func (w *ContainerLogsWindow) handleRegularKeyPress(ev *tcell.EventKey) {
 		w.logs_writer.stop <- nil
 	case tcell.KeyRune:
 		switch ev.Rune() {
+		case 'h':
+			window.GetScreen().PostEvent(window.NewChangeToLogsHelpEvent())
 		case 'f':
 			w.startFollowing()
 		case '/':

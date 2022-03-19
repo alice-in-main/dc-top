@@ -34,6 +34,9 @@ func main() {
 	}
 
 	docker.Init()
+	gui.InitScreen()
 	gui.Draw()
+	gui.CloseScreen()
+	docker.Close()
 
 }

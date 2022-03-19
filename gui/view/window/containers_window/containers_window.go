@@ -14,6 +14,8 @@ import (
 // TODO: improve performance by opening stats streams only for new containers
 // TODO: add loading screen
 // TODO: help in log window
+// TODO: scan for goroutine leaks
+// TODO: random log file name
 
 type windowMode uint8
 

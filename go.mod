@@ -18,6 +18,7 @@ require (
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/gobuffalo/uuid v2.0.5+incompatible // indirect
 	github.com/gofrs/uuid v4.2.0+incompatible // indirect
+	github.com/golang-collections/collections v0.0.0-20130729185459-604e922904d3 // indirect
 	github.com/google/go-dap v0.6.0 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -41,6 +42,7 @@ require (
 	github.com/tklauser/numcpus v0.4.0 // indirect
 	github.com/yusufpapurcu/wmi v1.2.2 // indirect
 	go.starlark.net v0.0.0-20220223235035-243c74974e97 // indirect
+	go.uber.org/goleak v1.1.12 // indirect
 	gobot.io/x/gobot v1.15.0 // indirect
 	golang.org/x/arch v0.0.0-20210923205945-b76863e36670 // indirect
 	golang.org/x/mobile v0.0.0-20220224134551-8a0a1e50732f // indirect

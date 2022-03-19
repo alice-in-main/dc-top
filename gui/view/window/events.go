@@ -5,16 +5,32 @@ import (
 	"time"
 )
 
-type ChangeToDefaultViewEvent struct {
+// type ChangeToDefaultViewEvent struct {
+// 	t time.Time
+// }
+
+// func (e ChangeToDefaultViewEvent) When() time.Time {
+// 	return e.t
+// }
+
+// func NewChangeToDefaultViewEvent() ChangeToDefaultViewEvent {
+// 	return ChangeToDefaultViewEvent{
+// 		t: time.Now(),
+// 	}
+// }
+
+// ---------
+
+type ReturnUpperViewEvent struct {
 	t time.Time
 }
 
-func (e ChangeToDefaultViewEvent) When() time.Time {
+func (e ReturnUpperViewEvent) When() time.Time {
 	return e.t
 }
 
-func NewChangeToDefaultViewEvent() ChangeToDefaultViewEvent {
-	return ChangeToDefaultViewEvent{
+func NewReturnUpperViewEvent() ReturnUpperViewEvent {
+	return ReturnUpperViewEvent{
 		t: time.Now(),
 	}
 }
@@ -81,6 +97,22 @@ func (e ChangeToMainHelpEvent) When() time.Time {
 
 func NewChangeToMainHelpEvent() ChangeToMainHelpEvent {
 	return ChangeToMainHelpEvent{
+		t: time.Now(),
+	}
+}
+
+// ---------
+
+type ChangeToLogsHelpEvent struct {
+	t time.Time
+}
+
+func (e ChangeToLogsHelpEvent) When() time.Time {
+	return e.t
+}
+
+func NewChangeToLogsHelpEvent() ChangeToLogsHelpEvent {
+	return ChangeToLogsHelpEvent{
 		t: time.Now(),
 	}
 }
