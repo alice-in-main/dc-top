@@ -1,18 +1,19 @@
 package containers_window
 
 import (
+	"context"
 	docker "dc-top/docker"
 	"log"
 	"strings"
 )
 
-func handleDelete(table_state *tableState) error {
+func handleDelete(ctx context.Context, table_state *tableState) error {
 	index, err := findIndexOfId(table_state.containers_data.GetData(), table_state.focused_id)
 	if err != nil {
 		return err
 	}
 	go func(id_to_delete string) {
-		if err := docker.DeleteContainer(id_to_delete); err != nil {
+		if err := docker.DeleteContainer(ctx, id_to_delete); err != nil {
 			log.Printf("Got error '%s' when trying to container delete %s", err, id_to_delete)
 			if !strings.Contains(err.Error(), "is already in progress") && !strings.Contains(err.Error(), "No such container") {
 				panic(err)
@@ -24,12 +25,12 @@ func handleDelete(table_state *tableState) error {
 	return nil
 }
 
-func handlePause(id string) {
+func handlePause(ctx context.Context, id string) {
 	go func(id_to_pause string) {
-		if err := docker.PauseContainer(id_to_pause); err != nil {
+		if err := docker.PauseContainer(ctx, id_to_pause); err != nil {
 			log.Printf("Got error '%s' when trying to container delete %s", err, id_to_pause)
 			if strings.Contains(err.Error(), "is already paused") {
-				if err := docker.UnpauseContainer(id_to_pause); err != nil {
+				if err := docker.UnpauseContainer(ctx, id_to_pause); err != nil {
 					panic(err)
 				}
 			} else if !strings.Contains(err.Error(), "is already in progress") &&
@@ -41,9 +42,9 @@ func handlePause(id string) {
 	}(id)
 }
 
-func handleStop(id string) {
+func handleStop(ctx context.Context, id string) {
 	go func(id_to_stop string) {
-		if err := docker.StopContainer(id_to_stop); err != nil {
+		if err := docker.StopContainer(ctx, id_to_stop); err != nil {
 			log.Printf("Got error '%s' when trying to container delete %s", err, id_to_stop)
 			if !strings.Contains(err.Error(), "is already in progress") && !strings.Contains(err.Error(), "No such container") {
 				panic(err)
@@ -52,9 +53,9 @@ func handleStop(id string) {
 	}(id)
 }
 
-func handleRestart(id string) {
+func handleRestart(ctx context.Context, id string) {
 	go func(id_to_stop string) {
-		if err := docker.RestartContainer(id_to_stop); err != nil {
+		if err := docker.RestartContainer(ctx, id_to_stop); err != nil {
 			log.Printf("Got error '%s' when trying to container delete %s", err, id_to_stop)
 		}
 	}(id)

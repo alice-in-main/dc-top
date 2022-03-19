@@ -11,10 +11,13 @@ import (
 	"log"
 
 	"github.com/gdamore/tcell/v2"
+	"golang.org/x/sync/semaphore"
 )
 
 type logsWriter struct {
-	ctx          context.Context
+	ctx              context.Context
+	drawer_semaphore *semaphore.Weighted
+
 	is_following bool
 	is_typing    bool
 	is_enabled   bool
@@ -35,7 +38,6 @@ type logsWriter struct {
 	redraw_request chan interface{}
 	write_queue    chan []string
 	enable_toggle  chan bool
-	stop           chan interface{}
 }
 
 func newLogsWriter(ctx context.Context) logsWriter {
@@ -43,7 +45,9 @@ func newLogsWriter(ctx context.Context) logsWriter {
 	height := y2 - y1
 	logs_container := NewArrStringSearcher(docker.MaxSavedLogs)
 	new_writer := logsWriter{
-		ctx:          ctx,
+		ctx:              ctx,
+		drawer_semaphore: semaphore.NewWeighted(1),
+
 		is_following: true,
 		is_typing:    false,
 		is_enabled:   true,
@@ -68,7 +72,6 @@ func newLogsWriter(ctx context.Context) logsWriter {
 		redraw_request: make(chan interface{}),
 		write_queue:    make(chan []string),
 		enable_toggle:  make(chan bool),
-		stop:           make(chan interface{}),
 	}
 	return new_writer
 }
@@ -91,6 +94,8 @@ func (writer *logsWriter) Write(logs_batch []byte) (int, error) {
 }
 
 func (writer *logsWriter) logPrinter() {
+	writer.drawer_semaphore.Acquire(writer.ctx, 1)
+	defer writer.drawer_semaphore.Release(1)
 	for {
 		select {
 		case <-writer.lookup_request:
@@ -141,9 +146,14 @@ func (writer *logsWriter) handleLookup(result_indices []int) {
 			} else {
 				i--
 			}
+		case is_enabled := <-writer.enable_toggle:
+			writer.is_enabled = is_enabled
+			continue
 		case <-writer.redraw_request:
+			log.Printf("Exitting lookup from redraw")
 			return
 		case <-writer.ctx.Done():
+			log.Printf("Exitting lookup from context")
 			return
 		}
 		bar_window.Info([]rune(fmt.Sprintf("Showing result %d/%d", i+1, len(result_indices))))
@@ -235,19 +245,4 @@ func (writer *logsWriter) showLines() {
 	}
 	window.DrawContents(&writer.dimensions, log_drawer)
 	window.GetScreen().Sync()
-}
-
-func (writer *logsWriter) logStopper(cancel context.CancelFunc) error {
-	for {
-		select {
-		case <-writer.stop:
-			log.Println("stopped log stopper from stop chan")
-			cancel()
-			return nil
-		case <-writer.ctx.Done():
-			log.Println("stopped log stopper from context")
-			cancel()
-			return nil
-		}
-	}
 }

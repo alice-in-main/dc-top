@@ -35,7 +35,7 @@ func Foreground(str string, color FColor) string {
 	return string(color) + str + string(reset)
 }
 
-func Background(str string, color BColor) string {
+func Bg(str string, color BColor) string {
 	return string(color) + str + string(reset)
 }
 

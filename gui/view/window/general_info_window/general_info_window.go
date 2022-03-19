@@ -9,23 +9,25 @@ import (
 )
 
 type GeneralInfoWindow struct {
+	window_ctx    context.Context
+	window_cancel context.CancelFunc
+
 	dimensions    window.Dimensions
-	context       context.Context
 	resize_ch     chan interface{}
 	enable_toggle chan bool
 }
 
-func NewGeneralInfoWindow(context context.Context) GeneralInfoWindow {
+func NewGeneralInfoWindow() GeneralInfoWindow {
 	x1, y1, x2, y2 := window.GeneralInfoWindowSize()
 	return GeneralInfoWindow{
 		dimensions:    window.NewDimensions(x1, y1, x2, y2, false),
-		context:       context,
 		resize_ch:     make(chan interface{}),
 		enable_toggle: make(chan bool),
 	}
 }
 
-func (w *GeneralInfoWindow) Open() {
+func (w *GeneralInfoWindow) Open(view_ctx context.Context) {
+	w.window_ctx, w.window_cancel = context.WithCancel(view_ctx)
 	go w.main()
 }
 
@@ -51,7 +53,9 @@ func (w *GeneralInfoWindow) Enable() {
 	w.enable_toggle <- true
 }
 
-func (w *GeneralInfoWindow) Close() {}
+func (w *GeneralInfoWindow) Close() {
+	w.window_cancel()
+}
 
 func (w *GeneralInfoWindow) main() {
 	state := generalInfoState{
@@ -71,7 +75,7 @@ func (w *GeneralInfoWindow) main() {
 			if is_enabled {
 				w.drawGeneralInfo(state)
 			}
-		case <-w.context.Done():
+		case <-w.window_ctx.Done():
 			log.Printf("General info window stopped drwaing...\n")
 			return
 		}

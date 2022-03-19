@@ -11,25 +11,26 @@ import (
 )
 
 type HelpWindow struct {
-	controls []Control
+	window_ctx    context.Context
+	window_cancel context.CancelFunc
 
+	controls             []Control
 	dimensions_generator func() window.Dimensions
-	context              context.Context
 	resize_ch            chan interface{}
 	is_enabled           bool
 }
 
-func NewHelpWindow(context context.Context, controls []Control, dimensions_generator func() window.Dimensions) HelpWindow {
+func NewHelpWindow(controls []Control, dimensions_generator func() window.Dimensions) HelpWindow {
 	return HelpWindow{
 		controls:             controls,
 		dimensions_generator: dimensions_generator,
-		context:              context,
 		resize_ch:            make(chan interface{}),
 		is_enabled:           true,
 	}
 }
 
-func (w *HelpWindow) Open() {
+func (w *HelpWindow) Open(view_ctx context.Context) {
+	w.window_ctx, w.window_cancel = context.WithCancel(view_ctx)
 	w.drawHelp()
 }
 
@@ -79,7 +80,9 @@ func (w *HelpWindow) Enable() {
 	w.drawHelp()
 }
 
-func (w *HelpWindow) Close() {}
+func (w *HelpWindow) Close() {
+	w.window_cancel()
+}
 
 func (w *HelpWindow) drawHelp() {
 	if !w.is_enabled {

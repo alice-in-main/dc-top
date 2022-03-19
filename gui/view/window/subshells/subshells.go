@@ -19,7 +19,7 @@ func OpenContainerShell(id string, ctx context.Context) {
 	screen := window.GetScreen()
 	screen.PostEvent(window.NewPauseWindowsEvent())
 	go func() {
-		cmd := exec.CommandContext(context.TODO(), "docker", "exec", "-it", id, "sh")
+		cmd := exec.CommandContext(ctx, "docker", "exec", "-it", id, "sh")
 		err := runCmdInPty(cmd, "clear\n")
 		if err != nil {
 			log.Fatal(err)
@@ -34,15 +34,15 @@ func EditDcYaml(ctx context.Context) {
 		screen.PostEvent(window.NewPauseWindowsEvent())
 		go func() {
 			compose.CreateBackupYaml()
-			cmd := exec.CommandContext(context.TODO(), "vim", compose.DcYamlPath())
+			cmd := exec.CommandContext(ctx, "vim", compose.DcYamlPath())
 			err := runCmdInPty(cmd)
 			if err != nil {
 				log.Fatal(err)
 			}
 			screen.PostEvent(window.NewResumeWindowsEvent())
-			if compose.ValidateYaml(context.TODO()) {
+			if compose.ValidateYaml(ctx) {
 				bar_window.Info([]rune("restarting docker-compose"))
-				compose.Up(context.TODO())
+				compose.Up(ctx)
 			} else {
 				bar_window.Info([]rune("docker compose yaml is invalid"))
 				compose.RestoreFromBackup()

@@ -75,6 +75,9 @@ func handleChangeIndex(is_next bool, table_state *tableState) {
 }
 
 func handleNewIndex(new_index int, table_state *tableState) {
+	if len(table_state.filtered_data) == 0 {
+		return
+	}
 	if new_index < 0 {
 		new_index = len(table_state.filtered_data) - 1
 	} else if new_index >= len(table_state.filtered_data) {

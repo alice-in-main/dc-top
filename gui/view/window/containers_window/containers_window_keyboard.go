@@ -1,7 +1,6 @@
 package containers_window
 
 import (
-	"context"
 	"dc-top/docker"
 	"dc-top/docker/compose"
 	"dc-top/gui/view/window"
@@ -51,7 +50,7 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 	case tcell.KeyDelete:
 		state.window_mode = containers
 		if state.focused_id != "" {
-			err := handleDelete(state)
+			err := handleDelete(w.window_context, state)
 			if err != nil {
 				return err
 			}
@@ -78,7 +77,7 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 			}
 		case 'v':
 			if compose.DcModeEnabled() {
-				if !compose.ValidateYaml(context.TODO()) {
+				if !compose.ValidateYaml(w.window_context) {
 					bar_window.Err([]rune("docker compose yaml syntax is invalid"))
 				} else {
 					compose.CreateBackupYaml()
@@ -100,15 +99,15 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 			log.Println("Toggling inspect mode")
 		case 'p':
 			if state.focused_id != "" {
-				handlePause(state.focused_id)
+				handlePause(w.window_context, state.focused_id)
 			}
 		case 'r':
 			if state.focused_id != "" {
-				handleRestart(state.focused_id)
+				handleRestart(w.window_context, state.focused_id)
 			}
 		case 's':
 			if state.focused_id != "" {
-				handleStop(state.focused_id)
+				handleStop(w.window_context, state.focused_id)
 			}
 		case 'g':
 			if state.window_mode == containers {

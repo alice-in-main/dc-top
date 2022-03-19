@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"dc-top/docker"
 	"dc-top/docker/compose"
 	"dc-top/gui"
@@ -27,7 +28,7 @@ func main() {
 	flag.Parse()
 
 	if *dc_file_path != "" {
-		if err := compose.Init(workdir, *dc_file_path); err != nil {
+		if err := compose.Init(context.Background(), workdir, *dc_file_path); err != nil {
 			fmt.Println(err)
 			return
 		}

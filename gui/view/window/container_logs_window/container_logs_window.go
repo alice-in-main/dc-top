@@ -12,35 +12,29 @@ import (
 )
 
 type ContainerLogsWindow struct {
-	id          string
-	logs_writer *logsWriter
-	context     context.Context
-	cancel      context.CancelFunc
+	id           string
+	logs_writer  *logsWriter
+	logs_context context.Context
+	logs_cancel  context.CancelFunc
 }
 
 func NewContainerLogsWindow(id string) ContainerLogsWindow {
-	container_log_window_context, cancel := context.WithCancel(context.TODO())
 	return ContainerLogsWindow{
 		id:          id,
 		logs_writer: nil,
-		context:     container_log_window_context,
-		cancel:      cancel,
 	}
 }
 
-func (w *ContainerLogsWindow) Open() {
+func (w *ContainerLogsWindow) Open(view_ctx context.Context) {
+	w.logs_context, w.logs_cancel = context.WithCancel(view_ctx)
 	go func() {
-		container_log_window_context, cancel := context.WithCancel(context.TODO())
-		logs_writer := newLogsWriter(container_log_window_context)
+		logs_writer := newLogsWriter(w.logs_context)
 		w.logs_writer = &logs_writer
-		go logs_writer.logPrinter()
-		go func() {
-			err := logs_writer.logStopper(cancel)
-			window.ExitIfErr(err)
-		}()
-		go docker.StreamContainerLogs(w.id, &logs_writer, container_log_window_context, cancel)
-		<-container_log_window_context.Done()
+		go docker.StreamContainerLogs(w.id, &logs_writer, w.logs_context, w.logs_cancel)
+		logs_writer.logPrinter()
 		log.Println("Switcing back...")
+		logs_writer.drawer_semaphore.Acquire(logs_writer.ctx, 1)
+		logs_writer.drawer_semaphore.Release(1)
 		window.GetScreen().PostEvent(window.NewReturnUpperViewEvent())
 	}()
 }
@@ -67,9 +61,11 @@ func (w *ContainerLogsWindow) HandleEvent(event interface{}, sender window.Windo
 
 func (w *ContainerLogsWindow) Enable() { w.logs_writer.enable_toggle <- true }
 
-func (w *ContainerLogsWindow) Disable() { w.logs_writer.enable_toggle <- false }
+func (w *ContainerLogsWindow) Disable() {
+	w.logs_writer.enable_toggle <- false
+}
 
-func (w *ContainerLogsWindow) Close() { w.cancel() }
+func (w *ContainerLogsWindow) Close() { w.logs_cancel() }
 
 func (w *ContainerLogsWindow) handleRegularKeyPress(ev *tcell.EventKey) {
 	key := ev.Key()
@@ -88,7 +84,7 @@ func (w *ContainerLogsWindow) handleRegularKeyPress(ev *tcell.EventKey) {
 			w.stopFollowing()
 		}
 	case tcell.KeyCtrlD:
-		w.logs_writer.stop <- nil
+		w.logs_cancel()
 	case tcell.KeyRune:
 		switch ev.Rune() {
 		case 'h':
@@ -115,9 +111,9 @@ func (w *ContainerLogsWindow) handleRegularKeyPress(ev *tcell.EventKey) {
 				w.logs_writer.lookup_request <- nil
 			}
 		case 'q':
-			w.logs_writer.stop <- nil
+			w.logs_cancel()
 		case 'l':
-			w.logs_writer.stop <- nil
+			w.logs_cancel()
 		}
 	}
 }

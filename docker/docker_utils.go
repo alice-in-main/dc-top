@@ -9,19 +9,19 @@ import (
 	"github.com/docker/docker/api/types/filters"
 )
 
-func isBeingRemoved(id string) (bool, error) {
+func isBeingRemoved(ctx context.Context, id string) (bool, error) {
 	var id_and_status_removing_filter = filters.NewArgs(filters.Arg("id", id), filters.Arg("status", "removing"))
-	return isExisting(id, id_and_status_removing_filter)
+	return isExisting(ctx, id, id_and_status_removing_filter)
 }
 
-func isDeleted(id string) (bool, error) {
+func isDeleted(ctx context.Context, id string) (bool, error) {
 	var only_id_filter filters.Args = filters.NewArgs(filters.Arg("id", id))
-	exists, err := isExisting(id, only_id_filter)
+	exists, err := isExisting(ctx, id, only_id_filter)
 	return !exists, err
 }
 
-func isExisting(id string, filters filters.Args) (bool, error) {
-	c, err := docker_cli.ContainerList(context.Background(), types.ContainerListOptions{All: true, Quiet: true, Filters: filters})
+func isExisting(ctx context.Context, id string, filters filters.Args) (bool, error) {
+	c, err := docker_cli.ContainerList(ctx, types.ContainerListOptions{All: true, Quiet: true, Filters: filters})
 	if err != nil {
 		return false, err
 	}

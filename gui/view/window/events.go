@@ -228,7 +228,7 @@ func NewFatalErrorEvent(err error) FatalErrorEvent {
 }
 
 func ExitIfErr(err error) {
-	if err != nil {
+	if err != nil && err.Error() != "context canceled" {
 		log.Printf("a fatal error occured: %s\n", err)
 		GetScreen().PostEvent(NewFatalErrorEvent(err))
 	}

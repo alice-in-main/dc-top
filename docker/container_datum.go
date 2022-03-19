@@ -22,15 +22,15 @@ type ContainerDatum struct {
 	is_deleted   bool
 }
 
-func NewContainerDatum(base types.Container, stats_stream types.ContainerStats) (ContainerDatum, error) {
+func NewContainerDatum(ctx context.Context, base types.Container, stats_stream types.ContainerStats) (ContainerDatum, error) {
 	_cached_stats, err := getNewStats(base.ID, &stats_stream)
 	if err != nil {
 		log.Println("1 Failed to get new container stats:")
-		is_being_removed, test_err := isBeingRemoved(base.ID)
+		is_being_removed, test_err := isBeingRemoved(ctx, base.ID)
 		if test_err != nil {
 			return ContainerDatum{}, err
 		}
-		is_deleted, test_err := isDeleted(base.ID)
+		is_deleted, test_err := isDeleted(ctx, base.ID)
 		if test_err != nil {
 			return ContainerDatum{}, err
 		}
@@ -49,20 +49,20 @@ func NewContainerDatum(base types.Container, stats_stream types.ContainerStats) 
 		base:         base,
 		stats_stream: stats_stream,
 		cached_stats: _cached_stats,
-		inspection:   InspectContainerNoPanic(base.ID),
+		inspection:   InspectContainerNoPanic(ctx, base.ID),
 		is_deleted:   false,
 	}, nil
 }
 
-func UpdatedDatum(old_datum ContainerDatum) (ContainerDatum, error) {
+func UpdatedDatum(ctx context.Context, old_datum ContainerDatum) (ContainerDatum, error) {
 	new_stats, err := getNewStatsWithPrev(&old_datum)
 	if err != nil {
 		log.Println("2 Failed to get new container stats:")
-		is_being_removed, test_err := isBeingRemoved(old_datum.base.ID)
+		is_being_removed, test_err := isBeingRemoved(ctx, old_datum.base.ID)
 		if test_err != nil {
 			return ContainerDatum{}, err
 		}
-		is_deleted, test_err := isDeleted(old_datum.base.ID)
+		is_deleted, test_err := isDeleted(ctx, old_datum.base.ID)
 		if test_err != nil {
 			return ContainerDatum{}, err
 		}
@@ -80,7 +80,7 @@ func UpdatedDatum(old_datum ContainerDatum) (ContainerDatum, error) {
 		return ContainerDatum{}, fmt.Errorf("2 Failed to get stats and container %s wasnt deleted. %s", old_datum.base.ID, err)
 	}
 	var filters filters.Args = filters.NewArgs(filters.Arg("id", old_datum.ID()))
-	containers, err := docker_cli.ContainerList(context.Background(), types.ContainerListOptions{All: true, Filters: filters})
+	containers, err := docker_cli.ContainerList(ctx, types.ContainerListOptions{All: true, Filters: filters})
 	if len(containers) != 1 || err != nil {
 		log.Println(containers)
 		return ContainerDatum{}, fmt.Errorf("got more than 1 filtered image from id or %s", err)

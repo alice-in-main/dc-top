@@ -1,13 +1,16 @@
 package view
 
 import (
+	"context"
 	"dc-top/gui/view/window"
-	"log"
 
 	"github.com/gdamore/tcell/v2"
 )
 
 type View struct {
+	view_ctx    context.Context
+	view_cancel context.CancelFunc
+
 	windows       map[window.WindowType]window.Window
 	focusedWindow window.WindowType
 }
@@ -37,9 +40,11 @@ func (view *View) SetFocusedWindow(focusedWindow window.WindowType) {
 	view.focusedWindow = focusedWindow
 }
 
-func (view *View) Open() {
+func (view *View) Open(bg_context context.Context) {
+	view.view_ctx, view.view_cancel = context.WithCancel(bg_context)
+
 	for _, win := range view.windows {
-		win.Open()
+		win.Open(view.view_ctx)
 	}
 }
 
@@ -62,10 +67,7 @@ func (view *View) Disable() {
 }
 
 func (view *View) Close() {
-	for typE, win := range view.windows {
-		log.Printf("Closing %+v", typE)
-		win.Close()
-	}
+	view.view_cancel()
 	view.windows = make(map[window.WindowType]window.Window)
 }
 

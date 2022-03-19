@@ -11,25 +11,24 @@ import (
 
 type BarWindow struct {
 	dimensions_generator func() window.Dimensions
-	context              context.Context
-	cancel               context.CancelFunc
+	window_context       context.Context
+	window_cancel        context.CancelFunc
 	resize_ch            chan interface{}
 	message_chan         chan BarMessage
 	enable_toggle        chan bool
 }
 
-func NewBarWindow(context context.Context, cancel context.CancelFunc, dimensions_generator func() window.Dimensions) BarWindow {
+func NewBarWindow(dimensions_generator func() window.Dimensions) BarWindow {
 	return BarWindow{
 		dimensions_generator: dimensions_generator,
-		context:              context,
-		cancel:               cancel,
 		resize_ch:            make(chan interface{}),
 		message_chan:         make(chan BarMessage),
 		enable_toggle:        make(chan bool),
 	}
 }
 
-func (w *BarWindow) Open() {
+func (w *BarWindow) Open(view_context context.Context) {
+	w.window_context, w.window_cancel = context.WithCancel(view_context)
 	go w.main()
 }
 
@@ -62,7 +61,7 @@ func (w *BarWindow) Enable() {
 }
 
 func (w *BarWindow) Close() {
-	w.cancel()
+	w.window_cancel()
 }
 
 func (w *BarWindow) main() {
@@ -92,7 +91,7 @@ func (w *BarWindow) main() {
 			} else {
 				should_clear--
 			}
-		case <-w.context.Done():
+		case <-w.window_context.Done():
 			log.Printf("Bar window stopped drwaing...\n")
 			return
 		}

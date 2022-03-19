@@ -1,11 +1,13 @@
 package window
 
 import (
+	"context"
+
 	"github.com/gdamore/tcell/v2"
 )
 
 type Window interface {
-	Open()
+	Open(view_ctx context.Context)
 	Resize()
 	KeyPress(tcell.EventKey)
 	MousePress(tcell.EventMouse)

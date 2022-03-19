@@ -13,7 +13,7 @@ var (
 	dc_yaml_path  string
 )
 
-func Init(workdir string, dc_file_path string) error {
+func Init(ctx context.Context, workdir string, dc_file_path string) error {
 	_, err := os.Stat(dc_file_path)
 	if err != nil {
 		fmt.Printf("didn't find file %s\n", dc_file_path)
@@ -34,7 +34,7 @@ func Init(workdir string, dc_file_path string) error {
 			panic(err)
 		}
 	}
-	if !ValidateYaml(context.Background()) {
+	if !ValidateYaml(ctx) {
 		return fmt.Errorf("failed to validate docker-compose yaml: '%s'. (run docker-compose config)", dc_file_path)
 	}
 	workdir_path = workdir

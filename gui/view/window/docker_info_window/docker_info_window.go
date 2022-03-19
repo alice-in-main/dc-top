@@ -1,6 +1,7 @@
 package docker_info_window
 
 import (
+	"context"
 	docker "dc-top/docker"
 	"dc-top/gui/view/window"
 	"dc-top/gui/view/window/containers_window"
@@ -8,28 +9,33 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
+	"golang.org/x/sync/semaphore"
 )
 
 type DockerInfoWindow struct {
+	window_ctx       context.Context
+	window_cancel    context.CancelFunc
+	drawer_semaphore *semaphore.Weighted
+
 	dimensions     window.Dimensions
 	resize_chan    chan interface{}
 	new_stats_chan chan containers_window.TotalStatsSummary
-	stop_chan      chan interface{}
 	enable_toggle  chan bool
 }
 
 func NewDockerInfoWindow() DockerInfoWindow {
 	x1, y1, x2, y2 := window.DockerInfoWindowSize()
 	return DockerInfoWindow{
-		dimensions:     window.NewDimensions(x1, y1, x2, y2, true),
-		resize_chan:    make(chan interface{}),
-		new_stats_chan: make(chan containers_window.TotalStatsSummary),
-		stop_chan:      make(chan interface{}),
-		enable_toggle:  make(chan bool),
+		drawer_semaphore: semaphore.NewWeighted(1),
+		dimensions:       window.NewDimensions(x1, y1, x2, y2, true),
+		resize_chan:      make(chan interface{}),
+		new_stats_chan:   make(chan containers_window.TotalStatsSummary),
+		enable_toggle:    make(chan bool),
 	}
 }
 
-func (w *DockerInfoWindow) Open() {
+func (w *DockerInfoWindow) Open(view_ctx context.Context) {
+	w.window_ctx, w.window_cancel = context.WithCancel(view_ctx)
 	go w.main()
 }
 
@@ -58,6 +64,8 @@ func (w *DockerInfoWindow) HandleEvent(ev interface{}, wt window.WindowType) (in
 func (w *DockerInfoWindow) Disable() {
 	log.Printf("Disable DockerInfoWindow...")
 	w.enable_toggle <- false
+	w.drawer_semaphore.Acquire(w.window_ctx, 1)
+	w.drawer_semaphore.Release(1)
 }
 
 func (w *DockerInfoWindow) Enable() {
@@ -66,7 +74,7 @@ func (w *DockerInfoWindow) Enable() {
 }
 
 func (w *DockerInfoWindow) Close() {
-	w.stop_chan <- nil
+	w.window_cancel()
 }
 
 func (w *DockerInfoWindow) main() {
@@ -74,6 +82,7 @@ func (w *DockerInfoWindow) main() {
 	is_enabled := true
 	var state dockerInfoState = dockerInfoState{}
 	tick := time.NewTicker(1000 * time.Millisecond)
+
 	for {
 		select {
 		case is_enabled = <-w.enable_toggle:
@@ -90,7 +99,7 @@ func (w *DockerInfoWindow) main() {
 		case summary := <-w.new_stats_chan:
 			state.docker_resource_summary = summary
 			if is_enabled {
-				info, err := docker.GetDockerInfo()
+				info, err := docker.GetDockerInfo(w.window_ctx)
 				window.ExitIfErr(err)
 				state.docker_info = info
 				w.dockerInfoWindowDraw(state)
@@ -98,7 +107,7 @@ func (w *DockerInfoWindow) main() {
 		case <-tick.C:
 			var GetTotalStatsRequest = containers_window.GetTotalStats{}
 			s.PostEvent(window.NewMessageEvent(window.ContainersHolder, window.DockerInfo, GetTotalStatsRequest))
-		case <-w.stop_chan:
+		case <-w.window_ctx.Done():
 			tick.Stop()
 			log.Println("Docker info stopped drawing")
 			return
@@ -107,6 +116,8 @@ func (w *DockerInfoWindow) main() {
 }
 
 func (w *DockerInfoWindow) dockerInfoWindowDraw(state dockerInfoState) {
+	w.drawer_semaphore.Acquire(w.window_ctx, 1)
 	window.DrawContents(&w.dimensions, dockerInfoDrawerGenerator(state, window.Width(&w.dimensions)))
 	window.GetScreen().Show()
+	w.drawer_semaphore.Release(1)
 }

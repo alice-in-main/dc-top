@@ -14,7 +14,9 @@ func Draw() {
 	screen := window.GetScreen()
 	screen.EnableMouse(tcell.MouseButtonEvents)
 
-	view.InitDefaultView()
+	bg_context, bg_cancel := context.WithCancel(context.Background())
+
+	view.InitDefaultView(bg_context)
 
 	finalize := func() {
 		view.CloseAll()
@@ -35,6 +37,7 @@ func Draw() {
 			key := ev.Key()
 			switch key {
 			case tcell.KeyCtrlC:
+				bg_cancel()
 				return
 			default:
 				view.HandleKeyPress(ev)
@@ -50,19 +53,20 @@ func Draw() {
 		case window.ResumeWindowsEvent:
 			view.CurrentView().ResumeWindows()
 		case window.ChangeToContainerShellEvent:
-			subshells.OpenContainerShell(ev.ContainerId, context.TODO())
+			subshells.OpenContainerShell(ev.ContainerId, bg_context)
 		case window.ChangeToFileEdittorEvent:
-			subshells.EditDcYaml(context.TODO())
+			subshells.EditDcYaml(bg_context)
 		case window.ChangeToLogsWindowEvent:
-			view.ChangeToLogView(ev.ContainerId)
+			view.ChangeToLogView(bg_context, ev.ContainerId)
 		case window.ChangeToMainHelpEvent:
-			view.DisplayMainHelp()
+			view.DisplayMainHelp(bg_context)
 		case window.ChangeToLogsHelpEvent:
-			view.DisplayLogHelp()
+			view.DisplayLogHelp(bg_context)
 		case window.ReturnUpperViewEvent:
 			view.ReturnToUpperView()
 		case window.FatalErrorEvent:
 			log.Printf("a fatal error occured at %s:\n%s", ev.When(), ev.Err)
+			bg_cancel()
 			return
 		case *tcell.EventError:
 			log.Printf("GUI error '%T: %s'\n", ev, ev)

@@ -24,7 +24,7 @@ type ContainerData struct {
 	dc_filters  *filters.Args
 }
 
-func NewContainerData() (ContainerData, error) {
+func NewContainerData(ctx context.Context) (ContainerData, error) {
 	var container_list_options = types.ContainerListOptions{All: true}
 	var dc_services *compose.Services = nil
 	var dc_filters *filters.Args = nil
@@ -46,7 +46,7 @@ func NewContainerData() (ContainerData, error) {
 		}
 		container_list_options.Filters = *dc_filters
 	}
-	containers, err := docker_cli.ContainerList(context.TODO(), container_list_options)
+	containers, err := docker_cli.ContainerList(ctx, container_list_options)
 	if err != nil {
 		return ContainerData{}, err
 	}
@@ -56,16 +56,16 @@ func NewContainerData() (ContainerData, error) {
 	defer close(container_init_ch)
 
 	for index, container := range containers {
-		go func(i int, c types.Container) {
-			container_id := c.ID
-			container_stats, err := docker_cli.ContainerStats(context.Background(), container_id, true)
+		go func(i int, _cont types.Container) {
+			container_id := _cont.ID
+			container_stats, err := docker_cli.ContainerStats(ctx, container_id, true)
 			if err != nil && err != io.EOF {
 				log.Println(err)
 				if !strings.HasPrefix(err.Error(), "Error response from daemon: No such container") {
 					log.Println(containers)
 				}
 			} else {
-				new_datum, _err := NewContainerDatum(c, container_stats)
+				new_datum, _err := NewContainerDatum(ctx, _cont, container_stats)
 				container_data = append(container_data, new_datum)
 				err = _err
 			}
@@ -145,10 +145,10 @@ func (containers *ContainerData) Filter(substr string) []ContainerDatum {
 	return filtered_data
 }
 
-func (containers *ContainerData) UpdateStats() {
+func (containers *ContainerData) UpdateStats(ctx context.Context) {
 	data := containers.GetData()
 	for i, datum := range data {
-		new_datum, err := UpdatedDatum(datum)
+		new_datum, err := UpdatedDatum(ctx, datum)
 		if err != nil {
 			log.Printf("Got error %s while fetching new data", err)
 			continue
@@ -158,7 +158,7 @@ func (containers *ContainerData) UpdateStats() {
 	}
 }
 
-func (containers *ContainerData) AreIdsUpToDate() (bool, error) {
+func (containers *ContainerData) AreIdsUpToDate(ctx context.Context) (bool, error) {
 	preserved_container_options := types.ContainerListOptions{All: true, Quiet: true, Filters: filters.NewArgs()}
 	all_containers_options := types.ContainerListOptions{All: true, Quiet: true}
 
@@ -172,11 +172,11 @@ func (containers *ContainerData) AreIdsUpToDate() (bool, error) {
 	}
 
 	var err error
-	preserved_containers, err := docker_cli.ContainerList(context.Background(), preserved_container_options)
+	preserved_containers, err := docker_cli.ContainerList(ctx, preserved_container_options)
 	if err != nil {
 		return false, err
 	}
-	all_containers, err := docker_cli.ContainerList(context.Background(), all_containers_options)
+	all_containers, err := docker_cli.ContainerList(ctx, all_containers_options)
 	if err != nil {
 		return false, err
 	}
