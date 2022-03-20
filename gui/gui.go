@@ -27,12 +27,11 @@ func Draw() {
 	for {
 		ev := screen.PollEvent()
 		switch ev := ev.(type) {
-		case *ReadinessCheck:
+		case *GuiReadinessCheck:
 			ev.Ack <- nil
 		case *tcell.EventResize:
 			screen.Clear()
 			view.CurrentView().Resize()
-			screen.Sync()
 		case *tcell.EventKey:
 			key := ev.Key()
 			switch key {

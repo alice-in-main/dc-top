@@ -28,11 +28,10 @@ type tableState struct {
 
 func handleResize(win *ContainersWindow, table_state tableState) tableState {
 	log.Printf("Resize request\n")
-	x1, y1, x2, y2 := window.ContainerWindowSize()
+	_, y1, _, y2 := window.ContainerWindowSize()
 	table_state.table_height = calcTableHeight(y1, y2)
 	table_state.inspect_height = y2 - y1 - 2 + 1
 	log.Printf("table height is %d\n", table_state.table_height)
-	win.dimensions.SetBorders(x1, y1, x2, y2)
 	restartIndex(&table_state)
 	return table_state
 }
@@ -74,6 +73,14 @@ func handleChangeIndex(is_next bool, table_state *tableState) {
 	handleNewIndex(new_index, table_state)
 }
 
+func restartIndex(state *tableState) {
+	index, err := findIndexOfId(state.filtered_data, state.focused_id)
+	if err != nil {
+		return
+	}
+	handleNewIndex(index, state)
+}
+
 func handleNewIndex(new_index int, table_state *tableState) {
 	if len(table_state.filtered_data) == 0 {
 		return
@@ -85,17 +92,6 @@ func handleNewIndex(new_index int, table_state *tableState) {
 	}
 	table_state.focused_id = table_state.filtered_data[new_index].ID()
 	updateIndices(table_state, new_index)
-}
-
-func restartIndex(state *tableState) {
-	index, err := findIndexOfId(state.filtered_data, state.focused_id)
-	if err != nil {
-		if len(state.filtered_data) == 0 {
-			return
-		}
-		index = 0
-	}
-	handleNewIndex(index, state)
 }
 
 func updateIndices(state *tableState, curr_index int) {

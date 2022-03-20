@@ -7,7 +7,7 @@ func GeneralInfoWindowSize() (x1, y1, x2, y2 int) {
 
 func ContainerWindowSize() (x1, y1, x2, y2 int) {
 	width, height := GetScreen().Size()
-	return 1, 4, width - 2, int(0.7 * float64(height))
+	return 1, 3, width - 2, int(0.7 * float64(height))
 }
 
 func ContainersBarWindowSize() (x1, y1, x2, y2 int) {
@@ -27,7 +27,7 @@ func MainHelpWindowSize() (x1, y1, x2, y2 int) {
 
 func LogsWindowSize() (x1, y1, x2, y2 int) {
 	width, height := GetScreen().Size()
-	return 0, 0, width, height - 2
+	return 0, 0, width - 1, height - 2
 }
 
 func LogsBarWindowSize() (x1, y1, x2, y2 int) {

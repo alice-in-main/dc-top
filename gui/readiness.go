@@ -2,17 +2,17 @@ package gui
 
 import "time"
 
-type ReadinessCheck struct {
+type GuiReadinessCheck struct {
 	t   time.Time
 	Ack chan interface{}
 }
 
-func (e ReadinessCheck) When() time.Time {
+func (e GuiReadinessCheck) When() time.Time {
 	return e.t
 }
 
-func NewReadinessCheck(ack chan interface{}) *ReadinessCheck {
-	return &ReadinessCheck{
+func NewGuiReadinessCheck(ack chan interface{}) *GuiReadinessCheck {
+	return &GuiReadinessCheck{
 		t:   time.Now(),
 		Ack: ack,
 	}

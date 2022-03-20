@@ -13,9 +13,8 @@ import (
 
 // TODO: improve performance by opening stats streams only for new containers
 // TODO: add loading screen
-// TODO: help in log window
-// TODO: scan for goroutine leaks
-// TODO: random log file name
+// TODO: random log file name + log levels
+// TODO: finish dc
 
 type windowMode uint8
 
@@ -29,7 +28,7 @@ type ContainersWindow struct {
 	window_cancel    context.CancelFunc
 	drawer_semaphore *semaphore.Weighted
 	//common
-	dimensions              window.Dimensions
+	dimensions_generator    func() window.Dimensions
 	cached_state            tableState
 	resize_chan             chan interface{}
 	new_container_data_chan chan docker.ContainerData
@@ -42,13 +41,15 @@ type ContainersWindow struct {
 }
 
 func NewContainersWindow() ContainersWindow {
-	x1, y1, x2, y2 := window.ContainerWindowSize()
 	return ContainersWindow{
 		//common
-		dimensions:              window.NewDimensions(x1, y1, x2, y2, true),
+		dimensions_generator: func() window.Dimensions {
+			x1, y1, x2, y2 := window.ContainerWindowSize()
+			return window.NewDimensions(x1, y1, x2, y2, true)
+		},
+		drawer_semaphore:        semaphore.NewWeighted(1),
 		resize_chan:             make(chan interface{}),
 		draw_queue:              make(chan tableState),
-		drawer_semaphore:        semaphore.NewWeighted(1),
 		enable_toggle:           make(chan bool),
 		new_container_data_chan: make(chan docker.ContainerData),
 		//containers view
@@ -59,6 +60,7 @@ func NewContainersWindow() ContainersWindow {
 }
 
 func (w *ContainersWindow) Open(view_ctx context.Context) {
+	log.Println("Opening containers")
 	w.window_context, w.window_cancel = context.WithCancel(view_ctx)
 	go w.main()
 }
@@ -125,65 +127,6 @@ func (w *ContainersWindow) Close() {
 	w.window_cancel()
 }
 
-func (w *ContainersWindow) drawer() {
-	for {
-		select {
-		case state := <-w.draw_queue:
-			w.drawer_semaphore.Acquire(w.window_context, 1)
-			if state.is_enabled {
-				drawer_func, err := dockerStatsDrawerGenerator(state, window.Width(&w.dimensions))
-				if err != nil {
-					log.Printf("Got error %s while drawing\n", err)
-				}
-				window.DrawContents(&w.dimensions, drawer_func)
-				window.GetScreen().Show()
-			}
-			w.drawer_semaphore.Release(1)
-		case <-w.window_context.Done():
-			log.Printf("Containers window stopped drwaing...\n")
-			return
-		}
-	}
-}
-
-func (w *ContainersWindow) dockerDataStreamer() {
-	for {
-		select {
-		case state := <-w.data_request_chan:
-			var new_data docker.ContainerData
-			up_to_date, err := state.containers_data.AreIdsUpToDate(w.window_context)
-			window.ExitIfErr(err)
-			if !up_to_date {
-				log.Printf("Ids changed, getting new container stats")
-				new_data, err = docker.GetContainers(w.window_context, &state.containers_data)
-				window.ExitIfErr(err)
-			} else {
-				state.containers_data.UpdateStats(w.window_context)
-				new_data = state.containers_data
-			}
-			select {
-			case <-w.window_context.Done():
-				log.Printf("Stopped streaming containers data 1")
-				return
-			default:
-				log.Printf("Sending back new data")
-				w.new_container_data_chan <- new_data
-			}
-		case <-w.window_context.Done():
-			log.Printf("Stopped streaming containers data 2")
-			return
-		}
-	}
-}
-
-func (w *ContainersWindow) sendInitialStateAsync(state *tableState) {
-	select {
-	case <-w.window_context.Done():
-		return
-	case w.new_container_data_chan <- state.containers_data:
-	}
-}
-
 func (w *ContainersWindow) main() {
 	_, y1, _, y2 := window.ContainerWindowSize()
 	data, err := docker.GetContainers(w.window_context, nil)
@@ -242,5 +185,65 @@ func (w *ContainersWindow) main() {
 		case <-w.window_context.Done():
 			return
 		}
+	}
+}
+
+func (w *ContainersWindow) drawer() {
+	for {
+		dimensions := w.dimensions_generator()
+		select {
+		case state := <-w.draw_queue:
+			w.drawer_semaphore.Acquire(w.window_context, 1)
+			if state.is_enabled {
+				drawer_func, err := dockerStatsDrawerGenerator(state, window.Width(&dimensions))
+				if err != nil {
+					log.Printf("Got error %s while drawing\n", err)
+				}
+				window.DrawContents(&dimensions, drawer_func)
+				window.GetScreen().Show()
+			}
+			w.drawer_semaphore.Release(1)
+		case <-w.window_context.Done():
+			log.Printf("Containers window stopped drwaing...\n")
+			return
+		}
+	}
+}
+
+func (w *ContainersWindow) dockerDataStreamer() {
+	for {
+		select {
+		case state := <-w.data_request_chan:
+			var new_data docker.ContainerData
+			up_to_date, err := state.containers_data.AreIdsUpToDate(w.window_context)
+			window.ExitIfErr(err)
+			if !up_to_date {
+				log.Printf("Ids changed, getting new container stats")
+				new_data, err = docker.GetContainers(w.window_context, &state.containers_data)
+				window.ExitIfErr(err)
+			} else {
+				state.containers_data.UpdateStats(w.window_context)
+				new_data = state.containers_data
+			}
+			select {
+			case <-w.window_context.Done():
+				log.Printf("Stopped streaming containers data 1")
+				return
+			default:
+				log.Printf("Sending back new data")
+				w.new_container_data_chan <- new_data
+			}
+		case <-w.window_context.Done():
+			log.Printf("Stopped streaming containers data 2")
+			return
+		}
+	}
+}
+
+func (w *ContainersWindow) sendInitialStateAsync(state *tableState) {
+	select {
+	case <-w.window_context.Done():
+		return
+	case w.new_container_data_chan <- state.containers_data:
 	}
 }

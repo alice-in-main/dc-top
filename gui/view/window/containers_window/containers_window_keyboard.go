@@ -63,9 +63,7 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 				screen.PostEvent(window.NewChangeToLogsWindowEvent(state.focused_id))
 			}
 		case 'h':
-			if state.focused_id != "" {
-				screen.PostEvent(window.NewChangeToMainHelpEvent())
-			}
+			screen.PostEvent(window.NewChangeToMainHelpEvent())
 		case 'e':
 			if state.focused_id != "" {
 				index, err := findIndexOfId(state.containers_data.GetData(), state.focused_id)

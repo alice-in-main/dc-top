@@ -41,14 +41,14 @@ func TestMain(m *testing.M) {
 */
 func beforeEach() (stop_signal chan interface{}) {
 	docker.Init()
-	InitScreen()
+	window.InitScreen()
 	stop_signal = make(chan interface{})
 	go func() {
 		Draw()
 		time.Sleep(time.Second) // make sure all windows finished drawing after draw finished
 		stop_signal <- nil
 	}()
-	readiness := NewReadinessCheck(make(chan interface{}))
+	readiness := NewGuiReadinessCheck(make(chan interface{}))
 	window.GetScreen().PostEvent(readiness)
 	<-readiness.Ack
 	return stop_signal
@@ -64,7 +64,7 @@ func afterEach(stop_signal chan interface{}) {
 	stopKey := tcell.NewEventKey(tcell.KeyCtrlC, '\x00', 0)
 	window.GetScreen().PostEvent(stopKey)
 	<-stop_signal
-	CloseScreen()
+	window.CloseScreen()
 	docker.Close()
 }
 

@@ -17,20 +17,22 @@ type DockerInfoWindow struct {
 	window_cancel    context.CancelFunc
 	drawer_semaphore *semaphore.Weighted
 
-	dimensions     window.Dimensions
-	resize_chan    chan interface{}
-	new_stats_chan chan containers_window.TotalStatsSummary
-	enable_toggle  chan bool
+	dimensions_generator func() window.Dimensions
+	resize_chan          chan interface{}
+	new_stats_chan       chan containers_window.TotalStatsSummary
+	enable_toggle        chan bool
 }
 
 func NewDockerInfoWindow() DockerInfoWindow {
-	x1, y1, x2, y2 := window.DockerInfoWindowSize()
 	return DockerInfoWindow{
 		drawer_semaphore: semaphore.NewWeighted(1),
-		dimensions:       window.NewDimensions(x1, y1, x2, y2, true),
-		resize_chan:      make(chan interface{}),
-		new_stats_chan:   make(chan containers_window.TotalStatsSummary),
-		enable_toggle:    make(chan bool),
+		dimensions_generator: func() window.Dimensions {
+			x1, y1, x2, y2 := window.DockerInfoWindowSize()
+			return window.NewDimensions(x1, y1, x2, y2, true)
+		},
+		resize_chan:    make(chan interface{}),
+		new_stats_chan: make(chan containers_window.TotalStatsSummary),
+		enable_toggle:  make(chan bool),
 	}
 }
 
@@ -83,6 +85,11 @@ func (w *DockerInfoWindow) main() {
 	var state dockerInfoState = dockerInfoState{}
 	tick := time.NewTicker(1000 * time.Millisecond)
 
+	info, err := docker.GetDockerInfo(w.window_ctx)
+	window.ExitIfErr(err)
+	state.docker_info = info
+	w.dockerInfoWindowDraw(state)
+
 	for {
 		select {
 		case is_enabled = <-w.enable_toggle:
@@ -91,8 +98,6 @@ func (w *DockerInfoWindow) main() {
 				w.dockerInfoWindowDraw(state)
 			}
 		case <-w.resize_chan:
-			x1, y1, x2, y2 := window.DockerInfoWindowSize()
-			w.dimensions.SetBorders(x1, y1, x2, y2)
 			if is_enabled {
 				w.dockerInfoWindowDraw(state)
 			}
@@ -117,7 +122,8 @@ func (w *DockerInfoWindow) main() {
 
 func (w *DockerInfoWindow) dockerInfoWindowDraw(state dockerInfoState) {
 	w.drawer_semaphore.Acquire(w.window_ctx, 1)
-	window.DrawContents(&w.dimensions, dockerInfoDrawerGenerator(state, window.Width(&w.dimensions)))
+	dimensions := w.dimensions_generator()
+	window.DrawContents(&dimensions, dockerInfoDrawerGenerator(state, window.Width(&dimensions)))
 	window.GetScreen().Show()
 	w.drawer_semaphore.Release(1)
 }

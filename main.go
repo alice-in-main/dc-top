@@ -5,6 +5,7 @@ import (
 	"dc-top/docker"
 	"dc-top/docker/compose"
 	"dc-top/gui"
+	"dc-top/gui/view/window"
 	"dc-top/logger"
 	"flag"
 	"fmt"
@@ -35,9 +36,9 @@ func main() {
 	}
 
 	docker.Init()
-	gui.InitScreen()
+	window.InitScreen()
 	gui.Draw()
-	gui.CloseScreen()
+	window.CloseScreen()
 	docker.Close()
 
 }

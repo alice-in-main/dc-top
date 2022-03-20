@@ -9,13 +9,14 @@ import (
 )
 
 func handleMouseEvent(ev *tcell.EventMouse, w *ContainersWindow, table_state tableState) tableState {
-	if w.dimensions.IsOutbounds(ev) {
+	dimensions := w.dimensions_generator()
+	if dimensions.IsOutbounds(ev) {
 		x, y := ev.Position()
 		log.Printf("outbounds mouse event %d,%d", x, y)
 		return table_state
 	}
-	x, y := w.dimensions.RelativeMousePosition(ev)
-	total_width := window.Width(&w.dimensions)
+	x, y := dimensions.RelativeMousePosition(ev)
+	total_width := window.Width(&dimensions)
 	log.Printf("Handling mouse event that happened on %d, %d", x, y)
 	switch {
 	case y == 1:

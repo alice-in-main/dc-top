@@ -12,15 +12,17 @@ type GeneralInfoWindow struct {
 	window_ctx    context.Context
 	window_cancel context.CancelFunc
 
-	dimensions    window.Dimensions
-	resize_ch     chan interface{}
-	enable_toggle chan bool
+	dimensions_generator func() window.Dimensions
+	resize_ch            chan interface{}
+	enable_toggle        chan bool
 }
 
 func NewGeneralInfoWindow() GeneralInfoWindow {
-	x1, y1, x2, y2 := window.GeneralInfoWindowSize()
 	return GeneralInfoWindow{
-		dimensions:    window.NewDimensions(x1, y1, x2, y2, false),
+		dimensions_generator: func() window.Dimensions {
+			x1, y1, x2, y2 := window.GeneralInfoWindowSize()
+			return window.NewDimensions(x1, y1, x2, y2, false)
+		},
 		resize_ch:     make(chan interface{}),
 		enable_toggle: make(chan bool),
 	}
@@ -67,8 +69,6 @@ func (w *GeneralInfoWindow) main() {
 	for {
 		select {
 		case <-w.resize_ch:
-			x1, y1, x2, y2 := window.GeneralInfoWindowSize()
-			w.dimensions.SetBorders(x1, y1, x2, y2)
 			w.drawGeneralInfo(state)
 		case is_enabled := <-w.enable_toggle:
 			state.is_enabled = is_enabled
@@ -84,6 +84,7 @@ func (w *GeneralInfoWindow) main() {
 
 func (w *GeneralInfoWindow) drawGeneralInfo(state generalInfoState) {
 	if state.is_enabled {
-		window.DrawContents(&w.dimensions, generalInfoDrawerGenerator(&state, window.Width(&w.dimensions)))
+		dimensions := w.dimensions_generator()
+		window.DrawContents(&dimensions, generalInfoDrawerGenerator(&state, window.Width(&dimensions)))
 	}
 }

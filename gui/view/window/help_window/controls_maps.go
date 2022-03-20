@@ -9,7 +9,7 @@ func MainControls() []Control {
 	return []Control{
 		{"'h'", "Display more controls"},
 		{"'l'", "Watch container logs"},
-		{"'e'", "Open shell inside the container"},
+		{"'e'", "Open shell inside selected container"},
 		{"'/'", "Filter containers"},
 		{"'c'", "Clear filter"},
 		{"'v'", "Edit docker-compose yaml"},
@@ -19,8 +19,9 @@ func MainControls() []Control {
 		{"Delete", "Remove selected container"},
 		{"'s'", "Stop selected container"},
 		{"'!'", "Reverse sort order"},
-		{"'g'", "Go to the top of the container list"},
+		{"'g'", "Go to the top of the container list/inspect info"},
 		{"'G'", "Go to the buttom of the container list"},
+		{"Up/Down", "Browse containers/Scroll inspect info"},
 		{"F[1-5]", "Sort by column"},
 	}
 }
@@ -28,7 +29,7 @@ func MainControls() []Control {
 func LogControls() []Control {
 	return []Control{
 		{"'h'", "Display controls"},
-		{"'l' or 'q'", "Exit current logs"},
+		{"'l'/'q'", "Exit current logs"},
 		{"'/'", "Search inside logs"},
 		{"'c'", "Clear search"},
 		{"'n'", "Jump to next search result"},

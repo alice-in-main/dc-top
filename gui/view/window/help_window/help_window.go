@@ -30,6 +30,7 @@ func NewHelpWindow(controls []Control, dimensions_generator func() window.Dimens
 }
 
 func (w *HelpWindow) Open(view_ctx context.Context) {
+	log.Println("Opening help")
 	w.window_ctx, w.window_cancel = context.WithCancel(view_ctx)
 	w.drawHelp()
 }
@@ -97,10 +98,12 @@ func (w *HelpWindow) drawHelp() {
 		}
 		i++
 	}
-	var relative_widths = []float64{0.2, 0.8}
+	var relative_widths = []float64{0.25, 0.75}
 	dimensions := w.dimensions_generator()
-	var table = []elements.StringStyler{elements.TextDrawer("Controls:", tcell.StyleDefault.Bold(true).Underline(true)),
-		elements.EmptyDrawer()}
+	var table = []elements.StringStyler{
+		elements.TextDrawer("Controls:", tcell.StyleDefault.Bold(true).Underline(true)),
+		elements.EmptyDrawer(),
+	}
 	table = append(table, elements.TableWithoutSeperator(window.Width(&dimensions), relative_widths, cells)...)
 	var drawer = func(x, y int) (rune, tcell.Style) {
 		if y >= len(table) {

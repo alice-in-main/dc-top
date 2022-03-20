@@ -13,9 +13,10 @@ type BarWindow struct {
 	dimensions_generator func() window.Dimensions
 	window_context       context.Context
 	window_cancel        context.CancelFunc
-	resize_ch            chan interface{}
-	message_chan         chan BarMessage
-	enable_toggle        chan bool
+
+	resize_ch     chan interface{}
+	message_chan  chan BarMessage
+	enable_toggle chan bool
 }
 
 func NewBarWindow(dimensions_generator func() window.Dimensions) BarWindow {

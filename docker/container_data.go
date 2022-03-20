@@ -29,6 +29,7 @@ func NewContainerData(ctx context.Context) (ContainerData, error) {
 	var dc_services *compose.Services = nil
 	var dc_filters *filters.Args = nil
 	var err error
+
 	if compose.DcModeEnabled() {
 		dc_services = &compose.Services{}
 		*dc_services, err = compose.GenerateDcData()
@@ -46,6 +47,76 @@ func NewContainerData(ctx context.Context) (ContainerData, error) {
 		}
 		container_list_options.Filters = *dc_filters
 	}
+
+	containers, err := docker_cli.ContainerList(ctx, container_list_options)
+	if err != nil {
+		return ContainerData{}, err
+	}
+
+	container_data := make([]ContainerDatum, 0)
+	container_init_ch := make(chan error, len(containers))
+	defer close(container_init_ch)
+
+	for index, container := range containers {
+		go func(i int, _cont types.Container) {
+			container_id := _cont.ID
+			container_stats, err := docker_cli.ContainerStats(ctx, container_id, true)
+			if err != nil && err != io.EOF {
+				log.Println(err)
+				if !strings.HasPrefix(err.Error(), "Error response from daemon: No such container") {
+					log.Println(containers)
+				}
+			} else {
+				new_datum, _err := NewContainerDatum(ctx, _cont, container_stats)
+				container_data = append(container_data, new_datum)
+				err = _err
+			}
+			container_init_ch <- err
+		}(index, container)
+	}
+	for range containers {
+		_err := <-container_init_ch
+		if err != nil {
+			err = _err
+		}
+	}
+
+	new_containers_data := ContainerData{
+		data:                container_data,
+		main_sort_type:      State,
+		secondary_sort_type: Name,
+		dc_services:         dc_services,
+		dc_filters:          dc_filters,
+	}
+
+	return new_containers_data, err
+}
+
+// TODO: replace AreIdsUpToDate
+func UpdatedContainerData(ctx context.Context, old_data *ContainerData) (ContainerData, error) {
+	var container_list_options = types.ContainerListOptions{All: true}
+	var dc_services *compose.Services = nil
+	var dc_filters *filters.Args = nil
+	var err error
+
+	if compose.DcModeEnabled() {
+		dc_services = &compose.Services{}
+		*dc_services, err = compose.GenerateDcData()
+		if err != nil {
+			return ContainerData{}, err
+		}
+		dc_filters = &filters.Args{}
+		*dc_filters = filters.NewArgs()
+		for service_key, service := range dc_services.ServicesMap {
+			if service.ContainerName == "" {
+				dc_filters.Add("name", fmt.Sprintf("%s_%s_1", filepath.Base(filepath.Dir(compose.DcYamlPath())), service_key))
+			} else {
+				dc_filters.Add("name", service.ContainerName)
+			}
+		}
+		container_list_options.Filters = *dc_filters
+	}
+
 	containers, err := docker_cli.ContainerList(ctx, container_list_options)
 	if err != nil {
 		return ContainerData{}, err

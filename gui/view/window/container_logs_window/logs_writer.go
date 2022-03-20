@@ -18,11 +18,11 @@ type logsWriter struct {
 	ctx              context.Context
 	drawer_semaphore *semaphore.Weighted
 
-	is_following bool
-	is_typing    bool
-	is_enabled   bool
-	is_looking   bool
-	dimensions   window.Dimensions
+	is_following         bool
+	is_typing            bool
+	is_enabled           bool
+	is_looking           bool
+	dimensions_generator func() window.Dimensions
 
 	logs_container LogContainer
 	logs_offset    int
@@ -41,7 +41,7 @@ type logsWriter struct {
 }
 
 func newLogsWriter(ctx context.Context) logsWriter {
-	x1, y1, x2, y2 := window.LogsWindowSize()
+	_, y1, _, y2 := window.LogsWindowSize()
 	height := y2 - y1
 	logs_container := NewArrStringSearcher(docker.MaxSavedLogs)
 	new_writer := logsWriter{
@@ -52,7 +52,10 @@ func newLogsWriter(ctx context.Context) logsWriter {
 		is_typing:    false,
 		is_enabled:   true,
 		is_looking:   false,
-		dimensions:   window.NewDimensions(x1, y1, x2, y2, false),
+		dimensions_generator: func() window.Dimensions {
+			x1, y1, x2, y2 := window.LogsWindowSize()
+			return window.NewDimensions(x1, y1, x2, y2, false)
+		},
 
 		logs_container: &logs_container,
 		logs_offset:    0,
@@ -148,7 +151,6 @@ func (writer *logsWriter) handleLookup(result_indices []int) {
 			}
 		case is_enabled := <-writer.enable_toggle:
 			writer.is_enabled = is_enabled
-			continue
 		case <-writer.redraw_request:
 			log.Printf("Exitting lookup from redraw")
 			return
@@ -156,9 +158,11 @@ func (writer *logsWriter) handleLookup(result_indices []int) {
 			log.Printf("Exitting lookup from context")
 			return
 		}
-		bar_window.Info([]rune(fmt.Sprintf("Showing result %d/%d", i+1, len(result_indices))))
-		writer.view_offset = result_indices[i]
-		writer.redraw()
+		if writer.is_enabled {
+			bar_window.Info([]rune(fmt.Sprintf("Showing result %d/%d", i+1, len(result_indices))))
+			writer.view_offset = result_indices[i]
+			writer.redraw()
+		}
 	}
 }
 
@@ -196,8 +200,9 @@ func (writer *logsWriter) redraw() {
 }
 
 func (writer *logsWriter) updateLines() {
-	width := window.Width(&writer.dimensions)
-	height := window.Height(&writer.dimensions)
+	dimensions := writer.dimensions_generator()
+	width := window.Width(&dimensions)
+	height := window.Height(&dimensions)
 	writer.lines = make([]elements.StringStyler, height)
 	log_i := writer.view_offset % docker.MaxSavedLogs
 	if log_i < 0 {
@@ -209,7 +214,7 @@ func (writer *logsWriter) updateLines() {
 		if !writer.logs_container.Get(log_i).is_stdout {
 			log_line_style = log_line_style.Foreground(tcell.ColorRed)
 		}
-		num_partitions := 1 + len(log_line_text)/width
+		num_partitions := 1 + (len(log_line_text)-1)/width
 		log_with_highlights := elements.HighlightDrawer(log_line_text, writer.search_box.Value(), log_line_style)
 		for j := 0; j < num_partitions; j++ {
 			writer.lines[line_i] = elements.Suffix(log_with_highlights, (num_partitions-j-1)*width)
@@ -226,7 +231,8 @@ func (writer *logsWriter) updateLines() {
 }
 
 func (writer *logsWriter) showLines() {
-	height := window.Height(&writer.dimensions)
+	dimensions := writer.dimensions_generator()
+	height := window.Height(&dimensions)
 	search_box := writer.search_box.Style()
 	not_following_message := elements.TextDrawer("Currently not following logs. Press 'f' to start following.", tcell.StyleDefault.Background(tcell.ColorGreen).Bold(true))
 	log_drawer := func(i int, j int) (rune, tcell.Style) {
@@ -243,6 +249,6 @@ func (writer *logsWriter) showLines() {
 
 		return '\x00', tcell.StyleDefault
 	}
-	window.DrawContents(&writer.dimensions, log_drawer)
+	window.DrawContents(&dimensions, log_drawer)
 	window.GetScreen().Sync()
 }

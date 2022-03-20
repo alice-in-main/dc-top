@@ -79,7 +79,7 @@ func (w *ContainerLogsWindow) handleRegularKeyPress(ev *tcell.EventKey) {
 			w.stopFollowing()
 		}
 	case tcell.KeyDown:
-		if w.logs_writer.view_offset < w.logs_writer.logs_counter {
+		if w.logs_writer.view_offset < w.logs_writer.logs_counter-1 {
 			w.logs_writer.view_offset++
 			w.stopFollowing()
 		}
