@@ -190,19 +190,19 @@ func (w *ContainersWindow) main() {
 
 func (w *ContainersWindow) drawer() {
 	for {
-		dimensions := w.dimensions_generator()
 		select {
 		case state := <-w.draw_queue:
-			w.drawer_semaphore.Acquire(w.window_context, 1)
 			if state.is_enabled {
+				w.drawer_semaphore.Acquire(w.window_context, 1)
+				dimensions := w.dimensions_generator()
 				drawer_func, err := dockerStatsDrawerGenerator(state, window.Width(&dimensions))
 				if err != nil {
 					log.Printf("Got error %s while drawing\n", err)
 				}
 				window.DrawContents(&dimensions, drawer_func)
 				window.GetScreen().Show()
+				w.drawer_semaphore.Release(1)
 			}
-			w.drawer_semaphore.Release(1)
 		case <-w.window_context.Done():
 			log.Printf("Containers window stopped drwaing...\n")
 			return
