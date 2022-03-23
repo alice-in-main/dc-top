@@ -7,7 +7,7 @@ import (
 	"strings"
 )
 
-func handleDelete(ctx context.Context, table_state *tableState) error {
+func (w *ContainersWindow) handleDelete(ctx context.Context, table_state *tableState) error {
 	index, err := findIndexOfId(table_state.containers_data.GetData(), table_state.focused_id)
 	if err != nil {
 		return err
@@ -25,7 +25,7 @@ func handleDelete(ctx context.Context, table_state *tableState) error {
 	return nil
 }
 
-func handlePause(ctx context.Context, id string) {
+func (w *ContainersWindow) handlePause(ctx context.Context, id string) {
 	go func(id_to_pause string) {
 		if err := docker.PauseContainer(ctx, id_to_pause); err != nil {
 			log.Printf("Got error '%s' when trying to container delete %s", err, id_to_pause)
@@ -42,7 +42,7 @@ func handlePause(ctx context.Context, id string) {
 	}(id)
 }
 
-func handleStop(ctx context.Context, id string) {
+func (w *ContainersWindow) handleStop(ctx context.Context, id string) {
 	go func(id_to_stop string) {
 		if err := docker.StopContainer(ctx, id_to_stop); err != nil {
 			log.Printf("Got error '%s' when trying to container delete %s", err, id_to_stop)
@@ -53,7 +53,7 @@ func handleStop(ctx context.Context, id string) {
 	}(id)
 }
 
-func handleRestart(ctx context.Context, id string) {
+func (w *ContainersWindow) handleRestart(ctx context.Context, id string) {
 	go func(id_to_stop string) {
 		if err := docker.RestartContainer(ctx, id_to_stop); err != nil {
 			log.Printf("Got error '%s' when trying to container delete %s", err, id_to_stop)

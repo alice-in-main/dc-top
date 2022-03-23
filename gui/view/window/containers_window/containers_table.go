@@ -48,6 +48,9 @@ func dockerStatsDrawerGenerator(state tableState, window_width int) (func(x, y i
 			}
 			if y+state.index_of_top_container < len(data_table) {
 				r, s := data_table[y+state.index_of_top_container](x)
+				if state.filtered_data[y+state.index_of_top_container-2].IsDeleted() {
+					s = s.Background(tcell.ColorDarkRed)
+				}
 				if state.focused_id == state.filtered_data[y+state.index_of_top_container-2].ID() {
 					s = s.Background(tcell.ColorDarkBlue)
 				}

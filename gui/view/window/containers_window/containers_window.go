@@ -6,15 +6,15 @@ import (
 	"dc-top/gui/elements"
 	"dc-top/gui/view/window"
 	"log"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"golang.org/x/sync/semaphore"
 )
 
-// TODO: improve performance by opening stats streams only for new containers
-// TODO: add loading screen
 // TODO: random log file name + log levels
 // TODO: finish dc
+// TODO: fix containers scrolling (after deletion and last container with search)
 
 type windowMode uint8
 
@@ -129,7 +129,7 @@ func (w *ContainersWindow) Close() {
 
 func (w *ContainersWindow) main() {
 	_, y1, _, y2 := window.ContainerWindowSize()
-	data, err := docker.GetContainers(w.window_context, nil)
+	data, err := docker.NewContainerData(w.window_context)
 	window.ExitIfErr(err)
 	state := tableState{
 		is_enabled:      true,
@@ -215,15 +215,10 @@ func (w *ContainersWindow) dockerDataStreamer() {
 		select {
 		case state := <-w.data_request_chan:
 			var new_data docker.ContainerData
-			up_to_date, err := state.containers_data.AreIdsUpToDate(w.window_context)
+			new_data, err := docker.UpdatedContainerData(w.window_context, &state.containers_data)
 			window.ExitIfErr(err)
-			if !up_to_date {
-				log.Printf("Ids changed, getting new container stats")
-				new_data, err = docker.GetContainers(w.window_context, &state.containers_data)
-				window.ExitIfErr(err)
-			} else {
-				state.containers_data.UpdateStats(w.window_context)
-				new_data = state.containers_data
+			if new_data.Len() == 0 {
+				time.Sleep(200 * time.Millisecond)
 			}
 			select {
 			case <-w.window_context.Done():

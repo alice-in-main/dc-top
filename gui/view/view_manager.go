@@ -1,6 +1,7 @@
 package view
 
 import (
+	"bufio"
 	"context"
 	"dc-top/gui/view/window"
 	"dc-top/gui/view/window/bar_window"
@@ -9,6 +10,7 @@ import (
 	"dc-top/gui/view/window/docker_info_window"
 	"dc-top/gui/view/window/general_info_window"
 	"dc-top/gui/view/window/help_window"
+	"dc-top/gui/view/window/subshell_window"
 	"log"
 	"sync"
 
@@ -22,6 +24,7 @@ const (
 	logs
 	main_help
 	logs_help
+	subshell
 	none
 )
 
@@ -92,12 +95,29 @@ func ChangeToLogView(bg_context context.Context, container_id string) {
 		x1, y1, x2, y2 := window.LogsBarWindowSize()
 		return window.NewDimensions(x1, y1, x2, y2, false)
 	}
-	logs_bar_w := bar_window.NewBarWindow(bar_dimensions_generator)
+	logs_bar_window := bar_window.NewBarWindow(bar_dimensions_generator)
 	logs_view := NewView(map[window.WindowType]window.Window{
 		window.ContainerLogs: &logs_window,
-		window.Bar:           &logs_bar_w,
+		window.Bar:           &logs_bar_window,
 	}, window.ContainerLogs)
 	changeView(bg_context, logs, main, &logs_view)
+}
+
+type testReader struct{}
+
+func (testReader) Read(b []byte) (int, error) {
+	b[0] = '7'
+	return 1, nil
+}
+
+func ChangeToSubshell(bg_context context.Context) {
+	log.Printf("Changing to subshell")
+	var reader bufio.Reader = *bufio.NewReader(testReader{})
+	subshell_window := subshell_window.NewSubshellWindow(reader)
+	subshell_view := NewView(map[window.WindowType]window.Window{
+		window.Subshell: &subshell_window,
+	}, window.Subshell)
+	changeView(bg_context, subshell, main, &subshell_view)
 }
 
 func DisplayLogHelp(bg_context context.Context) {

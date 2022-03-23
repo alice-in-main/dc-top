@@ -11,7 +11,6 @@ import (
 	"time"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/filters"
 )
 
 type ContainerDatum struct {
@@ -54,7 +53,7 @@ func NewContainerDatum(ctx context.Context, base types.Container, stats_stream t
 	}, nil
 }
 
-func UpdatedDatum(ctx context.Context, old_datum ContainerDatum) (ContainerDatum, error) {
+func UpdatedDatum(ctx context.Context, old_datum ContainerDatum, base types.Container) (ContainerDatum, error) {
 	new_stats, err := getNewStatsWithPrev(&old_datum)
 	if err != nil {
 		log.Println("2 Failed to get new container stats:")
@@ -79,14 +78,8 @@ func UpdatedDatum(ctx context.Context, old_datum ContainerDatum) (ContainerDatum
 		}
 		return ContainerDatum{}, fmt.Errorf("2 Failed to get stats and container %s wasnt deleted. %s", old_datum.base.ID, err)
 	}
-	var filters filters.Args = filters.NewArgs(filters.Arg("id", old_datum.ID()))
-	containers, err := docker_cli.ContainerList(ctx, types.ContainerListOptions{All: true, Filters: filters})
-	if len(containers) != 1 || err != nil {
-		log.Println(containers)
-		return ContainerDatum{}, fmt.Errorf("got more than 1 filtered image from id or %s", err)
-	}
 	return ContainerDatum{
-		base:         containers[0],
+		base:         base,
 		stats_stream: old_datum.stats_stream,
 		cached_stats: new_stats,
 		inspection:   old_datum.inspection,

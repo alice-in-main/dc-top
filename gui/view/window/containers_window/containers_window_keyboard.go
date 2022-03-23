@@ -50,10 +50,63 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 	case tcell.KeyDelete:
 		state.window_mode = containers
 		if state.focused_id != "" {
-			err := handleDelete(w.window_context, state)
+			err := w.handleDelete(w.window_context, state)
 			if err != nil {
 				return err
 			}
+		}
+	case tcell.KeyCtrlV:
+		if compose.DcModeEnabled() {
+			if !compose.ValidateYaml(w.window_context) {
+				bar_window.Err([]rune("docker compose yaml syntax is invalid"))
+			} else {
+				compose.CreateBackupYaml()
+				window.GetScreen().PostEvent(window.NewChangeToFileEdittorEvent(compose.DcYamlPath(), window.ContainersHolder))
+			}
+		} else {
+			bar_window.Err([]rune("dc mode is disabled"))
+		}
+	case tcell.KeyCtrlW:
+		if compose.DcModeEnabled() {
+			if !compose.ValidateYaml(w.window_context) {
+				bar_window.Err([]rune("docker compose yaml syntax is invalid"))
+			} else {
+				bar_window.Info([]rune("Restarting docker compose..."))
+				go func() {
+					if err := compose.Up(w.window_context); err != nil {
+						bar_window.Err([]rune("Failed to restart docker compose (Maybe updating will work 'u')"))
+					}
+				}()
+			}
+		} else {
+			bar_window.Err([]rune("dc mode is disabled"))
+		}
+	case tcell.KeyCtrlU:
+		if compose.DcModeEnabled() {
+			if !compose.ValidateYaml(w.window_context) {
+				bar_window.Err([]rune("docker compose yaml syntax is invalid"))
+			} else {
+				bar_window.Info([]rune("Updating docker compose..."))
+				go func() {
+					if err := compose.Restart(w.window_context); err != nil {
+						bar_window.Err([]rune("Failed to update docker compose"))
+					}
+				}()
+			}
+		} else {
+			bar_window.Err([]rune("dc mode is disabled"))
+		}
+	case tcell.KeyCtrlP:
+		if state.focused_id != "" {
+			w.handlePause(w.window_context, state.focused_id)
+		}
+	case tcell.KeyCtrlR:
+		if state.focused_id != "" {
+			w.handleRestart(w.window_context, state.focused_id)
+		}
+	case tcell.KeyCtrlS:
+		if state.focused_id != "" {
+			w.handleStop(w.window_context, state.focused_id)
 		}
 	case tcell.KeyRune:
 		screen := window.GetScreen()
@@ -73,17 +126,6 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 					screen.PostEvent(window.NewChangeToContainerShellEvent(state.focused_id))
 				}
 			}
-		case 'v':
-			if compose.DcModeEnabled() {
-				if !compose.ValidateYaml(w.window_context) {
-					bar_window.Err([]rune("docker compose yaml syntax is invalid"))
-				} else {
-					compose.CreateBackupYaml()
-					screen.PostEvent(window.NewChangeToFileEdittorEvent(compose.DcYamlPath(), window.ContainersHolder))
-				}
-			} else {
-				bar_window.Err([]rune("dc mode is disabled"))
-			}
 		case 'i':
 			if state.window_mode == containers {
 				_, err := findIndexOfId(state.containers_data.GetData(), state.focused_id)
@@ -95,18 +137,6 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 				state.window_mode = containers
 			}
 			log.Println("Toggling inspect mode")
-		case 'p':
-			if state.focused_id != "" {
-				handlePause(w.window_context, state.focused_id)
-			}
-		case 'r':
-			if state.focused_id != "" {
-				handleRestart(w.window_context, state.focused_id)
-			}
-		case 's':
-			if state.focused_id != "" {
-				handleStop(w.window_context, state.focused_id)
-			}
 		case 'g':
 			if state.window_mode == containers {
 				handleNewIndex(0, state)

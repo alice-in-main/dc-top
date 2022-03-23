@@ -5,12 +5,13 @@ import (
 	"dc-top/gui/view"
 	"dc-top/gui/view/window"
 	"dc-top/gui/view/window/subshells"
+	"fmt"
 	"log"
 
 	"github.com/gdamore/tcell/v2"
 )
 
-func Draw() {
+func Draw() error {
 	screen := window.GetScreen()
 	screen.EnableMouse(tcell.MouseButtonEvents)
 
@@ -37,7 +38,7 @@ func Draw() {
 			switch key {
 			case tcell.KeyCtrlC:
 				bg_cancel()
-				return
+				return nil
 			default:
 				view.HandleKeyPress(ev)
 			}
@@ -64,9 +65,10 @@ func Draw() {
 		case window.ReturnUpperViewEvent:
 			view.ReturnToUpperView()
 		case window.FatalErrorEvent:
-			log.Printf("a fatal error occured at %s:\n%s", ev.When(), ev.Err)
+			err := fmt.Errorf("a fatal error occured at %s:\n%s", ev.When(), ev.Err)
+			log.Println(err.Error())
 			bg_cancel()
-			return
+			return err
 		case *tcell.EventError:
 			log.Printf("GUI error '%T: %s'\n", ev, ev)
 		default:

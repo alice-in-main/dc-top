@@ -37,8 +37,10 @@ func main() {
 
 	docker.Init()
 	window.InitScreen()
-	gui.Draw()
+	err = gui.Draw()
 	window.CloseScreen()
 	docker.Close()
-
+	if err != nil {
+		fmt.Println(err)
+	}
 }

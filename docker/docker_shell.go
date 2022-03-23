@@ -5,25 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"log"
-	"os"
-	"os/exec"
 	"time"
 
 	"github.com/docker/docker/api/types"
 	"github.com/gdamore/tcell/v2"
 )
-
-func OpenShell(id string, ctx context.Context, shell string) error {
-	cmd := exec.CommandContext(ctx, "docker", "exec", "-it", id, shell)
-	cmd.Stdin = os.Stdin
-	cmd.Stderr = os.Stderr
-	cmd.Stdout = os.Stdout
-	err := cmd.Run()
-	if err != nil {
-		log.Println("Failed to start shell", shell, err)
-	}
-	return err
-}
 
 func OpenShellOld(id string, ctx context.Context, shell string) error {
 	var cfg = types.ExecConfig{
@@ -33,8 +19,8 @@ func OpenShellOld(id string, ctx context.Context, shell string) error {
 		AttachStdout: true,
 		Cmd:          []string{shell},
 	}
-	shell_ctx, cancel_func := context.WithCancel(ctx)
-	defer cancel_func()
+	shell_ctx, shell_cancel := context.WithCancel(ctx)
+	defer shell_cancel()
 
 	exec_id, err := docker_cli.ContainerExecCreate(shell_ctx, id, cfg)
 	if err != nil {
@@ -50,23 +36,25 @@ func OpenShellOld(id string, ctx context.Context, shell string) error {
 		return err
 	}
 
-	s, err := tcell.NewTerminfoScreenFromTty(nil)
+	// TODO: replace with log style window
+	screen, err := tcell.NewTerminfoScreenFromTty(nil)
 	if err != nil {
 		log.Fatal("Failed to allocate screen from tty")
 	}
-	err = s.Init()
+	err = screen.Init()
 	if err != nil {
 		log.Fatal("Failed to init tty screen")
 	}
-	defer s.Fini()
+	defer screen.Fini()
+	//
 
 	fmt.Printf("Using %s inside container '%s'\n\r", shell, id)
+
 	go screenWriter(&highjacked_conn, shell_ctx)
+	go livenessChecker(screen, shell_ctx, exec_id.ID)
+	inputParser(screen, highjacked_conn, shell_ctx)
 
-	go livenessChecker(s, shell_ctx, exec_id.ID)
-	inputParser(s, highjacked_conn, shell_ctx)
-
-	cancel_func()
+	shell_cancel()
 
 	return err
 }
@@ -159,7 +147,7 @@ func readinessChecker(context context.Context, exec_id string) error {
 	for {
 		exec_inspect, err := docker_cli.ContainerExecInspect(context, exec_id)
 		if err != nil {
-			log.Fatalf("Failed to inspect exec %s", exec_id)
+			return fmt.Errorf("failed to inspect exec %s", exec_id)
 		}
 		if exec_inspect.ExitCode != 0 || !exec_inspect.Running {
 			return errors.New("invalid entrypoint")

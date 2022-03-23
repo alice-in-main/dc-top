@@ -9,5 +9,6 @@ const (
 	GeneralInfo
 	ContainerLogs
 	Help
+	Subshell
 	Other
 )

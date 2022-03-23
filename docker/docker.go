@@ -18,16 +18,6 @@ func Init() {
 	}
 }
 
-func GetContainers(ctx context.Context, old_data *ContainerData) (ContainerData, error) {
-	if old_data != nil {
-		for _, datum := range old_data.data {
-			datum.Close()
-		}
-	}
-
-	return NewContainerData(ctx)
-}
-
 func GetDockerInfo(ctx context.Context) (DockerInfo, error) {
 	docker_info, err := docker_cli.Info(ctx)
 	if err != nil {
