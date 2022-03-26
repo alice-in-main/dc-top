@@ -145,7 +145,7 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 			}
 		case 'G':
 			if state.window_mode == containers {
-				handleNewIndex(state.containers_data.Len()-1, state)
+				handleNewIndex(len(state.filtered_data)-1, state)
 			}
 		case 'c':
 			state.search_box.Reset()
