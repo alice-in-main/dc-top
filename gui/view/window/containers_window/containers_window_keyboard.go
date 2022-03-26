@@ -55,17 +55,6 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 				return err
 			}
 		}
-	case tcell.KeyCtrlV:
-		if compose.DcModeEnabled() {
-			if !compose.ValidateYaml(w.window_context) {
-				bar_window.Err([]rune("docker compose yaml syntax is invalid"))
-			} else {
-				compose.CreateBackupYaml()
-				window.GetScreen().PostEvent(window.NewChangeToFileEdittorEvent(compose.DcYamlPath(), window.ContainersHolder))
-			}
-		} else {
-			bar_window.Err([]rune("dc mode is disabled"))
-		}
 	case tcell.KeyCtrlW:
 		if compose.DcModeEnabled() {
 			if !compose.ValidateYaml(w.window_context) {
@@ -137,6 +126,17 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 				state.window_mode = containers
 			}
 			log.Println("Toggling inspect mode")
+		case 'v':
+			if compose.DcModeEnabled() {
+				if !compose.ValidateYaml(w.window_context) { // TODO: make this faster
+					bar_window.Err([]rune("docker compose yaml syntax is invalid"))
+				} else {
+					compose.CreateBackupYaml()
+					window.GetScreen().PostEvent(window.NewChangeToFileEdittorEvent(compose.DcYamlPath(), window.ContainersHolder))
+				}
+			} else {
+				bar_window.Err([]rune("dc mode is disabled"))
+			}
 		case 'g':
 			if state.window_mode == containers {
 				handleNewIndex(0, state)

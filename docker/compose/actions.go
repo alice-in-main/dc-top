@@ -29,7 +29,7 @@ func Restart(ctx context.Context) error {
 }
 
 func ValidateYaml(ctx context.Context) bool {
-	cmd := exec.CommandContext(ctx, "docker-compose", "-f", DcYamlPath(), "config", "-q")
+	cmd := exec.CommandContext(ctx, "docker", "compose", "-f", DcYamlPath(), "config", "-q")
 	err := cmd.Run()
 	return err == nil
 }

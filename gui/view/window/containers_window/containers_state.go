@@ -37,7 +37,7 @@ func handleResize(win *ContainersWindow, table_state tableState) tableState {
 }
 
 func handleNewData(new_data *docker.ContainerData, w *ContainersWindow, table_state tableState) tableState {
-	log.Printf("Got new data\n")
+	// log.Printf("Got new data\n")
 	table_state.containers_data = *new_data
 	table_state.filtered_data = table_state.containers_data.Filter(table_state.search_box.Value())
 	if !new_data.Contains(table_state.focused_id) {

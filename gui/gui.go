@@ -4,7 +4,6 @@ import (
 	"context"
 	"dc-top/gui/view"
 	"dc-top/gui/view/window"
-	"dc-top/gui/view/window/subshells"
 	"fmt"
 	"log"
 
@@ -53,15 +52,19 @@ func Draw() error {
 		case window.ResumeWindowsEvent:
 			view.CurrentView().ResumeWindows()
 		case window.ChangeToContainerShellEvent:
-			subshells.OpenContainerShell(ev.ContainerId, bg_context)
+			// subshells.OpenContainerShell(ev.ContainerId, bg_context)
+			view.ChangeToFileEdittor(bg_context)
 		case window.ChangeToFileEdittorEvent:
-			subshells.EditDcYaml(bg_context)
+			// subshells.EditDcYaml(bg_context)
+			view.ChangeToFileEdittor(bg_context)
 		case window.ChangeToLogsWindowEvent:
 			view.ChangeToLogView(bg_context, ev.ContainerId)
 		case window.ChangeToMainHelpEvent:
 			view.DisplayMainHelp(bg_context)
 		case window.ChangeToLogsHelpEvent:
 			view.DisplayLogHelp(bg_context)
+		case window.ChangeToEdittorHelpEvent:
+			view.DisplayEdittorHelp(bg_context)
 		case window.ReturnUpperViewEvent:
 			view.ReturnToUpperView()
 		case window.FatalErrorEvent:

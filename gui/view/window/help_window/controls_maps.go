@@ -5,6 +5,8 @@ type Control struct {
 	meaning string
 }
 
+// TODO: fix when done
+
 func MainControls() []Control {
 	return []Control{
 		{"'h'", "Display more controls"},
@@ -36,5 +38,13 @@ func LogControls() []Control {
 		{"'N'", "Jump to previous search result"},
 		{"Up/Down", "Browse logs"},
 		{"'f'", "Resume following logs"},
+	}
+}
+
+func EdittorControls() []Control {
+	return []Control{
+		{"Ctrl+H", "Display controls"},
+		{"'h'", "Exit controls"},
+		{"Ctrl+V", "Exit edittor"},
 	}
 }

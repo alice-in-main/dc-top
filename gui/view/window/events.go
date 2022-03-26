@@ -119,6 +119,22 @@ func NewChangeToLogsHelpEvent() ChangeToLogsHelpEvent {
 
 // ---------
 
+type ChangeToEdittorHelpEvent struct {
+	t time.Time
+}
+
+func (e ChangeToEdittorHelpEvent) When() time.Time {
+	return e.t
+}
+
+func NewChangeToEdittorHelpEvent() ChangeToEdittorHelpEvent {
+	return ChangeToEdittorHelpEvent{
+		t: time.Now(),
+	}
+}
+
+// ---------
+
 type ChangeToContainerShellEvent struct {
 	t           time.Time
 	ContainerId string

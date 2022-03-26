@@ -11,9 +11,10 @@ type TextBox struct {
 	prefix_len    int
 	default_style tcell.Style
 	cursor_style  tcell.Style
+	focused       bool
 }
 
-func NewTextBox(prefix StringStyler, prefix_len int, default_style tcell.Style, cursor_style tcell.Style) TextBox {
+func NewTextBox(prefix StringStyler, prefix_len int, default_style tcell.Style, cursor_style tcell.Style, focused bool) TextBox {
 	return TextBox{
 		text:          "",
 		cursor_pos:    0,
@@ -21,12 +22,28 @@ func NewTextBox(prefix StringStyler, prefix_len int, default_style tcell.Style, 
 		prefix_len:    prefix_len,
 		default_style: default_style,
 		cursor_style:  cursor_style,
+		focused:       focused,
 	}
 }
 
 func (box *TextBox) WriteRune(r rune) {
 	box.text = box.text[:box.cursor_pos] + string(r) + box.text[box.cursor_pos:]
 	box.cursor_pos++
+}
+
+func (box *TextBox) SetText(text string) {
+	text_bytes := []byte(text)
+	var copied_byted = make([]byte, len(text_bytes))
+	copy(copied_byted, text_bytes)
+	box.text = string(copied_byted)
+}
+
+func (box *TextBox) Focus() {
+	box.focused = true
+}
+
+func (box *TextBox) Unfocus() {
+	box.focused = false
 }
 
 func (box *TextBox) Reset() {
@@ -59,6 +76,14 @@ func (box *TextBox) Backspace() {
 	}
 }
 
+func (box *TextBox) Home() {
+	box.cursor_pos = 0
+}
+
+func (box *TextBox) End() {
+	box.cursor_pos = len(box.text)
+}
+
 func (box *TextBox) Value() string {
 	return box.text
 }
@@ -78,6 +103,10 @@ func (box *TextBox) HandleKey(ev *tcell.EventKey) {
 		box.Backspace()
 	case tcell.KeyDelete:
 		box.Delete()
+	case tcell.KeyHome:
+		box.Home()
+	case tcell.KeyEnd:
+		box.End()
 	case tcell.KeyCtrlA:
 		box.Reset()
 	}
@@ -92,7 +121,7 @@ func (box *TextBox) Style() StringStyler {
 			r = rune(box.text[i])
 		}
 
-		if i == box.cursor_pos {
+		if i == box.cursor_pos && box.focused {
 			s = box.cursor_style
 		}
 		return r, s

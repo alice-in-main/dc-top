@@ -68,14 +68,14 @@ func CopyFile(src, dst string) error {
 	return out.Close()
 }
 
-func DeepCopy(s string) string {
-	b := make([]byte, len(s))
-	copy(b, s)
-	return *(*string)(unsafe.Pointer(&b))
-}
-
 func ZeroIfNegative(n *int) {
 	if *n < 0 {
 		*n = 0
 	}
+}
+
+func Clone(s string) string {
+	b := make([]byte, len(s))
+	copy(b, s)
+	return *(*string)(unsafe.Pointer(&b))
 }

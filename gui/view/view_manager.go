@@ -1,17 +1,18 @@
 package view
 
 import (
-	"bufio"
 	"context"
+	"dc-top/docker/compose"
 	"dc-top/gui/view/window"
 	"dc-top/gui/view/window/bar_window"
 	"dc-top/gui/view/window/container_logs_window"
 	"dc-top/gui/view/window/containers_window"
 	"dc-top/gui/view/window/docker_info_window"
+	"dc-top/gui/view/window/edittor_window"
 	"dc-top/gui/view/window/general_info_window"
 	"dc-top/gui/view/window/help_window"
-	"dc-top/gui/view/window/subshell_window"
 	"log"
+	"os"
 	"sync"
 
 	"github.com/gdamore/tcell/v2"
@@ -21,10 +22,11 @@ type _viewName uint8
 
 const (
 	main _viewName = iota
-	logs
 	main_help
+	logs
 	logs_help
-	subshell
+	edittor
+	edittor_help
 	none
 )
 
@@ -103,26 +105,28 @@ func ChangeToLogView(bg_context context.Context, container_id string) {
 	changeView(bg_context, logs, main, &logs_view)
 }
 
-type testReader struct{}
-
-func (testReader) Read(b []byte) (int, error) {
-	b[0] = '7'
-	return 1, nil
-}
-
-func ChangeToSubshell(bg_context context.Context) {
+func ChangeToFileEdittor(bg_context context.Context) {
 	log.Printf("Changing to subshell")
-	var reader bufio.Reader = *bufio.NewReader(testReader{})
-	subshell_window := subshell_window.NewSubshellWindow(reader)
-	subshell_view := NewView(map[window.WindowType]window.Window{
-		window.Subshell: &subshell_window,
-	}, window.Subshell)
-	changeView(bg_context, subshell, main, &subshell_view)
+	file, err := os.Open(compose.DcYamlPath())
+	if err != nil {
+		log.Printf("Failed to open file %s", compose.DcYamlPath())
+		return
+	}
+	edittor_window := edittor_window.NewEdittorWindow(file)
+	edittor_view := NewView(map[window.WindowType]window.Window{
+		window.Edittor: &edittor_window,
+	}, window.Edittor)
+	changeView(bg_context, edittor, main, &edittor_view)
 }
 
 func DisplayLogHelp(bg_context context.Context) {
 	log.Printf("Changing to log help")
 	changeToHelpView(bg_context, logs_help, logs, help_window.LogControls())
+}
+
+func DisplayEdittorHelp(bg_context context.Context) {
+	log.Printf("Changing to edittor help")
+	changeToHelpView(bg_context, edittor_help, edittor, help_window.EdittorControls())
 }
 
 func HandleKeyPress(key *tcell.EventKey) {
@@ -182,6 +186,7 @@ func changeView(bg_context context.Context, new_view_key, prev_view_key _viewNam
 	_views[new_view_key] = view
 	_view_stack.push(new_view_key)
 	view.Open(bg_context)
+	log.Println("opened")
 }
 
 func currentViewName() _viewName {

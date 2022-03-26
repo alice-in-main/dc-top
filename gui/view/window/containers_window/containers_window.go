@@ -139,7 +139,8 @@ func (w *ContainersWindow) main() {
 			elements.TextDrawer(" /", tcell.StyleDefault.Foreground(tcell.ColorYellow)),
 			2,
 			tcell.StyleDefault,
-			tcell.StyleDefault.Background(tcell.ColorWhite).Foreground(tcell.ColorBlack)),
+			tcell.StyleDefault.Background(tcell.ColorWhite).Foreground(tcell.ColorBlack),
+			true),
 		index_of_top_container: 0,
 		table_height:           calcTableHeight(y1, y2),
 		main_sort_type:         docker.State,
@@ -225,7 +226,7 @@ func (w *ContainersWindow) dockerDataStreamer() {
 				log.Printf("Stopped streaming containers data 1")
 				return
 			default:
-				log.Printf("Sending back new data")
+				// log.Printf("Sending back new data")
 				w.new_container_data_chan <- new_data
 			}
 		case <-w.window_context.Done():
