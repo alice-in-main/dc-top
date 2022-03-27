@@ -15,6 +15,7 @@ import (
 // TODO: random log file name + log levels
 // TODO: finish dc
 // TODO: fix containers scrolling (after deletion and last container with search)
+// TODO: add env for dc
 
 type windowMode uint8
 

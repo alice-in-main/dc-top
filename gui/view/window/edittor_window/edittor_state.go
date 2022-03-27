@@ -109,39 +109,47 @@ func (state *edittorState) handleKeypress(ev *tcell.EventKey) {
 		window.GetScreen().PostEvent(window.NewChangeToEdittorHelpEvent())
 	case tcell.KeyBackspace2:
 		if state.focused_col > 0 {
-			state.content[state.focused_line] = state.content[state.focused_line][:state.focused_col-1] + state.content[state.focused_line][state.focused_col:]
+			removeStrFromLine(1, &state.content, state.focused_line, state.focused_col-1)
 			state.handleColFocusChange(state.focused_col - 1)
 		} else if state.focused_col == 0 {
 			if state.focused_line > 0 {
 				new_col := len(state.content[state.focused_line-1])
-				state.content[state.focused_line-1] = state.content[state.focused_line-1] + state.content[state.focused_line]
-				state.content = append(state.content[:state.focused_line], state.content[state.focused_line+1:]...)
+				collapseLine(&state.content, state.focused_line-1)
 				state.handleLineFocusChange(state.focused_line - 1)
 				state.handleColFocusChange(new_col)
+				state.change_stack.commitLineRemove(state.focused_line, state.focused_col)
 			}
 		}
 	case tcell.KeyEnter:
-		line := state.content[state.focused_line]
-		first_half_line := line[:state.focused_col]
-		second_half_line := line[state.focused_col:]
-		first_half := state.content[:state.focused_line+1]
-		second_half := append([]string{""}, state.content[state.focused_line+1:]...)
-		state.content = append(first_half, second_half...)
-		state.content[state.focused_line] = first_half_line
-		state.content[state.focused_line+1] = second_half_line
+		breakLine(&state.content, state.focused_line, state.focused_col)
+		state.change_stack.commitLineAdd(state.focused_line, state.focused_col)
 		state.handleLineFocusChange(state.focused_line + 1)
 		state.handleColFocusChange(0)
 	case tcell.KeyRune:
-		line := state.content[state.focused_line]
-		state.change_stack.commitLineChange(line, state.focused_line, state.focused_line, state.focused_col)
-		state.content[state.focused_line] = line[:state.focused_col] + string(ev.Rune()) + line[state.focused_col:]
+		state.change_stack.commitLineChange(string(ev.Rune()), state.focused_line, state.focused_col)
+		addStrToLine(string(ev.Rune()), &state.content, state.focused_line, state.focused_col)
 		state.handleColFocusChange(state.focused_col + 1)
 	case tcell.KeyCtrlZ:
+		var line, col int
+		var err error
 		if ev.Modifiers()&tcell.ModAlt == 0 {
-			state.change_stack.undoChange(state.content)
+			line, col, err = state.change_stack.undoChange(&state.content)
 		} else {
-			state.change_stack.redoChange(state.content)
+			line, col, err = state.change_stack.redoChange(&state.content)
 		}
+		if err == nil {
+			state.handleLineFocusChange(line)
+			state.handleColFocusChange(col)
+		}
+	case tcell.KeyCtrlG:
+		var line, col int
+		if ev.Modifiers()&tcell.ModAlt == 0 {
+			line, col = 0, 0
+		} else {
+			line, col = len(state.content)-1, 0
+		}
+		state.handleLineFocusChange(line)
+		state.handleColFocusChange(col)
 	}
 }
 
