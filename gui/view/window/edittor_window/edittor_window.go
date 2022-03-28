@@ -6,12 +6,14 @@ import (
 	"os"
 
 	"github.com/gdamore/tcell/v2"
+	"golang.org/x/sync/semaphore"
 )
 
 type EdittorWindow struct {
 	window_context       context.Context
 	window_cancel        context.CancelFunc
 	dimensions_generator func() window.Dimensions
+	drawer_semaphore     *semaphore.Weighted
 
 	file *os.File
 
@@ -23,6 +25,7 @@ type EdittorWindow struct {
 func NewEdittorWindow(file *os.File) EdittorWindow {
 
 	return EdittorWindow{
+		drawer_semaphore: semaphore.NewWeighted(1),
 		dimensions_generator: func() window.Dimensions {
 			w, h := window.GetScreen().Size()
 			return window.NewDimensions(0, 0, w-1, h-1, false)
@@ -55,6 +58,8 @@ func (w *EdittorWindow) HandleEvent(ev interface{}, wt window.WindowType) (inter
 
 func (w *EdittorWindow) Disable() {
 	w.enable_toggle <- false
+	w.drawer_semaphore.Acquire(w.window_context, 1)
+	w.drawer_semaphore.Release(1)
 }
 
 func (w *EdittorWindow) Enable() {
@@ -62,5 +67,8 @@ func (w *EdittorWindow) Enable() {
 }
 
 func (w *EdittorWindow) Close() {
+	w.drawer_semaphore.Acquire(w.window_context, 1)
+	defer w.drawer_semaphore.Release(1)
 	w.window_cancel()
+	w.file.Close()
 }

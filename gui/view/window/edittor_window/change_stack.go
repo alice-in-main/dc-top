@@ -2,7 +2,6 @@ package edittor_window
 
 import (
 	"errors"
-	"log"
 )
 
 type changeStack struct {
@@ -17,9 +16,13 @@ func newChangeStack() changeStack {
 	}
 }
 
-func (stack *changeStack) commitLineChange(text string, focused_line int, focused_col int) {
-	log.Printf("saving %s at %d", text, stack.curr_index)
+func (stack *changeStack) commitTextAdditionChange(text string, focused_line int, focused_col int) {
 	stack.changes = append(stack.changes[:stack.curr_index], newTextAdditionChange(text, focused_line, focused_col))
+	stack.curr_index++
+}
+
+func (stack *changeStack) commitTextRemovalChange(text string, focused_line int, focused_col int) {
+	stack.changes = append(stack.changes[:stack.curr_index], newTextRemovalChange(text, focused_line, focused_col))
 	stack.curr_index++
 }
 
@@ -40,6 +43,8 @@ func (stack *changeStack) undoChange(content *[]string) (line, col int, err erro
 		switch _change := _change.(type) {
 		case *textAdditionChange:
 			removeStrFromLine(len(_change.text), content, _change.focused_line, _change.focused_col)
+		case *textRemovalChange:
+			addStrToLine(_change.text, content, _change.focused_line, _change.focused_col)
 		case *lineAddChange:
 			collapseLine(content, _change.focused_line)
 		case *lineRemoveChange:
@@ -56,8 +61,9 @@ func (stack *changeStack) redoChange(content *[]string) (line, col int, err erro
 		_change := stack.changes[stack.curr_index]
 		switch _change := _change.(type) {
 		case *textAdditionChange:
-			log.Printf("redoing %s at %d. position %d, %d", _change.text, stack.curr_index, _change.focused_line, _change.focused_col)
-			(*content)[_change.focused_line] = (*content)[_change.focused_line][:_change.focused_col] + _change.text + (*content)[_change.focused_line][_change.focused_col:]
+			addStrToLine(_change.text, content, _change.focused_line, _change.focused_col)
+		case *textRemovalChange:
+			removeStrFromLine(len(_change.text), content, _change.focused_line, _change.focused_col)
 		case *lineAddChange:
 			breakLine(content, _change.focused_line, _change.focused_col)
 		case *lineRemoveChange:

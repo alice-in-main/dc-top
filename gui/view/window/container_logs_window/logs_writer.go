@@ -178,7 +178,7 @@ func (writer *logsWriter) writeLogs(logs []string) {
 
 func (writer *logsWriter) saveLog(_log string) {
 	const metadata_len = 8
-	var new_log containerLog
+	var new_log singleLog
 	if len(_log) > metadata_len {
 		metadata := _log[:metadata_len]
 		log_line_text := _log[metadata_len:]

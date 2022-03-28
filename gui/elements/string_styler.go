@@ -114,6 +114,21 @@ func HighlightDrawer(str string, substr string, default_style tcell.Style) Strin
 	}
 }
 
+func WidthHighlightDrawer(str string, substr string, default_style tcell.Style, width int) StringStyler {
+	drawer := HighlightDrawer(str, substr, default_style)
+	return func(i int) (rune, tcell.Style) {
+		if i < width {
+			r, s := drawer(i)
+			if i == width-1 && r != '\x00' {
+				r, s = '>', tcell.StyleDefault.Background(tcell.ColorYellow).Foreground(tcell.ColorBlack)
+			}
+			return r, s
+		} else {
+			return '\x00', tcell.StyleDefault
+		}
+	}
+}
+
 func PercentageBarDrawer(description string, percentage float64, bar_len int, extra_info []rune) StringStyler {
 	var high_percentage float64 = 80.0
 	var mid_percentage float64 = 50.0

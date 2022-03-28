@@ -24,6 +24,24 @@ func newTextAdditionChange(text string, focused_line int, focused_col int) *text
 	}
 }
 
+type textRemovalChange struct {
+	text         string
+	focused_line int
+	focused_col  int
+}
+
+func (change *textRemovalChange) focusedCoords() (line, column int) {
+	return change.focused_line, change.focused_col
+}
+
+func newTextRemovalChange(text string, focused_line int, focused_col int) *textRemovalChange {
+	return &textRemovalChange{
+		text:         text,
+		focused_line: focused_line,
+		focused_col:  focused_col,
+	}
+}
+
 type lineAddChange struct {
 	focused_line int
 	focused_col  int

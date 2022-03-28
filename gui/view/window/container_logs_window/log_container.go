@@ -1,11 +1,11 @@
 package container_logs_window
 
 type LogContainer interface {
-	Put(_log *containerLog, index int)
+	Put(_log *singleLog, index int)
 	Search(substr string) []int
-	Get(index int) *containerLog
+	Get(index int) *singleLog
 }
 
-func emptyLog() containerLog {
+func emptyLog() singleLog {
 	return newLog("", true)
 }
