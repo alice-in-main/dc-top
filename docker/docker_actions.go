@@ -47,6 +47,7 @@ func StreamContainerLogs(id string, writer io.Writer, ctx context.Context, cance
 	if err != nil {
 		log.Println(err)
 		cancel()
+		return
 	}
 	defer reader.Close()
 
