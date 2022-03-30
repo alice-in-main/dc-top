@@ -3,6 +3,7 @@ package containers_window
 import (
 	docker "dc-top/docker"
 	"dc-top/gui/elements"
+	"dc-top/gui/view/window"
 	"fmt"
 	"log"
 	"math"
@@ -31,9 +32,14 @@ var relative_cell_widths = []float64{
 
 func dockerStatsDrawerGenerator(state tableState, window_width int) (func(x, y int) (rune, tcell.Style), error) {
 	if state.window_mode == containers {
+		_, y1, _, y2 := window.ContainerWindowSize()
+		state.table_height = calcTableHeight(y1, y2)
+		state.inspect_height = y2 - y1 - 2 + 1
+
 		data_table := generateTable(&state, window_width)
 		search_row := state.search_box.Style()
-		search_filter_message := elements.TextDrawer(fmt.Sprintf("Showing only containers containing '%s'", state.search_box.Value()), tcell.StyleDefault)
+		search_filter_message := elements.TextDrawer(fmt.Sprintf("Showing only containers containing '%s'", state.search_box.Value()), tcell.StyleDefault.Bold(true))
+		empty_buttom_row := elements.RuneNRepeater('\u2192', 1, tcell.StyleDefault.Foreground(tcell.ColorOrangeRed))
 
 		return func(x, y int) (rune, tcell.Style) {
 			if y == 0 || y == 1 {
@@ -44,6 +50,8 @@ func dockerStatsDrawerGenerator(state tableState, window_width int) (func(x, y i
 					return search_row(x)
 				} else if state.keyboard_mode == regular && state.search_box.Value() != "" {
 					return search_filter_message(x)
+				} else {
+					return empty_buttom_row(x)
 				}
 			}
 			if y+state.index_of_top_container < len(data_table) {

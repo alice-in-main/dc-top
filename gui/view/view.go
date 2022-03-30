@@ -67,6 +67,9 @@ func (view *View) Disable() {
 }
 
 func (view *View) Close() {
+	for _, win := range view.windows {
+		win.Close()
+	}
 	view.view_cancel()
 	view.windows = make(map[window.WindowType]window.Window)
 }

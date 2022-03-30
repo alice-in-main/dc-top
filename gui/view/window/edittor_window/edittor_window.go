@@ -3,6 +3,7 @@ package edittor_window
 import (
 	"context"
 	"dc-top/gui/view/window"
+	"log"
 	"os"
 
 	"github.com/gdamore/tcell/v2"
@@ -28,7 +29,7 @@ func NewEdittorWindow(file *os.File) EdittorWindow {
 		drawer_semaphore: semaphore.NewWeighted(1),
 		dimensions_generator: func() window.Dimensions {
 			w, h := window.GetScreen().Size()
-			return window.NewDimensions(0, 0, w-1, h-1, false)
+			return window.NewDimensions(0, 0, w-1, h-2, false)
 		},
 		file:          file,
 		resize_chan:   make(chan interface{}),
@@ -67,8 +68,10 @@ func (w *EdittorWindow) Enable() {
 }
 
 func (w *EdittorWindow) Close() {
+	log.Println("closing")
 	w.drawer_semaphore.Acquire(w.window_context, 1)
 	defer w.drawer_semaphore.Release(1)
 	w.window_cancel()
 	w.file.Close()
+	log.Println("closed")
 }

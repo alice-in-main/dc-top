@@ -2,9 +2,7 @@ package subshells
 
 import (
 	"context"
-	"dc-top/docker/compose"
 	"dc-top/gui/view/window"
-	"dc-top/gui/view/window/bar_window"
 	"io"
 	"log"
 	"os"
@@ -26,39 +24,6 @@ func OpenContainerShell(id string, ctx context.Context) {
 		}
 		screen.PostEvent(window.NewResumeWindowsEvent())
 	}()
-}
-
-func EditDcYaml(ctx context.Context) {
-	screen := window.GetScreen()
-	if compose.DcModeEnabled() {
-		screen.PostEvent(window.NewPauseWindowsEvent())
-		go func() {
-			compose.CreateBackupYaml()
-			cmd := exec.CommandContext(ctx, "vim", compose.DcYamlPath())
-			err := runCmdInPty(ctx, cmd)
-			if err != nil {
-				log.Fatal(err)
-			}
-			if compose.ValidateYaml(ctx) {
-				screen.PostEvent(window.NewResumeWindowsEvent())
-				if compose.IsYamlChanged() {
-					bar_window.Info([]rune("Restarting docker-compose"))
-					err := compose.Up(ctx)
-					if err != nil {
-						bar_window.Err([]rune("Failed to start docker-compose"))
-					}
-				} else {
-					bar_window.Info([]rune("No changes detected"))
-				}
-			} else {
-				bar_window.Err([]rune("Docker compose yaml is invalid"))
-				compose.RestoreFromBackup()
-				screen.PostEvent(window.NewResumeWindowsEvent())
-			}
-		}()
-	} else {
-		bar_window.Err([]rune("Docker compose mode is disabled"))
-	}
 }
 
 func runCmdInPty(ctx context.Context, command *exec.Cmd, args ...string) error {

@@ -1,11 +1,11 @@
-version: '3.7' #oaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaab
+version: '3.7' #axoxaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabaac
 services:
   zookeeper:
     restart: always
     container_name: zookeeper
     image: nginx # 'bitnami/zookeeper:latest'
     ports:
-      - '2181:2181'
+      - '1123:2182' # a
     environment:
       - ALLOW_ANONYMOUS_LOGIN=yes
     deploy:
@@ -13,7 +13,6 @@ services:
         limits:
           memory: 512M
   kafka:
-    container_name: kafka
     image: nginx # 'bitnami/kafka:latest'
     ports:
       - '9092:9092'
@@ -34,7 +33,7 @@ services:
           memory: 512M
   zookeeper2:
     restart: always
-    container_name: zookeeper
+    container_name: zookeeper2
     image: nginx # 'bitnami/zookeeper:latest'
     ports:
       - '2181:2181'
@@ -45,10 +44,10 @@ services:
         limits:
           memory: 512M
   kafka2:
-    container_name: kafka
+    container_name: kafka2
     image: nginx # 'bitnami/kafka:latest'
     ports:
-      - '9092:9092'
+      - '9093:9092'
     environment:
       - KAFKA_BROKER_ID=1
       - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092

@@ -5,22 +5,6 @@ import (
 	"time"
 )
 
-// type ChangeToDefaultViewEvent struct {
-// 	t time.Time
-// }
-
-// func (e ChangeToDefaultViewEvent) When() time.Time {
-// 	return e.t
-// }
-
-// func NewChangeToDefaultViewEvent() ChangeToDefaultViewEvent {
-// 	return ChangeToDefaultViewEvent{
-// 		t: time.Now(),
-// 	}
-// }
-
-// ---------
-
 type ReturnUpperViewEvent struct {
 	t time.Time
 }
@@ -247,5 +231,21 @@ func ExitIfErr(err error) {
 	if err != nil && err.Error() != "context canceled" {
 		log.Printf("a fatal error occured: %s\n", err)
 		GetScreen().PostEvent(NewFatalErrorEvent(err))
+	}
+}
+
+// ---------
+
+type UpdateDockerCompose struct {
+	t time.Time
+}
+
+func (e UpdateDockerCompose) When() time.Time {
+	return e.t
+}
+
+func NewUpdateDockerCompose() UpdateDockerCompose {
+	return UpdateDockerCompose{
+		t: time.Now(),
 	}
 }

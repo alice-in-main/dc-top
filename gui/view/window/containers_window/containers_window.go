@@ -14,8 +14,8 @@ import (
 
 // TODO: random log file name + log levels
 // TODO: finish dc
-// TODO: fix containers scrolling (after deletion and last container with search)
-// TODO: add env for dc
+// TODO: add pgup and pgdn where relevant
+// TODO: pages?
 
 type windowMode uint8
 
@@ -227,7 +227,6 @@ func (w *ContainersWindow) dockerDataStreamer() {
 				log.Printf("Stopped streaming containers data 1")
 				return
 			default:
-				// log.Printf("Sending back new data")
 				w.new_container_data_chan <- new_data
 			}
 		case <-w.window_context.Done():

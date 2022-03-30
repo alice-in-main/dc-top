@@ -228,6 +228,10 @@ func (containers *ContainerData) GetSortedData(main_sort_type, secondary_sort_ty
 	return new_data
 }
 
+func (containers *ContainerData) DcServices() compose.Services {
+	return *containers.dc_services
+}
+
 func (containers *ContainerData) Filter(substr string) []ContainerDatum {
 	filtered_data := make([]ContainerDatum, 0)
 	for _, datum := range containers.GetData() {

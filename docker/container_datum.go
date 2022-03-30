@@ -150,5 +150,6 @@ func getNewStats(id string, stats_stream *types.ContainerStats) (ContainerMainSt
 		new_network.LastUpdateTime = time.Now()
 		container_stats_data.Network[key] = new_network
 	}
+	container_stats_data.Name = strings.TrimPrefix(container_stats_data.Name, "/")
 	return container_stats_data, nil
 }

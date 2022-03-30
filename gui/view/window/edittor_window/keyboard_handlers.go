@@ -1,7 +1,11 @@
 package edittor_window
 
 import (
+	"dc-top/docker/compose"
 	"dc-top/gui/view/window"
+	"dc-top/gui/view/window/bar_window"
+	"fmt"
+	"strings"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -26,11 +30,69 @@ func (state *edittorState) handleKeypress(ev *tcell.EventKey) {
 }
 
 func (state *edittorState) handleSearchKey(ev *tcell.EventKey) {
-
+	key := ev.Key()
+	switch key {
+	case tcell.KeyEscape:
+		state.search_box.Reset()
+		state.switchToRegular()
+	case tcell.KeyCtrlD:
+		state.search_box.Reset()
+		state.switchToRegular()
+	case tcell.KeyEnter:
+		state.search_result_row_indices = make([]int, 0)
+		for i, row := range state.content {
+			if strings.Contains(row, state.search_box.Value()) {
+				state.search_result_row_indices = append(state.search_result_row_indices, i)
+			}
+		}
+		if len(state.search_result_row_indices) > 0 {
+			state.curr_search_result = 0
+			state.focused_line = state.search_result_row_indices[state.curr_search_result]
+			state.switchToLookup()
+		} else {
+			state.switchToRegular()
+			bar_window.Err([]rune(fmt.Sprintf("Found 0 results for '%s'", state.search_box.Value())))
+		}
+	default:
+		state.search_box.HandleKey(ev)
+	}
 }
 
 func (state *edittorState) handleLookupKey(ev *tcell.EventKey) {
-
+	key := ev.Key()
+	switch key {
+	case tcell.KeyRune:
+		r := ev.Rune()
+		switch r {
+		case 'n':
+			if len(state.search_result_row_indices) > 0 {
+				num_results := len(state.search_result_row_indices)
+				state.curr_search_result = (state.curr_search_result + 1) % num_results
+				state.focused_line = state.search_result_row_indices[state.curr_search_result]
+				bar_window.Info([]rune(fmt.Sprintf("Showing result %d/%d", state.curr_search_result+1, num_results)))
+			}
+		case 'N':
+			if len(state.search_result_row_indices) > 0 {
+				num_results := len(state.search_result_row_indices)
+				if state.curr_search_result == 0 {
+					state.curr_search_result += num_results
+				}
+				state.curr_search_result = (state.curr_search_result - 1) % len(state.search_result_row_indices)
+				state.focused_line = state.search_result_row_indices[state.curr_search_result]
+				bar_window.Info([]rune(fmt.Sprintf("Showing result %d/%d", state.curr_search_result+1, num_results)))
+			}
+		}
+	case tcell.KeyEscape:
+		state.switchToRegular()
+	case tcell.KeyCtrlD:
+		state.switchToRegular()
+	case tcell.KeyEnter:
+		state.switchToRegular()
+	case tcell.KeyCtrlF:
+		state.switchToSearch()
+	default:
+		state.search_box.HandleKey(ev)
+	}
 }
 
 func (state *edittorState) handleRegularKey(ev *tcell.EventKey) {
@@ -48,7 +110,11 @@ func (state *edittorState) handleRegularKey(ev *tcell.EventKey) {
 		state.handleColFocusChange(0)
 	case tcell.KeyEnd:
 		state.handleColFocusChange(len(state.content[state.focused_line]))
-	case tcell.KeyCtrlV:
+	case tcell.KeyCtrlS:
+		state.finalizeEdittor()
+	case tcell.KeyCtrlQ:
+		window.GetScreen().PostEvent(window.NewReturnUpperViewEvent())
+	case tcell.KeyEscape:
 		window.GetScreen().PostEvent(window.NewReturnUpperViewEvent())
 	case tcell.KeyCtrlH:
 		window.GetScreen().PostEvent(window.NewChangeToEdittorHelpEvent())
@@ -63,6 +129,16 @@ func (state *edittorState) handleRegularKey(ev *tcell.EventKey) {
 				collapseLine(&state.content, state.focused_line-1)
 				state.handleLineFocusChange(state.focused_line - 1)
 				state.handleColFocusChange(new_col)
+				state.change_stack.commitLineRemove(state.focused_line, state.focused_col)
+			}
+		}
+	case tcell.KeyDelete:
+		if state.focused_col < len(state.content[state.focused_line]) {
+			state.change_stack.commitTextRemovalChange(string(state.content[state.focused_line][state.focused_col]), state.focused_line, state.focused_col)
+			removeStrFromLine(1, &state.content, state.focused_line, state.focused_col)
+		} else if state.focused_col == len(state.content[state.focused_line]) {
+			if state.focused_line < len(state.content)-1 {
+				collapseLine(&state.content, state.focused_line)
 				state.change_stack.commitLineRemove(state.focused_line, state.focused_col)
 			}
 		}
@@ -87,7 +163,7 @@ func (state *edittorState) handleRegularKey(ev *tcell.EventKey) {
 			state.handleLineFocusChange(line)
 			state.handleColFocusChange(col)
 		}
-	case tcell.KeyCtrlN:
+	case tcell.KeyCtrlF:
 		state.keyboard_mode = search
 	case tcell.KeyCtrlG:
 		var line, col int
@@ -98,7 +174,27 @@ func (state *edittorState) handleRegularKey(ev *tcell.EventKey) {
 		}
 		state.handleLineFocusChange(line)
 		state.handleColFocusChange(col)
+	case tcell.KeyCtrlA:
+		state.search_box.Reset()
 	}
+}
+
+func (state *edittorState) finalizeEdittor() {
+	if !contentsEquals(state.content, state.original_content) {
+		compose.CreateBackupYaml()
+		err := writeNewContent(state.content, state.file)
+		if !compose.ValidateYaml(state.ctx) {
+			compose.RestoreFromBackup()
+			bar_window.Err([]rune("docker-compose yaml contains errors"))
+			return
+		}
+		if err != nil {
+			bar_window.Err([]rune(fmt.Sprintf("Got error '%s' while writing to file", err.Error())))
+			return
+		}
+		window.GetScreen().PostEvent(window.NewUpdateDockerCompose())
+	}
+	window.GetScreen().PostEvent(window.NewReturnUpperViewEvent())
 }
 
 func (state *edittorState) handleLineFocusChange(new_focus_index int) {
@@ -120,4 +216,19 @@ func (state *edittorState) handleColFocusChange(new_focus_index int) {
 		state.handleLineFocusChange(state.focused_line + 1)
 		state.focused_col = 0
 	}
+}
+
+func (state *edittorState) switchToRegular() {
+	state.keyboard_mode = regular
+	bar_window.Info([]rune("Exitted search"))
+}
+
+func (state *edittorState) switchToSearch() {
+	state.keyboard_mode = search
+	bar_window.Info([]rune("Searching..."))
+}
+
+func (state *edittorState) switchToLookup() {
+	bar_window.Info([]rune("Press n to find next result"))
+	state.keyboard_mode = lookup
 }

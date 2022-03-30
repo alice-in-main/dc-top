@@ -3,7 +3,6 @@ package containers_window
 import (
 	docker "dc-top/docker"
 	"dc-top/gui/elements"
-	"dc-top/gui/view/window"
 	"log"
 )
 
@@ -28,10 +27,6 @@ type tableState struct {
 
 func handleResize(win *ContainersWindow, table_state tableState) tableState {
 	log.Printf("Resize request\n")
-	_, y1, _, y2 := window.ContainerWindowSize()
-	table_state.table_height = calcTableHeight(y1, y2)
-	table_state.inspect_height = y2 - y1 - 2 + 1
-	log.Printf("table height is %d\n", table_state.table_height)
 	restartIndex(&table_state)
 	return table_state
 }

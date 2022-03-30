@@ -62,7 +62,7 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 			} else {
 				bar_window.Info([]rune("Restarting docker compose..."))
 				go func() {
-					if err := compose.Up(w.window_context); err != nil {
+					if err := compose.Restart(w.window_context); err != nil {
 						bar_window.Err([]rune("Failed to restart docker compose (Maybe updating will work 'u')"))
 					}
 				}()
@@ -131,7 +131,6 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 				if !compose.ValidateYaml(w.window_context) { // TODO: make this faster
 					bar_window.Err([]rune("docker compose yaml syntax is invalid"))
 				} else {
-					compose.CreateBackupYaml()
 					window.GetScreen().PostEvent(window.NewChangeToFileEdittorEvent(compose.DcYamlPath(), window.ContainersHolder))
 				}
 			} else {

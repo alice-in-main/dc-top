@@ -2,8 +2,10 @@ package gui
 
 import (
 	"context"
+	"dc-top/docker/compose"
 	"dc-top/gui/view"
 	"dc-top/gui/view/window"
+	"dc-top/gui/view/window/bar_window"
 	"fmt"
 	"log"
 
@@ -52,10 +54,9 @@ func Draw() error {
 		case window.ResumeWindowsEvent:
 			view.CurrentView().ResumeWindows()
 		case window.ChangeToContainerShellEvent:
+			view.ChangeToSubshell(bg_context, ev.ContainerId)
 			// subshells.OpenContainerShell(ev.ContainerId, bg_context)
-			view.ChangeToFileEdittor(bg_context)
 		case window.ChangeToFileEdittorEvent:
-			// subshells.EditDcYaml(bg_context)
 			view.ChangeToFileEdittor(bg_context)
 		case window.ChangeToLogsWindowEvent:
 			view.ChangeToLogView(bg_context, ev.ContainerId)
@@ -67,6 +68,14 @@ func Draw() error {
 			view.DisplayEdittorHelp(bg_context)
 		case window.ReturnUpperViewEvent:
 			view.ReturnToUpperView()
+		case window.UpdateDockerCompose:
+			go func() {
+				_err := compose.Up(bg_context)
+				if _err != nil {
+					bar_window.Err([]rune(fmt.Sprintf("Updating docker-compose failed. '%s'", _err)))
+				}
+			}()
+			bar_window.Info([]rune("Updating docker-compose"))
 		case window.FatalErrorEvent:
 			err := fmt.Errorf("a fatal error occured at %s:\n%s", ev.When(), ev.Err)
 			log.Println(err.Error())

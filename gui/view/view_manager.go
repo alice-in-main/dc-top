@@ -11,6 +11,7 @@ import (
 	"dc-top/gui/view/window/edittor_window"
 	"dc-top/gui/view/window/general_info_window"
 	"dc-top/gui/view/window/help_window"
+	"dc-top/gui/view/window/subshell_window"
 	"log"
 	"os"
 	"sync"
@@ -27,6 +28,7 @@ const (
 	logs_help
 	edittor
 	edittor_help
+	subshell
 	none
 )
 
@@ -106,17 +108,39 @@ func ChangeToLogView(bg_context context.Context, container_id string) {
 }
 
 func ChangeToFileEdittor(bg_context context.Context) {
-	log.Printf("Changing to subshell")
+	log.Printf("Changing to edittor")
 	file, err := os.Open(compose.DcYamlPath())
 	if err != nil {
 		log.Printf("Failed to open file %s", compose.DcYamlPath())
 		return
 	}
 	edittor_window := edittor_window.NewEdittorWindow(file)
+
+	edittor_dimensions_generator := func() window.Dimensions {
+		x1, y1, x2, y2 := window.LogsBarWindowSize()
+		return window.NewDimensions(x1, y1, x2, y2, false)
+	}
+	edittor_bar_window := bar_window.NewBarWindow(edittor_dimensions_generator)
+
 	edittor_view := NewView(map[window.WindowType]window.Window{
 		window.Edittor: &edittor_window,
+		window.Bar:     &edittor_bar_window,
 	}, window.Edittor)
 	changeView(bg_context, edittor, main, &edittor_view)
+}
+
+func ChangeToSubshell(bg_context context.Context, id string) {
+	log.Printf("Changing to subshell")
+
+	window.GetScreen().Clear()
+	window.GetScreen().Show()
+
+	subshell_window := subshell_window.NewSubshellWindow(id)
+
+	subshell_view := NewView(map[window.WindowType]window.Window{
+		window.Subshell: &subshell_window,
+	}, window.Subshell)
+	changeView(bg_context, subshell, main, &subshell_view)
 }
 
 func DisplayLogHelp(bg_context context.Context) {

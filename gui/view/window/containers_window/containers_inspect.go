@@ -14,7 +14,6 @@ import (
 
 func generatePrettyInspectInfo(state tableState, window_width int) (map[int]elements.StringStyler, error) {
 	var info map[int]elements.StringStyler = make(map[int]elements.StringStyler)
-
 	var info_arr []elements.StringStyler = make([]elements.StringStyler, 0)
 
 	index, err := findIndexOfId(state.containers_data.GetData(), state.focused_id)
@@ -56,6 +55,7 @@ func generatePrettyInspectInfo(state tableState, window_width int) (map[int]elem
 		generateInspectSeperator(),
 		elements.TextDrawer("Ports:", tcell.StyleDefault),
 	)
+
 	port_map := generatePortMap(inspect_info.NetworkSettings.Ports)
 	for _, port_binding := range port_map {
 		info_arr = append(info_arr, elements.TextDrawer(port_binding, tcell.StyleDefault))
@@ -63,10 +63,12 @@ func generatePrettyInspectInfo(state tableState, window_width int) (map[int]elem
 	info_arr = append(info_arr, generateInspectSeperator(),
 		elements.TextDrawer("Mounts:", tcell.StyleDefault),
 	)
+
 	parsed_mounts := generateMountsMap(inspect_info.Mounts)
 	for _, mount := range parsed_mounts {
 		info_arr = append(info_arr, elements.TextDrawer(mount, tcell.StyleDefault))
 	}
+
 	info_arr = append(info_arr, generateInspectSeperator(),
 		elements.TextDrawer("Network Usage:", tcell.StyleDefault),
 	)
@@ -75,6 +77,9 @@ func generatePrettyInspectInfo(state tableState, window_width int) (map[int]elem
 		return info, err
 	}
 	info_arr = append(info_arr, network_usage...)
+
+	info_arr = append(info_arr, generateInspectSeperator())
+
 	var row_offset int
 	num_rows := len(info_arr)
 	if num_rows > state.inspect_height {

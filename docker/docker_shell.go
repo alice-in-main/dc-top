@@ -11,6 +11,34 @@ import (
 	"github.com/gdamore/tcell/v2"
 )
 
+func OpenShell(id string, ctx context.Context, shell string) (*types.HijackedResponse, error) {
+	var cfg = types.ExecConfig{
+		Tty:          true,
+		AttachStdin:  true,
+		AttachStderr: true,
+		AttachStdout: true,
+		Cmd:          []string{shell},
+	}
+	shell_ctx, shell_cancel := context.WithCancel(ctx)
+	defer shell_cancel()
+
+	exec_id, err := docker_cli.ContainerExecCreate(shell_ctx, id, cfg)
+	if err != nil {
+		return nil, err
+	}
+	highjacked_conn, err := docker_cli.ContainerExecAttach(shell_ctx, exec_id.ID, types.ExecStartCheck{Tty: true})
+	if err != nil {
+		return nil, err
+	}
+	err = readinessChecker(shell_ctx, exec_id.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	log.Printf("Using %s inside container '%s'\n\r", shell, id)
+	return &highjacked_conn, nil
+}
+
 func OpenShellOld(id string, ctx context.Context, shell string) error {
 	var cfg = types.ExecConfig{
 		Tty:          true,

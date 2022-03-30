@@ -10,5 +10,6 @@ const (
 	ContainerLogs
 	Help
 	Edittor
+	Subshell
 	Other
 )
