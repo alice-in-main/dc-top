@@ -128,7 +128,7 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 			log.Println("Toggling inspect mode")
 		case 'v':
 			if compose.DcModeEnabled() {
-				if !compose.ValidateYaml(w.window_context) { // TODO: make this faster
+				if !compose.ValidateYaml(w.window_context) {
 					bar_window.Err([]rune("docker compose yaml syntax is invalid"))
 				} else {
 					window.GetScreen().PostEvent(window.NewChangeToFileEdittorEvent(compose.DcYamlPath(), window.ContainersHolder))

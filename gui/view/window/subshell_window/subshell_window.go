@@ -5,6 +5,7 @@ import (
 	"dc-top/docker"
 	"dc-top/gui/view/window"
 	"dc-top/utils"
+	"fmt"
 	"log"
 	"strings"
 
@@ -86,6 +87,8 @@ func (w *SubshellWindow) Close() {
 }
 
 func (w *SubshellWindow) main() {
+	window.GetScreen().Clear()
+	window.GetScreen().Show()
 	go w.shellReader()
 	go w.shellDrawer()
 }
@@ -105,6 +108,7 @@ func (w *SubshellWindow) shellReader() {
 		}
 		new_output := string(buff[:n])
 		log.Print(new_output)
+		// fmt.Print(new_output)
 		if w.output[w.output_offset] == "" {
 			w.output[w.output_offset] = utils.Clone(new_output)
 		} else {
@@ -139,16 +143,20 @@ func (w *SubshellWindow) shellDrawer() {
 
 func (w *SubshellWindow) draw() {
 	if w.is_enabled {
-		dimensions := w.dimensions_generator()
-		drawer := func(x, y int) (rune, tcell.Style) {
-			row := w.output[y]
-			if x < len(row) && y < len(w.output) {
-				return rune(w.output[y][x]), tcell.StyleDefault
-			} else {
-				return '\x00', tcell.StyleDefault
-			}
+		for y := 0; y < w.output_offset+1; y++ {
+			fmt.Println(w.output[y])
 		}
-		window.DrawContents(&dimensions, drawer)
-		window.GetScreen().Show()
+
+		// 	dimensions := w.dimensions_generator()
+		// 	drawer := func(x, y int) (rune, tcell.Style) {
+		// 		row := w.output[y]
+		// 		if x < len(row) && y < len(w.output) {
+		// 			return rune(w.output[y][x]), tcell.StyleDefault
+		// 		} else {
+		// 			return '\x00', tcell.StyleDefault
+		// 		}
+		// 	}
+		// 	window.DrawContents(&dimensions, drawer)
+		// 	window.GetScreen().Show()
 	}
 }
