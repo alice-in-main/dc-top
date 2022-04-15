@@ -65,7 +65,7 @@ func (w *SubshellWindow) handleKeyEvent(ev *tcell.EventKey) {
 		w.highjacked_conn.Conn.Write([]byte{52})
 		w.highjacked_conn.Conn.Write([]byte{126})
 	case tcell.KeyRune:
-		a := string(ev.Rune())
-		w.highjacked_conn.Conn.Write([]byte(a))
+		bytes_written := []byte(string(ev.Rune()))
+		w.highjacked_conn.Conn.Write(bytes_written)
 	}
 }

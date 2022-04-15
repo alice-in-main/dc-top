@@ -4,7 +4,6 @@ import (
 	"context"
 	"dc-top/docker"
 	"dc-top/gui/view/window"
-	"dc-top/utils"
 	"fmt"
 	"log"
 	"strings"
@@ -29,7 +28,7 @@ type SubshellWindow struct {
 	highjacked_conn *types.HijackedResponse
 
 	output        [output_len]string
-	output_offset int
+	output_offset int64
 }
 
 func NewSubshellWindow(id string) SubshellWindow {
@@ -94,6 +93,8 @@ func (w *SubshellWindow) main() {
 }
 
 func (w *SubshellWindow) shellReader() {
+	defer window.GetScreen().PostEvent(window.NewReturnUpperViewEvent())
+
 	for {
 		select {
 		case <-w.window_ctx.Done():
@@ -107,21 +108,15 @@ func (w *SubshellWindow) shellReader() {
 			return
 		}
 		new_output := string(buff[:n])
-		log.Print(new_output)
-		// fmt.Print(new_output)
-		if w.output[w.output_offset] == "" {
-			w.output[w.output_offset] = utils.Clone(new_output)
-		} else {
-			w.output[w.output_offset] += string(new_output)
-		}
+		w.output[w.output_offset] += string(new_output)
 
 		lines := strings.Split(w.output[w.output_offset], "\n")
-		for i, line := range lines {
-			index := (w.output_offset + i) % output_len
+		for _, line := range lines {
+			index := w.output_offset % output_len
 			w.output[index] = line
+			w.output_offset++
 		}
 
-		w.output_offset = (w.output_offset + len(lines) - 1) % output_len
 		w.draw_request_ch <- nil
 	}
 }
@@ -143,9 +138,18 @@ func (w *SubshellWindow) shellDrawer() {
 
 func (w *SubshellWindow) draw() {
 	if w.is_enabled {
-		for y := 0; y < w.output_offset+1; y++ {
-			fmt.Println(w.output[y])
+		dimensions := w.dimensions_generator()
+		start_y := w.output_offset + 1 - window.Height(&dimensions)
+		if start_y < 0 {
+			start_y = 0
 		}
+
+		// for y := start_y; y < w.output_offset+1; y++ {
+		// 	fmt.Println(w.output[y])
+		// }
+		text := strings.Join(w.output[start_y:w.output_offset+1], "\n")
+		fmt.Print(text)
+		log.Print(text)
 
 		// 	dimensions := w.dimensions_generator()
 		// 	drawer := func(x, y int) (rune, tcell.Style) {
