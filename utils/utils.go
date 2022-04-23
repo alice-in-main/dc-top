@@ -3,7 +3,9 @@ package utils
 import (
 	"io"
 	"math"
+	"math/rand"
 	"os"
+	"time"
 	"unsafe"
 )
 
@@ -68,14 +70,18 @@ func CopyFile(src, dst string) error {
 	return out.Close()
 }
 
-func ZeroIfNegative(n *int) {
-	if *n < 0 {
-		*n = 0
-	}
-}
-
 func Clone(s string) string {
 	b := make([]byte, len(s))
 	copy(b, s)
 	return *(*string)(unsafe.Pointer(&b))
+}
+
+func RandSeq(n int) string {
+	var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+	rand.Seed(time.Now().UnixNano())
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letters[rand.Intn(len(letters))]
+	}
+	return string(b)
 }

@@ -13,12 +13,15 @@ type View struct {
 
 	windows       map[window.WindowType]window.Window
 	focusedWindow window.WindowType
+
+	ctrl_c_enabled bool
 }
 
 func NewView(windows map[window.WindowType]window.Window, focused window.WindowType) View {
 	return View{
-		windows:       windows,
-		focusedWindow: focused,
+		windows:        windows,
+		focusedWindow:  focused,
+		ctrl_c_enabled: true,
 	}
 }
 

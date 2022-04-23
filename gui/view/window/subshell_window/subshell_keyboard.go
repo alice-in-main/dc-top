@@ -6,6 +6,7 @@ import (
 
 func (w *SubshellWindow) handleKeyEvent(ev *tcell.EventKey) {
 	key := ev.Key()
+
 	switch key {
 	case tcell.KeyEnter:
 		w.highjacked_conn.Conn.Write([]byte{0xA})

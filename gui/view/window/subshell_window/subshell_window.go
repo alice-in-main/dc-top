@@ -6,13 +6,10 @@ import (
 	"dc-top/gui/view/window"
 	"fmt"
 	"log"
-	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/gdamore/tcell/v2"
 )
-
-const output_len = 2000
 
 type SubshellWindow struct {
 	window_ctx    context.Context
@@ -26,9 +23,6 @@ type SubshellWindow struct {
 
 	id              string
 	highjacked_conn *types.HijackedResponse
-
-	output        [output_len]string
-	output_offset int64
 }
 
 func NewSubshellWindow(id string) SubshellWindow {
@@ -48,11 +42,13 @@ func NewSubshellWindow(id string) SubshellWindow {
 func (w *SubshellWindow) Open(view_ctx context.Context) {
 	var err error
 	w.window_ctx, w.window_cancel = context.WithCancel(view_ctx)
+
 	w.highjacked_conn, err = docker.OpenShell(w.id, w.window_ctx, "sh")
 	if err != nil {
 		log.Println("Failed to open shell")
 		return
 	}
+
 	go w.main()
 }
 
@@ -88,8 +84,8 @@ func (w *SubshellWindow) Close() {
 func (w *SubshellWindow) main() {
 	window.GetScreen().Clear()
 	window.GetScreen().Show()
+	fmt.Print("\x1B[H") // clear screen escape character sequence
 	go w.shellReader()
-	go w.shellDrawer()
 }
 
 func (w *SubshellWindow) shellReader() {
@@ -108,59 +104,8 @@ func (w *SubshellWindow) shellReader() {
 			return
 		}
 		new_output := string(buff[:n])
-		w.output[w.output_offset] += string(new_output)
-
-		lines := strings.Split(w.output[w.output_offset], "\n")
-		for _, line := range lines {
-			index := w.output_offset % output_len
-			w.output[index] = line
-			w.output_offset++
+		if w.is_enabled {
+			fmt.Print(new_output)
 		}
-
-		w.draw_request_ch <- nil
-	}
-}
-
-func (w *SubshellWindow) shellDrawer() {
-	for {
-		select {
-		case <-w.draw_request_ch:
-			w.draw()
-		case <-w.resize_ch:
-			w.draw()
-		case w.is_enabled = <-w.enable_toggle:
-			w.draw()
-		case <-w.window_ctx.Done():
-			return
-		}
-	}
-}
-
-func (w *SubshellWindow) draw() {
-	if w.is_enabled {
-		dimensions := w.dimensions_generator()
-		start_y := w.output_offset + 1 - window.Height(&dimensions)
-		if start_y < 0 {
-			start_y = 0
-		}
-
-		// for y := start_y; y < w.output_offset+1; y++ {
-		// 	fmt.Println(w.output[y])
-		// }
-		text := strings.Join(w.output[start_y:w.output_offset+1], "\n")
-		fmt.Print(text)
-		log.Print(text)
-
-		// 	dimensions := w.dimensions_generator()
-		// 	drawer := func(x, y int) (rune, tcell.Style) {
-		// 		row := w.output[y]
-		// 		if x < len(row) && y < len(w.output) {
-		// 			return rune(w.output[y][x]), tcell.StyleDefault
-		// 		} else {
-		// 			return '\x00', tcell.StyleDefault
-		// 		}
-		// 	}
-		// 	window.DrawContents(&dimensions, drawer)
-		// 	window.GetScreen().Show()
 	}
 }

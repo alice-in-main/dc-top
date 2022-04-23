@@ -14,8 +14,6 @@ import (
 
 // TODO: random log file name + log levels
 // TODO: finish dc
-// TODO: add pgup and pgdn where relevant
-// TODO: pages?
 
 type windowMode uint8
 

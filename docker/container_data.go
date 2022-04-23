@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"dc-top/docker/compose"
+	"fmt"
 	"io"
 	"log"
 	"math"
@@ -17,29 +18,28 @@ type ContainerData struct {
 	data                []ContainerDatum
 	main_sort_type      SortType
 	secondary_sort_type SortType
-	// only with docker-compose mode
-	dc_services *compose.Services
-	dc_filters  *filters.Args
 }
 
 func NewContainerData(ctx context.Context) (ContainerData, error) {
-	all_containers_options := types.ContainerListOptions{All: true, Quiet: true}
-
-	dc_filters, err := compose.CreateDcFilters(ctx)
-	if err == nil {
-		all_containers_options.Filters = *dc_filters
-	}
-
-	total_containers, err := docker_cli.ContainerList(ctx, all_containers_options)
+	containers_options := types.ContainerListOptions{All: true, Quiet: true}
+	filters, err := getContainerFilters(ctx)
 	if err != nil {
-		log.Println(total_containers)
+		log.Println("Failed to generate filter data when getting new data")
+		return ContainerData{}, err
+	}
+	containers_options.Filters = filters
+
+	containers, err := docker_cli.ContainerList(ctx, containers_options)
+	if err != nil {
+		log.Println("Failed to get container list on getting new data")
+		log.Println(containers)
 		return ContainerData{}, err
 	}
 
 	var new_data = make([]ContainerDatum, 0)
-	var data_channel = make(chan *ContainerDatum, len(total_containers))
+	var data_channel = make(chan *ContainerDatum, len(containers))
 	go func() {
-		for _, container := range total_containers {
+		for _, container := range containers {
 			go func(_inner_cont types.Container) {
 				container_stats, err := docker_cli.ContainerStats(ctx, _inner_cont.ID, true)
 				if err != nil && err != io.EOF {
@@ -47,7 +47,7 @@ func NewContainerData(ctx context.Context) (ContainerData, error) {
 					if !strings.HasPrefix(err.Error(), "Error response from daemon: No such container") {
 						log.Printf("%s: %s", err, _inner_cont.ID)
 					}
-					data_channel <- nil
+					// data_channel <- nil
 				} else {
 					new_datum, err := NewContainerDatum(ctx, _inner_cont, container_stats)
 					if err != nil {
@@ -58,7 +58,7 @@ func NewContainerData(ctx context.Context) (ContainerData, error) {
 			}(container)
 		}
 	}()
-	for range total_containers {
+	for range containers {
 		new_datum := <-data_channel
 		if new_datum != nil {
 			new_data = append(new_data, *new_datum)
@@ -69,42 +69,34 @@ func NewContainerData(ctx context.Context) (ContainerData, error) {
 		data:                new_data,
 		main_sort_type:      State,
 		secondary_sort_type: Name,
-		dc_filters:          dc_filters,
-	}
-
-	if compose.DcModeEnabled() {
-		dc_services, _err := compose.GenerateDcData(ctx)
-		if _err == nil {
-			new_containers_data.dc_services = &dc_services
-		}
 	}
 
 	return new_containers_data, err
 }
 
 func UpdatedContainerData(ctx context.Context, old_data *ContainerData) (ContainerData, error) {
-	all_containers_options := types.ContainerListOptions{All: true, Quiet: true}
-
-	dc_filters, err := compose.CreateDcFilters(ctx)
-	if err == nil {
-		all_containers_options.Filters = *dc_filters
-	} else {
-		dc_filters = old_data.dc_filters
-	}
-
-	total_containers, err := docker_cli.ContainerList(ctx, all_containers_options)
+	containers_options := types.ContainerListOptions{All: true, Quiet: true}
+	filters, err := getContainerFilters(ctx)
 	if err != nil {
-		log.Println(total_containers)
+		log.Println("Failed to generate filter data when getting updated data")
+		return ContainerData{}, err
+	}
+	containers_options.Filters = filters
+
+	containers, err := docker_cli.ContainerList(ctx, containers_options)
+	if err != nil {
+		log.Println("Failed to get all containers data on updating data")
+		log.Println(containers)
 		return ContainerData{}, err
 	}
 
 	var new_data = make([]ContainerDatum, 0)
-	var data_channel = make(chan *ContainerDatum, len(total_containers))
+	var data_channel = make(chan *ContainerDatum, len(containers))
 
 	go func() {
 		for _, old_datum := range old_data.GetData() {
 			go func(_inner_old_datum ContainerDatum) {
-				if base := findContainerBase(&_inner_old_datum, total_containers); base != nil {
+				if base := findContainerBase(&_inner_old_datum, containers); base != nil {
 					updated_datum, err := UpdatedDatum(ctx, _inner_old_datum, *base)
 					if err != nil {
 						updated_datum.is_deleted = true
@@ -118,7 +110,7 @@ func UpdatedContainerData(ctx context.Context, old_data *ContainerData) (Contain
 	}()
 
 	go func() {
-		for _, container := range total_containers {
+		for _, container := range containers {
 			go func(_inner_cont types.Container) {
 				if !isContainerExists(&_inner_cont, old_data.GetData()) {
 					log.Printf("%s doesn't exist", _inner_cont.Image)
@@ -128,7 +120,7 @@ func UpdatedContainerData(ctx context.Context, old_data *ContainerData) (Contain
 						if !strings.HasPrefix(err.Error(), "Error response from daemon: No such container") {
 							log.Printf("%s: %s", err, _inner_cont.ID)
 						}
-						data_channel <- nil
+						// data_channel <- nil
 					} else {
 						new_datum, err := NewContainerDatum(ctx, _inner_cont, container_stats)
 						if err != nil {
@@ -141,7 +133,7 @@ func UpdatedContainerData(ctx context.Context, old_data *ContainerData) (Contain
 		}
 	}()
 
-	for range total_containers {
+	for range containers {
 		new_datum := <-data_channel
 		if new_datum != nil {
 			new_data = append(new_data, *new_datum)
@@ -152,14 +144,6 @@ func UpdatedContainerData(ctx context.Context, old_data *ContainerData) (Contain
 		data:                new_data,
 		main_sort_type:      State,
 		secondary_sort_type: Name,
-		dc_filters:          dc_filters,
-	}
-
-	if compose.DcModeEnabled() {
-		dc_services, _err := compose.GenerateDcData(ctx)
-		if _err == nil {
-			new_containers_data.dc_services = &dc_services
-		}
 	}
 
 	return new_containers_data, err
@@ -216,8 +200,6 @@ func (containers *ContainerData) GetSortedData(main_sort_type, secondary_sort_ty
 		data:                data_copy,
 		main_sort_type:      main_sort_type,
 		secondary_sort_type: secondary_sort_type,
-		dc_services:         containers.dc_services,
-		dc_filters:          containers.dc_filters,
 	}
 	if reverse {
 		sort.Stable(sort.Reverse(&new_data))
@@ -226,10 +208,6 @@ func (containers *ContainerData) GetSortedData(main_sort_type, secondary_sort_ty
 	}
 
 	return new_data
-}
-
-func (containers *ContainerData) DcServices() compose.Services {
-	return *containers.dc_services
 }
 
 func (containers *ContainerData) Filter(substr string) []ContainerDatum {
@@ -249,6 +227,22 @@ func (containers *ContainerData) Contains(id string) bool {
 		}
 	}
 	return false
+}
+
+func getContainerFilters(ctx context.Context) (filters.Args, error) {
+	var contaiener_filters filters.Args = filters.NewArgs()
+	if compose.DcModeEnabled() {
+		dc_filters, err := compose.GetDcProcesses(ctx)
+		if err != nil {
+			return contaiener_filters, err
+		}
+
+		for _, filter := range dc_filters {
+			contaiener_filters.Add("name", fmt.Sprintf("^/%s$", filter.Name))
+		}
+	}
+
+	return contaiener_filters, nil
 }
 
 var docker_state_priority = map[string]uint8{

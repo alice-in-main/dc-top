@@ -9,31 +9,26 @@ import (
 	"dc-top/logger"
 	"flag"
 	"fmt"
-	"log"
-	"os"
 )
 
 // TODO: replace as many log.Fatal with error handling
 
 func main() {
-	const workdir = "/tmp/dc-top-files"
-	os.RemoveAll(workdir)
-	err := os.Mkdir(workdir, 0755)
-	if err != nil {
-		log.Fatal(err)
-	}
-	defer os.RemoveAll(workdir)
-	logger.Init()
+	var err error
 
-	dc_file_path := flag.String("dc-file-path", "", "path of docker-compose.yaml file")
+	logger.Init()
+	defer logger.Cleanup()
+
+	dc_file_path := flag.String("f", "", "path of docker-compose.yaml file")
 	flag.Parse()
 
 	if *dc_file_path != "" {
-		if err := compose.Init(context.Background(), workdir, *dc_file_path); err != nil {
+		if err = compose.Init(context.Background(), *dc_file_path); err != nil {
 			fmt.Println(err)
 			return
 		}
 	}
+	defer compose.Cleanup()
 
 	docker.Init()
 	window.InitScreen()

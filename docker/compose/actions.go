@@ -3,19 +3,19 @@ package compose
 import (
 	"context"
 	"dc-top/utils"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"os"
 	"os/exec"
-	"path/filepath"
 
-	"github.com/docker/docker/api/types/filters"
 	"gopkg.in/yaml.v2"
 )
 
-func Up(ctx context.Context) error {
-	cmd := exec.CommandContext(ctx, "docker-compose", "-f", DcYamlPath(), "up")
-	return cmd.Run()
+// TODO: add --compatability
+func Up(ctx context.Context) ([]byte, error) {
+	return exec.CommandContext(ctx, "docker-compose", "--compatibility", "-f", DcYamlPath(), "up").CombinedOutput()
 }
 
 func Down(ctx context.Context) error {
@@ -75,20 +75,17 @@ func RestoreFromBackup() error {
 	return utils.CopyFile(backupFileName(), DcYamlPath())
 }
 
-func CreateDcFilters(ctx context.Context) (*filters.Args, error) {
-	dc_services, err := GenerateDcData(ctx)
+func GetDcProcesses(ctx context.Context) ([]Process, error) {
+	raw_processes, err := exec.Command("docker", "compose", "-f", DcYamlPath(), "ps", "--format", "json").Output()
 	if err != nil {
+		log.Println("failed to get docker compose data")
 		return nil, err
 	}
-	dc_filters := filters.NewArgs()
-	for service_key, service := range dc_services.ServicesMap {
-		if service.ContainerName == "" {
-			dc_filters.Add("name", fmt.Sprintf("%s_%s", filepath.Base(filepath.Dir(DcYamlPath())), service_key))
-		} else {
-			dc_filters.Add("name", service.ContainerName)
-		}
-	}
-	return &dc_filters, nil
+
+	var parsed_processes []Process
+	json.Unmarshal(raw_processes, &parsed_processes)
+
+	return parsed_processes, nil
 }
 
 func backupFileName() string {

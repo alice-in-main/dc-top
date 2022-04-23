@@ -32,6 +32,7 @@ var relative_cell_widths = []float64{
 
 func dockerStatsDrawerGenerator(state tableState, window_width int) (func(x, y int) (rune, tcell.Style), error) {
 	if state.window_mode == containers {
+
 		_, y1, _, y2 := window.ContainerWindowSize()
 		state.table_height = calcTableHeight(y1, y2)
 		state.inspect_height = y2 - y1 - 2 + 1
@@ -39,7 +40,7 @@ func dockerStatsDrawerGenerator(state tableState, window_width int) (func(x, y i
 		data_table := generateTable(&state, window_width)
 		search_row := state.search_box.Style()
 		search_filter_message := elements.TextDrawer(fmt.Sprintf("Showing only containers containing '%s'", state.search_box.Value()), tcell.StyleDefault.Bold(true))
-		empty_buttom_row := elements.RuneNRepeater('\u2192', 1, tcell.StyleDefault.Foreground(tcell.ColorOrangeRed))
+		empty_buttom_row := elements.RuneNRepeater('/', 1, tcell.StyleDefault.Foreground(tcell.ColorYellow))
 
 		return func(x, y int) (rune, tcell.Style) {
 			if y == 0 || y == 1 {

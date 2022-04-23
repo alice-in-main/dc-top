@@ -140,6 +140,7 @@ func ChangeToSubshell(bg_context context.Context, id string) {
 	subshell_view := NewView(map[window.WindowType]window.Window{
 		window.Subshell: &subshell_window,
 	}, window.Subshell)
+	subshell_view.ctrl_c_enabled = false
 	changeView(bg_context, subshell, main, &subshell_view)
 }
 
@@ -166,6 +167,10 @@ func HandleMouseEvent(ev *tcell.EventMouse) {
 	case main:
 		DefaultView().GetWindow(window.ContainersHolder).MousePress(*ev)
 	}
+}
+
+func IsCtrlCEnabled() bool {
+	return CurrentView().ctrl_c_enabled
 }
 
 func CurrentView() *View {
@@ -210,7 +215,6 @@ func changeView(bg_context context.Context, new_view_key, prev_view_key _viewNam
 	_views[new_view_key] = view
 	_view_stack.push(new_view_key)
 	view.Open(bg_context)
-	log.Println("opened")
 }
 
 func currentViewName() _viewName {

@@ -2,6 +2,7 @@ package compose
 
 import (
 	"context"
+	"dc-top/utils"
 	"fmt"
 	"log"
 	"os"
@@ -14,12 +15,23 @@ var (
 	dc_yaml_path  string
 )
 
-func Init(ctx context.Context, workdir string, dc_file_path string) error {
-	_, err := os.Stat(dc_file_path)
+var workdir string
+
+func Init(ctx context.Context, dc_file_path string) error {
+	workdir = fmt.Sprintf("/tmp/dc-top-files-%s", utils.RandSeq(6))
+
+	os.RemoveAll(workdir)
+	err := os.Mkdir(workdir, 0755)
+	if err != nil {
+		return err
+	}
+
+	_, err = os.Stat(dc_file_path)
 	if err != nil {
 		log.Printf("didn't find file %s\n", dc_file_path)
 		return err
 	}
+
 	is_dc_mode_on = true
 	if dc_file_path[0] == '/' || dc_file_path[0] == '~' {
 		dc_yaml_path = dc_file_path
@@ -35,9 +47,15 @@ func Init(ctx context.Context, workdir string, dc_file_path string) error {
 			return err
 		}
 	}
+
 	if !ValidateYaml(ctx) {
 		return fmt.Errorf("failed to validate docker-compose yaml: '%s'. (run docker-compose config)", dc_file_path)
 	}
+
 	workdir_path = workdir
 	return nil
+}
+
+func Cleanup() {
+	os.RemoveAll(workdir)
 }

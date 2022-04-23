@@ -36,11 +36,10 @@ func Draw() error {
 			view.CurrentView().Resize()
 		case *tcell.EventKey:
 			key := ev.Key()
-			switch key {
-			case tcell.KeyCtrlC:
+			if key == tcell.KeyCtrlC && view.IsCtrlCEnabled() {
 				bg_cancel()
 				return nil
-			default:
+			} else {
 				view.HandleKeyPress(ev)
 			}
 		case *tcell.EventMouse:
@@ -55,7 +54,6 @@ func Draw() error {
 			view.CurrentView().ResumeWindows()
 		case window.ChangeToContainerShellEvent:
 			view.ChangeToSubshell(bg_context, ev.ContainerId)
-			// subshells.OpenContainerShell(ev.ContainerId, bg_context)
 		case window.ChangeToFileEdittorEvent:
 			view.ChangeToFileEdittor(bg_context)
 		case window.ChangeToLogsWindowEvent:
@@ -69,13 +67,14 @@ func Draw() error {
 		case window.ReturnUpperViewEvent:
 			view.ReturnToUpperView()
 		case window.UpdateDockerCompose:
+			bar_window.Info([]rune("Updating docker-compose"))
 			go func() {
-				_err := compose.Up(bg_context)
+				out, _err := compose.Up(bg_context)
 				if _err != nil {
-					bar_window.Err([]rune(fmt.Sprintf("Updating docker-compose failed. '%s'", _err)))
+					bar_window.Err([]rune(string(out)))
+					// bar_window.Err([]rune(fmt.Sprintf("Updating docker-compose failed. '%s'", _err)))
 				}
 			}()
-			bar_window.Info([]rune("Updating docker-compose"))
 		case window.FatalErrorEvent:
 			err := fmt.Errorf("a fatal error occured at %s:\n%s", ev.When(), ev.Err)
 			log.Println(err.Error())
