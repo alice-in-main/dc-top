@@ -34,6 +34,11 @@ func ValidateYaml(ctx context.Context) bool {
 	return err == nil
 }
 
+func Config(ctx context.Context) ([]byte, error) {
+	cmd := exec.CommandContext(ctx, "docker", "compose", "-f", DcYamlPath(), "config", "-q")
+	return cmd.CombinedOutput()
+}
+
 func GenerateDcData(ctx context.Context) (Services, error) {
 	if ValidateYaml(ctx) {
 		var services Services

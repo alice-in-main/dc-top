@@ -11,5 +11,6 @@ const (
 	Help
 	Edittor
 	Subshell
+	Error
 	Other
 )

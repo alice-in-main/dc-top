@@ -43,7 +43,7 @@ func (edittor_window *EdittorWindow) main() error {
 		focused_line:  0,
 		focused_col:   0,
 		change_stack:  newChangeStack(),
-		search_box:    elements.NewTextBox(elements.TextDrawer("/ ", tcell.StyleDefault), 2, tcell.StyleDefault, tcell.StyleDefault, true),
+		search_box:    elements.NewTextBox(elements.TextDrawer("/ ", tcell.StyleDefault.Foreground(tcell.ColorYellow)), 2, tcell.StyleDefault, tcell.StyleDefault, true),
 	}
 
 	raw_bytes, err := ioutil.ReadFile(edittor_window.file.Name())

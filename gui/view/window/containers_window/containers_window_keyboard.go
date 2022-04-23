@@ -131,7 +131,7 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 				if !compose.ValidateYaml(w.window_context) {
 					bar_window.Err([]rune("docker compose yaml syntax is invalid"))
 				} else {
-					window.GetScreen().PostEvent(window.NewChangeToFileEdittorEvent(compose.DcYamlPath(), window.ContainersHolder))
+					window.GetScreen().PostEvent(window.NewChangeToFileEdittorEvent(compose.DcYamlPath()))
 				}
 			} else {
 				bar_window.Err([]rune("dc mode is disabled"))

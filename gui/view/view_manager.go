@@ -9,6 +9,7 @@ import (
 	"dc-top/gui/view/window/containers_window"
 	"dc-top/gui/view/window/docker_info_window"
 	"dc-top/gui/view/window/edittor_window"
+	"dc-top/gui/view/window/error_window"
 	"dc-top/gui/view/window/general_info_window"
 	"dc-top/gui/view/window/help_window"
 	"dc-top/gui/view/window/subshell_window"
@@ -29,6 +30,7 @@ const (
 	edittor
 	edittor_help
 	subshell
+	err
 	none
 )
 
@@ -66,7 +68,9 @@ func InitDefaultView(bg_context context.Context) {
 		window.DockerInfo:       &def_docker_info_w,
 		window.Bar:              &def_bar_w,
 		window.Help:             &def_help_w,
-	}, window.ContainersHolder)
+	}, window.ContainersHolder,
+		tcell.MouseButtonEvents,
+		true)
 
 	_views[main] = &default_view
 	_view_stack.push(main)
@@ -103,7 +107,9 @@ func ChangeToLogView(bg_context context.Context, container_id string) {
 	logs_view := NewView(map[window.WindowType]window.Window{
 		window.ContainerLogs: &logs_window,
 		window.Bar:           &logs_bar_window,
-	}, window.ContainerLogs)
+	}, window.ContainerLogs,
+		0,
+		true)
 	changeView(bg_context, logs, main, &logs_view)
 }
 
@@ -125,7 +131,9 @@ func ChangeToFileEdittor(bg_context context.Context) {
 	edittor_view := NewView(map[window.WindowType]window.Window{
 		window.Edittor: &edittor_window,
 		window.Bar:     &edittor_bar_window,
-	}, window.Edittor)
+	}, window.Edittor,
+		0,
+		true)
 	changeView(bg_context, edittor, main, &edittor_view)
 }
 
@@ -139,9 +147,21 @@ func ChangeToSubshell(bg_context context.Context, id string) {
 
 	subshell_view := NewView(map[window.WindowType]window.Window{
 		window.Subshell: &subshell_window,
-	}, window.Subshell)
-	subshell_view.ctrl_c_enabled = false
+	}, window.Subshell,
+		0,
+		false)
 	changeView(bg_context, subshell, main, &subshell_view)
+}
+
+func ChangeToErrorView(bg_context context.Context, message []byte) {
+	log.Printf("Changing to error")
+	error_window := error_window.NewErrorWindow(message)
+	error_view := NewView(map[window.WindowType]window.Window{
+		window.Error: &error_window,
+	}, window.Error,
+		0,
+		false)
+	changeView(bg_context, err, currentViewName(), &error_view)
 }
 
 func DisplayLogHelp(bg_context context.Context) {
@@ -204,7 +224,9 @@ func changeToHelpView(bg_context context.Context, new_view_key, prev_view_key _v
 	)
 	help_view := NewView(map[window.WindowType]window.Window{
 		window.Help: &help_window,
-	}, window.Help)
+	}, window.Help,
+		0,
+		true)
 	changeView(bg_context, new_view_key, prev_view_key, &help_view)
 }
 

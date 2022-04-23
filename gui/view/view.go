@@ -14,14 +14,16 @@ type View struct {
 	windows       map[window.WindowType]window.Window
 	focusedWindow window.WindowType
 
+	mouse_settings tcell.MouseFlags
 	ctrl_c_enabled bool
 }
 
-func NewView(windows map[window.WindowType]window.Window, focused window.WindowType) View {
+func NewView(windows map[window.WindowType]window.Window, focused window.WindowType, mouse_settings tcell.MouseFlags, ctrl_c_enabled bool) View {
 	return View{
 		windows:        windows,
 		focusedWindow:  focused,
-		ctrl_c_enabled: true,
+		mouse_settings: mouse_settings,
+		ctrl_c_enabled: ctrl_c_enabled,
 	}
 }
 
@@ -86,6 +88,6 @@ func (view *View) PauseWindows() {
 func (view *View) ResumeWindows() {
 	screen := window.GetScreen()
 	view.Enable()
-	screen.EnableMouse(tcell.MouseButtonEvents)
+	screen.EnableMouse(view.mouse_settings)
 	screen.Sync()
 }

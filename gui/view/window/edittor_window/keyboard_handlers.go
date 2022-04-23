@@ -184,8 +184,10 @@ func (state *edittorState) finalizeEdittor() {
 		compose.CreateBackupYaml()
 		err := writeNewContent(state.content, state.file)
 		if !compose.ValidateYaml(state.ctx) {
+			output, _ := compose.Config(state.ctx)
 			compose.RestoreFromBackup()
 			bar_window.Err([]rune("docker-compose yaml contains errors"))
+			window.GetScreen().PostEvent(window.NewChangeToErrorEvent(output))
 			return
 		}
 		if err != nil {

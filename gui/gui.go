@@ -64,6 +64,8 @@ func Draw() error {
 			view.DisplayLogHelp(bg_context)
 		case window.ChangeToEdittorHelpEvent:
 			view.DisplayEdittorHelp(bg_context)
+		case window.ChangeToErrorEvent:
+			view.ChangeToErrorView(bg_context, ev.Message)
 		case window.ReturnUpperViewEvent:
 			view.ReturnToUpperView()
 		case window.UpdateDockerCompose:
@@ -71,8 +73,8 @@ func Draw() error {
 			go func() {
 				out, _err := compose.Up(bg_context)
 				if _err != nil {
-					bar_window.Err([]rune(string(out)))
-					// bar_window.Err([]rune(fmt.Sprintf("Updating docker-compose failed. '%s'", _err)))
+					bar_window.Err([]rune(fmt.Sprintf("Updating docker-compose failed. '%s'", _err)))
+					view.ChangeToErrorView(bg_context, out)
 				}
 			}()
 		case window.FatalErrorEvent:

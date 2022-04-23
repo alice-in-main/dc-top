@@ -140,18 +140,34 @@ func NewChangeToContainerShellEvent(container_id string) ChangeToContainerShellE
 type ChangeToFileEdittorEvent struct {
 	t        time.Time
 	FilePath string
-	Sender   WindowType
 }
 
 func (e ChangeToFileEdittorEvent) When() time.Time {
 	return e.t
 }
 
-func NewChangeToFileEdittorEvent(file_path string, sender_window WindowType) ChangeToFileEdittorEvent {
+func NewChangeToFileEdittorEvent(file_path string) ChangeToFileEdittorEvent {
 	return ChangeToFileEdittorEvent{
 		t:        time.Now(),
 		FilePath: file_path,
-		Sender:   sender_window,
+	}
+}
+
+// ---------
+
+type ChangeToErrorEvent struct {
+	t       time.Time
+	Message []byte
+}
+
+func (e ChangeToErrorEvent) When() time.Time {
+	return e.t
+}
+
+func NewChangeToErrorEvent(message []byte) ChangeToErrorEvent {
+	return ChangeToErrorEvent{
+		t:       time.Now(),
+		Message: message,
 	}
 }
 

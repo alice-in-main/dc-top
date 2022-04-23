@@ -3,6 +3,7 @@ module dc-top
 go 1.17
 
 require (
+	github.com/acarl005/stripansi v0.0.0-20180116102854-5a71ef0e047d // indirect
 	github.com/cilium/ebpf v0.8.1 // indirect
 	github.com/containerd/containerd v1.6.0 // indirect
 	github.com/cosiner/argv v0.1.0 // indirect
@@ -25,6 +26,7 @@ require (
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
 	github.com/inconshreveable/mousetrap v1.0.0 // indirect
 	github.com/jinzhu/copier v0.3.5 // indirect
+	github.com/leaanthony/go-ansi-parser v1.4.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.2.0 // indirect
 	github.com/mattn/go-colorable v0.1.12 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
