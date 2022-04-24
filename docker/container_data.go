@@ -10,15 +10,12 @@ import (
 	"strings"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/filters"
 )
 
 type ContainerData struct {
 	data                []ContainerDatum
 	main_sort_type      SortType
 	secondary_sort_type SortType
-
-	filters_ filters.Args
 }
 
 func NewContainerData(ctx context.Context) (ContainerData, error) {
@@ -28,9 +25,7 @@ func NewContainerData(ctx context.Context) (ContainerData, error) {
 		log.Printf("Failed to get initial filters: '%s", err)
 		return ContainerData{}, err
 	}
-
-	filters_ := compose.GetContainerFilters(ctx)
-	containers_options.Filters = filters_
+	containers_options.Filters = compose.GetContainerFilters(ctx)
 
 	containers, err := docker_cli.ContainerList(ctx, containers_options)
 	if err != nil {
@@ -72,21 +67,13 @@ func NewContainerData(ctx context.Context) (ContainerData, error) {
 		data:                new_data,
 		main_sort_type:      State,
 		secondary_sort_type: Name,
-
-		filters_: filters_,
 	}
 
 	return new_containers_data, err
 }
 
 func UpdatedContainerData(ctx context.Context, old_data *ContainerData) (ContainerData, error) {
-	containers_options := types.ContainerListOptions{All: true, Quiet: true, Filters: old_data.filters_}
-	// filters, err := getContainerFilters(ctx)
-	// if err != nil {
-	// 	log.Println("Failed to generate filter data when getting updated data")
-	// 	return ContainerData{}, err
-	// }
-	// containers_options.Filters = filters
+	containers_options := types.ContainerListOptions{All: true, Quiet: true, Filters: compose.GetContainerFilters(ctx)}
 
 	containers, err := docker_cli.ContainerList(ctx, containers_options)
 	if err != nil {
