@@ -11,9 +11,6 @@ import (
 	"fmt"
 )
 
-// TODO: replace as many log.Fatal with error handling
-// TODO: add scrolling to error window
-
 func main() {
 	var err error
 

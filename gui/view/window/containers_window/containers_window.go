@@ -12,9 +12,6 @@ import (
 	"golang.org/x/sync/semaphore"
 )
 
-// TODO: random log file name + log levels
-// TODO: finish dc
-
 type windowMode uint8
 
 const (

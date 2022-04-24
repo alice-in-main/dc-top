@@ -3,7 +3,6 @@ package docker
 import (
 	"context"
 	"dc-top/docker/compose"
-	"fmt"
 	"io"
 	"log"
 	"math"
@@ -18,16 +17,20 @@ type ContainerData struct {
 	data                []ContainerDatum
 	main_sort_type      SortType
 	secondary_sort_type SortType
+
+	filters_ filters.Args
 }
 
 func NewContainerData(ctx context.Context) (ContainerData, error) {
 	containers_options := types.ContainerListOptions{All: true, Quiet: true}
-	filters, err := getContainerFilters(ctx)
+	err := compose.UpdateContainerFilters(ctx)
 	if err != nil {
-		log.Println("Failed to generate filter data when getting new data")
+		log.Printf("Failed to get initial filters: '%s", err)
 		return ContainerData{}, err
 	}
-	containers_options.Filters = filters
+
+	filters_ := compose.GetContainerFilters(ctx)
+	containers_options.Filters = filters_
 
 	containers, err := docker_cli.ContainerList(ctx, containers_options)
 	if err != nil {
@@ -69,19 +72,21 @@ func NewContainerData(ctx context.Context) (ContainerData, error) {
 		data:                new_data,
 		main_sort_type:      State,
 		secondary_sort_type: Name,
+
+		filters_: filters_,
 	}
 
 	return new_containers_data, err
 }
 
 func UpdatedContainerData(ctx context.Context, old_data *ContainerData) (ContainerData, error) {
-	containers_options := types.ContainerListOptions{All: true, Quiet: true}
-	filters, err := getContainerFilters(ctx)
-	if err != nil {
-		log.Println("Failed to generate filter data when getting updated data")
-		return ContainerData{}, err
-	}
-	containers_options.Filters = filters
+	containers_options := types.ContainerListOptions{All: true, Quiet: true, Filters: old_data.filters_}
+	// filters, err := getContainerFilters(ctx)
+	// if err != nil {
+	// 	log.Println("Failed to generate filter data when getting updated data")
+	// 	return ContainerData{}, err
+	// }
+	// containers_options.Filters = filters
 
 	containers, err := docker_cli.ContainerList(ctx, containers_options)
 	if err != nil {
@@ -227,22 +232,6 @@ func (containers *ContainerData) Contains(id string) bool {
 		}
 	}
 	return false
-}
-
-func getContainerFilters(ctx context.Context) (filters.Args, error) {
-	var contaiener_filters filters.Args = filters.NewArgs()
-	if compose.DcModeEnabled() {
-		dc_filters, err := compose.GetDcProcesses(ctx)
-		if err != nil {
-			return contaiener_filters, err
-		}
-
-		for _, filter := range dc_filters {
-			contaiener_filters.Add("name", fmt.Sprintf("^/%s$", filter.Name))
-		}
-	}
-
-	return contaiener_filters, nil
 }
 
 var docker_state_priority = map[string]uint8{

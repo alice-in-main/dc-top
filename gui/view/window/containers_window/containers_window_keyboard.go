@@ -59,11 +59,15 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 		if compose.DcModeEnabled() {
 			if !compose.ValidateYaml(w.window_context) {
 				bar_window.Err([]rune("docker compose yaml syntax is invalid"))
+				output, _ := compose.Config(w.window_context)
+				window.GetScreen().PostEvent(window.NewChangeToErrorEvent(output))
 			} else {
 				bar_window.Info([]rune("Restarting docker compose..."))
 				go func() {
-					if err := compose.Restart(w.window_context); err != nil {
-						bar_window.Err([]rune("Failed to restart docker compose (Maybe updating will work 'u')"))
+					if msg, err := compose.Restart(w.window_context); err != nil {
+						bar_window.Err([]rune("Failed to restart docker compose (Maybe updating will work 'Ctrl+U')"))
+						full_message := "Got error when restarting docker-compose:\n" + string(msg)
+						window.GetScreen().PostEvent(window.NewChangeToErrorEvent([]byte(full_message)))
 					}
 				}()
 			}
@@ -74,11 +78,34 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 		if compose.DcModeEnabled() {
 			if !compose.ValidateYaml(w.window_context) {
 				bar_window.Err([]rune("docker compose yaml syntax is invalid"))
+				output, _ := compose.Config(w.window_context)
+				window.GetScreen().PostEvent(window.NewChangeToErrorEvent(output))
 			} else {
 				bar_window.Info([]rune("Updating docker compose..."))
 				go func() {
-					if err := compose.Restart(w.window_context); err != nil {
+					if msg, err := compose.Up(w.window_context); err != nil {
 						bar_window.Err([]rune("Failed to update docker compose"))
+						full_message := "Got error when updating docker-compose:\n" + string(msg)
+						window.GetScreen().PostEvent(window.NewChangeToErrorEvent([]byte(full_message)))
+					}
+				}()
+			}
+		} else {
+			bar_window.Err([]rune("dc mode is disabled"))
+		}
+	case tcell.KeyCtrlD:
+		if compose.DcModeEnabled() {
+			if !compose.ValidateYaml(w.window_context) {
+				bar_window.Err([]rune("docker compose yaml syntax is invalid"))
+				output, _ := compose.Config(w.window_context)
+				window.GetScreen().PostEvent(window.NewChangeToErrorEvent(output))
+			} else {
+				bar_window.Info([]rune("Removing docker compose..."))
+				go func() {
+					if msg, err := compose.Down(w.window_context); err != nil {
+						bar_window.Err([]rune("Failed to remove docker compose"))
+						full_message := "Got error when removing docker-compose:\n" + string(msg)
+						window.GetScreen().PostEvent(window.NewChangeToErrorEvent([]byte(full_message)))
 					}
 				}()
 			}
@@ -128,11 +155,7 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 			log.Println("Toggling inspect mode")
 		case 'v':
 			if compose.DcModeEnabled() {
-				if !compose.ValidateYaml(w.window_context) {
-					bar_window.Err([]rune("docker compose yaml syntax is invalid"))
-				} else {
-					window.GetScreen().PostEvent(window.NewChangeToFileEdittorEvent(compose.DcYamlPath()))
-				}
+				window.GetScreen().PostEvent(window.NewChangeToFileEdittorEvent(compose.DcYamlPath()))
 			} else {
 				bar_window.Err([]rune("dc mode is disabled"))
 			}

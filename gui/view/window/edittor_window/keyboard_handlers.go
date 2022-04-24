@@ -5,7 +5,9 @@ import (
 	"dc-top/gui/view/window"
 	"dc-top/gui/view/window/bar_window"
 	"fmt"
+	"log"
 	"strings"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 )
@@ -183,6 +185,10 @@ func (state *edittorState) finalizeEdittor() {
 	if !contentsEquals(state.content, state.original_content) {
 		compose.CreateBackupYaml()
 		err := writeNewContent(state.content, state.file)
+		if err != nil {
+			bar_window.Err([]rune(fmt.Sprintf("Got error '%s' while writing to file", err.Error())))
+			return
+		}
 		if !compose.ValidateYaml(state.ctx) {
 			output, _ := compose.Config(state.ctx)
 			compose.RestoreFromBackup()
@@ -190,13 +196,20 @@ func (state *edittorState) finalizeEdittor() {
 			window.GetScreen().PostEvent(window.NewChangeToErrorEvent(output))
 			return
 		}
-		if err != nil {
-			bar_window.Err([]rune(fmt.Sprintf("Got error '%s' while writing to file", err.Error())))
-			return
+
+		// Sometimes updating filters fails for unknown reasons so i retry
+		for i := 0; i < 3; i++ {
+			err = compose.UpdateContainerFilters(state.ctx)
+			if err == nil {
+				break
+			} else {
+				log.Printf("Failed to update filters: '%s", err)
+				time.Sleep(10 * time.Millisecond)
+			}
 		}
-		window.GetScreen().PostEvent(window.NewUpdateDockerCompose())
 	}
 	window.GetScreen().PostEvent(window.NewReturnUpperViewEvent())
+	window.GetScreen().PostEvent(window.NewUpdateDockerCompose())
 }
 
 func (state *edittorState) handleLineFocusChange(new_focus_index int) {

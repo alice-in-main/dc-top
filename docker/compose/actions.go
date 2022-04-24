@@ -13,23 +13,20 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-// TODO: add --compatability
 func Up(ctx context.Context) ([]byte, error) {
-	return exec.CommandContext(ctx, "docker-compose", "--compatibility", "-f", DcYamlPath(), "up").CombinedOutput()
+	return exec.CommandContext(ctx, "docker-compose", "--compatibility", "-f", DcYamlPath(), "up", "--remove-orphans").CombinedOutput()
 }
 
-func Down(ctx context.Context) error {
-	cmd := exec.CommandContext(ctx, "docker-compose", "-f", DcYamlPath(), "down")
-	return cmd.Run()
+func Down(ctx context.Context) ([]byte, error) {
+	return exec.CommandContext(ctx, "docker-compose", "--compatibility", "-f", DcYamlPath(), "down", "--remove-orphans").CombinedOutput()
 }
 
-func Restart(ctx context.Context) error {
-	cmd := exec.CommandContext(ctx, "docker-compose", "-f", DcYamlPath(), "restart")
-	return cmd.Run()
+func Restart(ctx context.Context) ([]byte, error) {
+	return exec.CommandContext(ctx, "docker-compose", "--compatibility", "-f", DcYamlPath(), "restart").CombinedOutput()
 }
 
 func ValidateYaml(ctx context.Context) bool {
-	cmd := exec.CommandContext(ctx, "docker", "compose", "-f", DcYamlPath(), "config", "-q")
+	cmd := exec.CommandContext(ctx, "docker", "compose", "--compatibility", "-f", DcYamlPath(), "config", "-q")
 	err := cmd.Run()
 	return err == nil
 }

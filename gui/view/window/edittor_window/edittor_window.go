@@ -3,6 +3,8 @@ package edittor_window
 import (
 	"context"
 	"dc-top/gui/view/window"
+	"dc-top/gui/view/window/bar_window"
+	"fmt"
 	"log"
 	"os"
 
@@ -40,7 +42,10 @@ func NewEdittorWindow(file *os.File) EdittorWindow {
 
 func (w *EdittorWindow) Open(view_context context.Context) {
 	w.window_context, w.window_cancel = context.WithCancel(view_context)
-	w.main() // TODO: handle error
+	if err := w.main(); err != nil {
+		window.GetScreen().PostEvent(window.NewReturnUpperViewEvent())
+		bar_window.Err([]rune(fmt.Sprintf("Failed to open file %s for editting", w.file.Name())))
+	}
 }
 
 func (w *EdittorWindow) Resize() {

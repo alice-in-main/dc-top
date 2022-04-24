@@ -5,8 +5,6 @@ type Control struct {
 	meaning string
 }
 
-// TODO: fix when done
-
 func MainControls() []Control {
 	return []Control{
 		{"'h'", "Display more controls"},
@@ -22,6 +20,7 @@ func MainControls() []Control {
 		{"Ctrl+S", "Stop selected container"},
 		{"Ctrl+U", "Update docker compose"},
 		{"Ctrl+W", "Restart docker compose"},
+		{"Ctrl+D", "Remove (down) docker compose"},
 		{"'!'", "Reverse sort order"},
 		{"'g'", "Go to the top of the container list/inspect info"},
 		{"'G'", "Go to the buttom of the container list"},

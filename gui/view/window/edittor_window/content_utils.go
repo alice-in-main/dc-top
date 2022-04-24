@@ -1,19 +1,16 @@
 package edittor_window
 
 import (
-	"log"
 	"os"
 	"strings"
 )
 
 func contentsEquals(content1 []string, content2 []string) bool {
 	if len(content1) != len(content2) {
-		log.Printf("len1 %d, len %d", len(content1), len(content2))
 		return false
 	}
 	for i := range content1 {
 		if content1[i] != content2[i] {
-			log.Printf("s1 %s, s2 %s", content1[i], content2[i])
 			return false
 		}
 	}
