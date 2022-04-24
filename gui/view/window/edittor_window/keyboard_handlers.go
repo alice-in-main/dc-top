@@ -131,7 +131,7 @@ func (state *edittorState) handleRegularKey(ev *tcell.EventKey) {
 				collapseLine(&state.content, state.focused_line-1)
 				state.handleLineFocusChange(state.focused_line - 1)
 				state.handleColFocusChange(new_col)
-				state.change_stack.commitLineRemove(state.focused_line, state.focused_col)
+				state.change_stack.commitLineCollapse(state.focused_line, state.focused_col)
 			}
 		}
 	case tcell.KeyDelete:
@@ -141,7 +141,7 @@ func (state *edittorState) handleRegularKey(ev *tcell.EventKey) {
 		} else if state.focused_col == len(state.content[state.focused_line]) {
 			if state.focused_line < len(state.content)-1 {
 				collapseLine(&state.content, state.focused_line)
-				state.change_stack.commitLineRemove(state.focused_line, state.focused_col)
+				state.change_stack.commitLineCollapse(state.focused_line, state.focused_col)
 			}
 		}
 	case tcell.KeyEnter:
@@ -153,6 +153,12 @@ func (state *edittorState) handleRegularKey(ev *tcell.EventKey) {
 		state.change_stack.commitTextAdditionChange(string(ev.Rune()), state.focused_line, state.focused_col)
 		addStrToLine(string(ev.Rune()), &state.content, state.focused_line, state.focused_col)
 		state.handleColFocusChange(state.focused_col + 1)
+	case tcell.KeyCtrlD:
+		if state.focused_line < len(state.content) {
+			text_to_delete := state.content[state.focused_line]
+			state.change_stack.commitLineDeletion(text_to_delete, state.focused_line, state.focused_col)
+			removeLine(&state.content, state.focused_line)
+		}
 	case tcell.KeyCtrlZ:
 		var line, col int
 		var err error
@@ -207,9 +213,9 @@ func (state *edittorState) finalizeEdittor() {
 				time.Sleep(10 * time.Millisecond)
 			}
 		}
+		window.GetScreen().PostEvent(window.NewUpdateDockerCompose())
 	}
 	window.GetScreen().PostEvent(window.NewReturnUpperViewEvent())
-	window.GetScreen().PostEvent(window.NewUpdateDockerCompose())
 }
 
 func (state *edittorState) handleLineFocusChange(new_focus_index int) {

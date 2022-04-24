@@ -52,6 +52,7 @@ func EdittorControls() []Control {
 		{"Ctrl+Alt+Z", "Redo"},
 		{"Ctrl+F", "Search"},
 		{"Ctrl+A", "Clear search"},
+		{"Ctrl+D", "Delete line"},
 		{"'n' / 'N'", "Next search result / Previous search result"},
 	}
 }

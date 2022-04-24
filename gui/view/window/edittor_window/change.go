@@ -58,17 +58,35 @@ func newLineAdd(focused_line int, focused_col int) *lineAddChange {
 	}
 }
 
-type lineRemoveChange struct {
+type lineCollapseChange struct {
 	focused_line int
 	focused_col  int
 }
 
-func (change *lineRemoveChange) focusedCoords() (line, column int) {
+func (change *lineCollapseChange) focusedCoords() (line, column int) {
 	return change.focused_line, change.focused_col
 }
 
-func newLineRemove(focused_line int, focused_col int) *lineRemoveChange {
-	return &lineRemoveChange{
+func newLineCollapse(focused_line int, focused_col int) *lineCollapseChange {
+	return &lineCollapseChange{
+		focused_line: focused_line,
+		focused_col:  focused_col,
+	}
+}
+
+type lineDeletionChange struct {
+	removed_text string
+	focused_line int
+	focused_col  int
+}
+
+func (change *lineDeletionChange) focusedCoords() (line, column int) {
+	return change.focused_line, change.focused_col
+}
+
+func newLineDeletion(text string, focused_line int, focused_col int) *lineDeletionChange {
+	return &lineDeletionChange{
+		removed_text: text,
 		focused_line: focused_line,
 		focused_col:  focused_col,
 	}

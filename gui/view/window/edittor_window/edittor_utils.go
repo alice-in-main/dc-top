@@ -25,3 +25,13 @@ func collapseLine(total_content *[]string, line_index int) {
 	(*total_content)[line_index] = (*total_content)[line_index] + (*total_content)[line_index+1]
 	(*total_content) = append((*total_content)[:line_index+1], (*total_content)[line_index+2:]...)
 }
+
+func removeLine(total_content *[]string, line_index int) {
+	*total_content = append((*total_content)[:line_index], (*total_content)[line_index+1:]...)
+}
+
+func addLine(str string, total_content *[]string, line_index int) {
+	first_half := (*total_content)[:line_index]
+	second_half := append([]string{str}, (*total_content)[line_index:]...)
+	*total_content = append(first_half, second_half...)
+}

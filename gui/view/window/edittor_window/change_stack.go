@@ -31,8 +31,13 @@ func (stack *changeStack) commitLineAdd(focused_line int, focused_col int) {
 	stack.curr_index++
 }
 
-func (stack *changeStack) commitLineRemove(focused_line int, focused_col int) {
-	stack.changes = append(stack.changes[:stack.curr_index], newLineRemove(focused_line, focused_col))
+func (stack *changeStack) commitLineCollapse(focused_line int, focused_col int) {
+	stack.changes = append(stack.changes[:stack.curr_index], newLineCollapse(focused_line, focused_col))
+	stack.curr_index++
+}
+
+func (stack *changeStack) commitLineDeletion(deleted_text string, focused_line int, focused_col int) {
+	stack.changes = append(stack.changes[:stack.curr_index], newLineDeletion(deleted_text, focused_line, focused_col))
 	stack.curr_index++
 }
 
@@ -47,8 +52,10 @@ func (stack *changeStack) undoChange(content *[]string) (line, col int, err erro
 			addStrToLine(_change.text, content, _change.focused_line, _change.focused_col)
 		case *lineAddChange:
 			collapseLine(content, _change.focused_line)
-		case *lineRemoveChange:
+		case *lineCollapseChange:
 			breakLine(content, _change.focused_line, _change.focused_col)
+		case *lineDeletionChange:
+			addLine(_change.removed_text, content, _change.focused_line)
 		}
 		line, col = _change.focusedCoords()
 		return line, col, nil
@@ -66,8 +73,10 @@ func (stack *changeStack) redoChange(content *[]string) (line, col int, err erro
 			removeStrFromLine(len(_change.text), content, _change.focused_line, _change.focused_col)
 		case *lineAddChange:
 			breakLine(content, _change.focused_line, _change.focused_col)
-		case *lineRemoveChange:
+		case *lineCollapseChange:
 			collapseLine(content, _change.focused_line)
+		case *lineDeletionChange:
+			removeLine(content, _change.focused_line)
 		}
 		stack.curr_index++
 		line, col = _change.focusedCoords()
