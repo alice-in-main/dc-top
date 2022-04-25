@@ -3,6 +3,7 @@ package gui
 import (
 	"context"
 	"dc-top/docker"
+	"dc-top/docker/compose"
 	"dc-top/gui/view/window"
 	"dc-top/logger"
 	"testing"
@@ -69,6 +70,7 @@ func afterEach(stop_signal chan interface{}) {
 }
 
 func TestLeaksNoActions(t *testing.T) {
+	tryPause()
 }
 
 func TestLeaksHelpWindow(t *testing.T) {
@@ -110,9 +112,10 @@ func TestLeaksEmptySearch(t *testing.T) {
 	sendUp()
 	startSearch()
 	tryPause()
-	typeString("hello!") // the '!' makes sure all containers will be filtered out
+	typeString("!hello!") // the '!' makes sure all containers will be filtered out
 	tryPause()
 	enter()
+	tryPause()
 	sendUp()
 	tryPause()
 	clearSearch()
@@ -132,4 +135,50 @@ func TestLeaksLogSearch(t *testing.T) {
 	clearSearch()
 	tryPause()
 	toggleLogs()
+	tryPause()
+}
+
+func TestLeaksContainerSubshell(t *testing.T) {
+	sendUp()
+	enterSubshell()
+	tryPause()
+	typeString("ls")
+	enter()
+	tryPause()
+	sendEof()
+	tryPause()
+}
+
+func TestLeaksEdittorNoSave(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	compose.Init(ctx, "../example_dc.yaml")
+
+	tryPause()
+	enterEdittor()
+	enter()
+	typeString("Hello, world!")
+	enter()
+	tryPause()
+	quitEdittorWithoutSaving()
+	tryPause()
+
+	cancel()
+}
+
+func TestLeaksEdittorSave(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	compose.Init(ctx, "../example_dc.yaml")
+
+	tryPause()
+	enterEdittor()
+	tryPause()
+	typeString("Hello, world!")
+	enter()
+	tryPause()
+	sendUp()
+	deleteLineInEdittor()
+	saveEdittor()
+	tryPause()
+
+	cancel()
 }

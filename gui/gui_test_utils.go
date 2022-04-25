@@ -8,17 +8,28 @@ import (
 )
 
 var (
-	upKey         = tcell.NewEventKey(tcell.KeyUp, '\x00', 0)
-	downKey       = tcell.NewEventKey(tcell.KeyDown, '\x00', 0)
-	inspectKey    = tcell.NewEventKey(tcell.KeyRune, 'i', 0)
-	helpKey       = tcell.NewEventKey(tcell.KeyRune, 'h', 0)
-	logsKey       = tcell.NewEventKey(tcell.KeyRune, 'l', 0)
-	searchKey     = tcell.NewEventKey(tcell.KeyRune, '/', 0)
-	clearKey      = tcell.NewEventKey(tcell.KeyRune, 'c', 0)
-	enterKey      = tcell.NewEventKey(tcell.KeyEnter, '\x00', 0)
-	nextSearchKey = tcell.NewEventKey(tcell.KeyRune, 'n', 0)
-	should_pause  = true
+	upKey          = tcell.NewEventKey(tcell.KeyUp, '\x00', 0)
+	downKey        = tcell.NewEventKey(tcell.KeyDown, '\x00', 0)
+	eofKey         = tcell.NewEventKey(tcell.KeyCtrlD, '\x00', 0)
+	inspectKey     = tcell.NewEventKey(tcell.KeyRune, 'i', 0)
+	helpKey        = tcell.NewEventKey(tcell.KeyRune, 'h', 0)
+	logsKey        = tcell.NewEventKey(tcell.KeyRune, 'l', 0)
+	searchKey      = tcell.NewEventKey(tcell.KeyRune, '/', 0)
+	clearKey       = tcell.NewEventKey(tcell.KeyRune, 'c', 0)
+	enterKey       = tcell.NewEventKey(tcell.KeyEnter, '\x00', 0)
+	nextSearchKey  = tcell.NewEventKey(tcell.KeyRune, 'n', 0)
+	subshellKey    = tcell.NewEventKey(tcell.KeyRune, 'e', 0)
+	edittorKey     = tcell.NewEventKey(tcell.KeyRune, 'v', 0)
+	saveEdittorKey = tcell.NewEventKey(tcell.KeyCtrlS, '\x00', 0)
+	quitEdittorKey = tcell.NewEventKey(tcell.KeyCtrlQ, '\x00', 0)
+	lineDeleteKey  = tcell.NewEventKey(tcell.KeyCtrlD, '\x00', 0)
+	should_pause   = true
 )
+
+func _post_event_with_delay(ev *tcell.EventKey) {
+	window.GetScreen().PostEvent(ev)
+	time.Sleep(20 * time.Millisecond)
+}
 
 func tryPause() {
 	if should_pause {
@@ -27,43 +38,67 @@ func tryPause() {
 }
 
 func sendUp() {
-	window.GetScreen().PostEvent(upKey)
+	_post_event_with_delay(upKey)
 }
 
 func sendDown() {
-	window.GetScreen().PostEvent(downKey)
+	_post_event_with_delay(downKey)
 }
 
 func toggleInspect() {
-	window.GetScreen().PostEvent(inspectKey)
+	_post_event_with_delay(inspectKey)
 }
 
 func toggleHelp() {
-	window.GetScreen().PostEvent(helpKey)
+	_post_event_with_delay(helpKey)
 }
 
 func toggleLogs() {
-	window.GetScreen().PostEvent(logsKey)
+	_post_event_with_delay(logsKey)
+}
+
+func enterSubshell() {
+	_post_event_with_delay(subshellKey)
 }
 
 func startSearch() {
-	window.GetScreen().PostEvent(searchKey)
+	_post_event_with_delay(searchKey)
 }
 
 func clearSearch() {
-	window.GetScreen().PostEvent(clearKey)
+	_post_event_with_delay(clearKey)
 }
 
 func enter() {
-	window.GetScreen().PostEvent(enterKey)
+	_post_event_with_delay(enterKey)
 }
 
 func nextSearchResult() {
-	window.GetScreen().PostEvent(nextSearchKey)
+	_post_event_with_delay(nextSearchKey)
 }
 
 func typeString(str string) {
 	for _, s := range str {
-		window.GetScreen().PostEvent(tcell.NewEventKey(tcell.KeyRune, s, 0))
+		_post_event_with_delay(tcell.NewEventKey(tcell.KeyRune, s, 0))
 	}
+}
+
+func sendEof() {
+	_post_event_with_delay(eofKey)
+}
+
+func enterEdittor() {
+	_post_event_with_delay(edittorKey)
+}
+
+func saveEdittor() {
+	_post_event_with_delay(saveEdittorKey)
+}
+
+func deleteLineInEdittor() {
+	_post_event_with_delay(lineDeleteKey)
+}
+
+func quitEdittorWithoutSaving() {
+	_post_event_with_delay(quitEdittorKey)
 }

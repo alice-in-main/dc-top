@@ -32,7 +32,7 @@ func ValidateYaml(ctx context.Context) bool {
 }
 
 func Config(ctx context.Context) ([]byte, error) {
-	cmd := exec.CommandContext(ctx, "docker", "compose", "-f", DcYamlPath(), "config", "-q")
+	cmd := exec.CommandContext(ctx, "docker", "compose", "-f", DcYamlPath(), "config")
 	return cmd.CombinedOutput()
 }
 

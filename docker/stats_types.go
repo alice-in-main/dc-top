@@ -2,7 +2,6 @@ package docker
 
 import "time"
 
-// STATS
 type ContainerMainStats struct {
 	Name       string                  `json:"name"`
 	Cpu        CpuStats                `json:"cpu_stats"`
@@ -37,5 +36,3 @@ type NetworkUsage struct {
 	TransmittedDropped uint64    `json:"tx_dropped"`
 	LastUpdateTime     time.Time `json:"-"`
 }
-
-// STATS END

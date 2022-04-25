@@ -28,7 +28,7 @@ func isExisting(ctx context.Context, id string, filters filters.Args) (bool, err
 	return len(c) > 0, nil
 }
 
-func UsagePercentage(usage int64, limit int64) float64 {
+func usagePercentage(usage int64, limit int64) float64 {
 	return 100.0 * float64(usage) / float64(limit)
 }
 
@@ -39,11 +39,11 @@ func CpuUsagePercentage(cpu *CpuStats, precpu *CpuStats, inspect_data *types.Con
 	} else {
 		limit = cpu.SystemUsage - precpu.SystemUsage
 	}
-	return UsagePercentage(cpu.ContainerUsage.TotalUsage-precpu.ContainerUsage.TotalUsage, limit)
+	return usagePercentage(cpu.ContainerUsage.TotalUsage-precpu.ContainerUsage.TotalUsage, limit)
 }
 
 func MemoryUsagePercentage(mem *MemoryStats) float64 {
-	return UsagePercentage(mem.Usage, mem.Limit)
+	return usagePercentage(mem.Usage, mem.Limit)
 }
 
 func NetworkUsageToMapOfInt(s NetworkUsage) (map[string]int, error) {

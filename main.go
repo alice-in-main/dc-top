@@ -23,6 +23,8 @@ func main() {
 	if *dc_file_path != "" {
 		if err = compose.Init(context.Background(), *dc_file_path); err != nil {
 			fmt.Println(err)
+			out, _ := compose.Config(context.Background())
+			fmt.Print(string(out))
 			return
 		}
 	}
