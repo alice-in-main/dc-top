@@ -91,8 +91,12 @@ func HighlightDrawer(str string, substr string, default_style tcell.Style) Strin
 		return TextDrawer(str, default_style)
 	}
 	substr_len := len(substr)
+
+	lowercase_str := strings.ToLower(str)
+	lowercase_substr := strings.ToLower(substr)
+
 	highlighted_indices := make([]bool, len(str))
-	for i, next_i := 0, strings.Index(str, substr); i < len(str) && next_i != -1; next_i = strings.Index(str[i:], substr) {
+	for i, next_i := 0, strings.Index(lowercase_str, lowercase_substr); i < len(lowercase_str) && next_i != -1; next_i = strings.Index(lowercase_str[i:], lowercase_substr) {
 		i += next_i
 		for j := i; j < i+substr_len; j++ {
 			highlighted_indices[j] = true
