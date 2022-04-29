@@ -18,14 +18,16 @@ type ContainerData struct {
 	secondary_sort_type SortType
 }
 
-func NewContainerData(ctx context.Context) (ContainerData, error) {
+func NewContainerData(ctx context.Context, filters_enabled bool) (ContainerData, error) {
 	containers_options := types.ContainerListOptions{All: true, Quiet: true}
 	err := compose.UpdateContainerFilters(ctx)
 	if err != nil {
 		log.Printf("Failed to get initial filters: '%s", err)
 		return ContainerData{}, err
 	}
-	containers_options.Filters = compose.GetContainerFilters(ctx)
+	if filters_enabled {
+		containers_options.Filters = compose.GetContainerFilters(ctx)
+	}
 
 	containers, err := docker_cli.ContainerList(ctx, containers_options)
 	if err != nil {
@@ -72,8 +74,11 @@ func NewContainerData(ctx context.Context) (ContainerData, error) {
 	return new_containers_data, err
 }
 
-func UpdatedContainerData(ctx context.Context, old_data *ContainerData) (ContainerData, error) {
-	containers_options := types.ContainerListOptions{All: true, Quiet: true, Filters: compose.GetContainerFilters(ctx)}
+func UpdatedContainerData(ctx context.Context, old_data *ContainerData, filters_enabled bool) (ContainerData, error) {
+	containers_options := types.ContainerListOptions{All: true, Quiet: true}
+	if filters_enabled {
+		containers_options.Filters = compose.GetContainerFilters(ctx)
+	}
 
 	containers, err := docker_cli.ContainerList(ctx, containers_options)
 	if err != nil {

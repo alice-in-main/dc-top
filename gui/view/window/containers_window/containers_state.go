@@ -23,6 +23,7 @@ type tableState struct {
 	is_reverse_sort        bool
 	top_line_inspect       int
 	inspect_height         int
+	is_filter_enabled      bool
 }
 
 func handleResize(win *ContainersWindow, table_state tableState) tableState {

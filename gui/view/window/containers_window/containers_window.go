@@ -125,7 +125,7 @@ func (w *ContainersWindow) Close() {
 
 func (w *ContainersWindow) main() {
 	_, y1, _, y2 := window.ContainerWindowSize()
-	data, err := docker.NewContainerData(w.window_context)
+	data, err := docker.NewContainerData(w.window_context, true)
 	window.ExitIfErr(err)
 	state := tableState{
 		is_enabled:      true,
@@ -146,6 +146,7 @@ func (w *ContainersWindow) main() {
 		keyboard_mode:          regular,
 		top_line_inspect:       0,
 		inspect_height:         y2 - y1 - 2 + 1,
+		is_filter_enabled:      true,
 	}
 	state.containers_data = data.GetSortedData(state.main_sort_type, state.secondary_sort_type, false)
 	w.cached_state = state
@@ -212,7 +213,7 @@ func (w *ContainersWindow) dockerDataStreamer() {
 		select {
 		case state := <-w.data_request_chan:
 			var new_data docker.ContainerData
-			new_data, err := docker.UpdatedContainerData(w.window_context, &state.containers_data)
+			new_data, err := docker.UpdatedContainerData(w.window_context, &state.containers_data, w.cached_state.is_filter_enabled)
 			window.ExitIfErr(err)
 			if new_data.Len() == 0 {
 				time.Sleep(200 * time.Millisecond)

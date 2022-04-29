@@ -14,6 +14,7 @@ func MainControls() []Control {
 		{"'c'", "Clear filter"},
 		{"'v'", "Edit docker-compose yaml"},
 		{"'i'", "Inspect selected container"},
+		{"'f'", "Toggle docker-compose filtering"},
 		{"Ctrl+P", "Pause selected container"},
 		{"Ctrl+R", "Restart selected container"},
 		{"Delete", "Remove selected container"},

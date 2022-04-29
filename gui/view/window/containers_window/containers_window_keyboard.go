@@ -179,6 +179,8 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 			state.keyboard_mode = search
 		case '!':
 			state.is_reverse_sort = !state.is_reverse_sort
+		case 'f':
+			state.is_filter_enabled = !state.is_filter_enabled
 		}
 	case tcell.KeyF1:
 		updateSortType(state, docker.State)
