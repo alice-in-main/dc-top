@@ -98,6 +98,10 @@ func DisplayMainHelp(bg_context context.Context) {
 
 func ChangeToLogView(bg_context context.Context, container_id string) {
 	log.Printf("Changing to logs")
+
+	window.GetScreen().Clear()
+	window.GetScreen().Show()
+
 	logs_window := container_logs_window.NewContainerLogsWindow(container_id)
 	bar_dimensions_generator := func() window.Dimensions {
 		x1, y1, x2, y2 := window.LogsBarWindowSize()
@@ -115,6 +119,10 @@ func ChangeToLogView(bg_context context.Context, container_id string) {
 
 func ChangeToFileEdittor(bg_context context.Context) {
 	log.Printf("Changing to edittor")
+
+	window.GetScreen().Clear()
+	window.GetScreen().Show()
+
 	file, err := os.Open(compose.DcYamlPath())
 	if err != nil {
 		log.Printf("Failed to open file %s", compose.DcYamlPath())
@@ -139,6 +147,9 @@ func ChangeToFileEdittor(bg_context context.Context) {
 
 func ChangeToSubshell(bg_context context.Context, id string) {
 	log.Printf("Changing to subshell")
+
+	window.GetScreen().Clear()
+	window.GetScreen().Show()
 
 	subshell_window := subshell_window.NewSubshellWindow(id)
 
@@ -230,7 +241,6 @@ func changeToHelpView(bg_context context.Context, new_view_key, prev_view_key _v
 func changeView(bg_context context.Context, new_view_key, prev_view_key _viewName, view *View) {
 	_lock.Lock()
 	defer _lock.Unlock()
-	window.GetScreen().Clear()
 	_views[prev_view_key].PauseWindows()
 	_views[new_view_key] = view
 	_view_stack.push(new_view_key)
