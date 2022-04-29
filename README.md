@@ -5,7 +5,7 @@ Terminal based tool for monitoring local docker and docker-compose containers.
 
 Requires docker API version 1.41
 
-![main-help](https://user-images.githubusercontent.com/44703928/165939260-54074b68-5b48-4fd0-9496-c0d3e4ef3f3f.png)
+![main-help](https://user-images.githubusercontent.com/44703928/165945935-679c50d0-669f-451c-afcc-d604b556adc1.png)
 
 ## Features
 
