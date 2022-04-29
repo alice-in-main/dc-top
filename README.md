@@ -45,3 +45,15 @@ Container inspect:
 
 docker-compose mode enabled:
 ![docker-compose](https://user-images.githubusercontent.com/44703928/165942589-2a2b917c-1607-4eeb-893c-58882254ff9b.png)
+
+## Installation
+
+### Download
+Download from [link](https://drive.google.com/file/d/1lF1cELPbanzksgalB5KJslAvblR9EMuo) and run.
+
+### Build from source
+* [Install golang](https://go.dev/doc/install)
+* Clone this repository
+* Go to the main directory
+* Run `go build`
+
