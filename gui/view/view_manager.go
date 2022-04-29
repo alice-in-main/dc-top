@@ -140,9 +140,6 @@ func ChangeToFileEdittor(bg_context context.Context) {
 func ChangeToSubshell(bg_context context.Context, id string) {
 	log.Printf("Changing to subshell")
 
-	window.GetScreen().Clear()
-	window.GetScreen().Show()
-
 	subshell_window := subshell_window.NewSubshellWindow(id)
 
 	subshell_view := NewView(map[window.WindowType]window.Window{
@@ -233,6 +230,7 @@ func changeToHelpView(bg_context context.Context, new_view_key, prev_view_key _v
 func changeView(bg_context context.Context, new_view_key, prev_view_key _viewName, view *View) {
 	_lock.Lock()
 	defer _lock.Unlock()
+	window.GetScreen().Clear()
 	_views[prev_view_key].PauseWindows()
 	_views[new_view_key] = view
 	_view_stack.push(new_view_key)
