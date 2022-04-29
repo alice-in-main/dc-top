@@ -36,6 +36,7 @@ func UpdateContainerFilters(ctx context.Context) error {
 		for _, filter := range dc_filters {
 			contaiener_filters.Add("name", fmt.Sprintf("^/%s$", filter.Name))
 		}
+		_curr_filters = contaiener_filters
 	}
 
 	return nil
