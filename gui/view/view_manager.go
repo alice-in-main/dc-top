@@ -215,7 +215,7 @@ func changeToHelpView(bg_context context.Context, new_view_key, prev_view_key _v
 		controls,
 		func() window.Dimensions {
 			width, height := window.GetScreen().Size()
-			x1, y1, x2, y2 := width/3, height/3, 2*width/3, (height/3 + len(controls) + 3)
+			x1, y1, x2, y2 := width/4, height/4, 3*width/4, (height/4 + len(controls) + 3)
 			return window.NewDimensions(x1, y1, x2, y2, true)
 		},
 	)
