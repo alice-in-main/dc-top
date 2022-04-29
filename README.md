@@ -56,5 +56,5 @@ Download from [link](https://drive.google.com/file/d/1lF1cELPbanzksgalB5KJslAvbl
 * Clone this repository
 * Go to the main directory
 * Run `go build`
-* Run dc-top
+* Run `./dc-top`
 
