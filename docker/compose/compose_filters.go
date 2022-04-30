@@ -36,6 +36,12 @@ func UpdateContainerFilters(ctx context.Context) error {
 		for _, filter := range dc_filters {
 			contaiener_filters.Add("name", fmt.Sprintf("^/%s$", filter.Name))
 		}
+
+		// make sure filters isn't empty, otherwise all containers will be shown
+		if contaiener_filters.Len() == 0 {
+			contaiener_filters.Add("name", "^!$") // "!" is an illegal container name and therefore will not affect the filtering
+		}
+
 		_curr_filters = contaiener_filters
 	}
 

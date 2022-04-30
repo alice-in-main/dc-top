@@ -14,7 +14,6 @@ import (
 
 func Draw() error {
 	screen := window.GetScreen()
-	screen.EnableMouse(tcell.MouseButtonEvents)
 
 	bg_context, bg_cancel := context.WithCancel(context.Background())
 

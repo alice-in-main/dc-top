@@ -20,11 +20,6 @@ type ContainerData struct {
 
 func NewContainerData(ctx context.Context, filters_enabled bool) (ContainerData, error) {
 	containers_options := types.ContainerListOptions{All: true, Quiet: true}
-	err := compose.UpdateContainerFilters(ctx)
-	if err != nil {
-		log.Printf("Failed to get initial filters: '%s", err)
-		return ContainerData{}, err
-	}
 	if filters_enabled {
 		containers_options.Filters = compose.GetContainerFilters(ctx)
 	}

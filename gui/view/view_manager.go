@@ -69,7 +69,7 @@ func InitDefaultView(bg_context context.Context) {
 		window.Bar:              &def_bar_w,
 		window.Help:             &def_help_w,
 	}, window.ContainersHolder,
-		tcell.MouseButtonEvents,
+		containers_window.MouseOptions,
 		true)
 
 	_views[main] = &default_view
