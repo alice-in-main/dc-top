@@ -18,13 +18,13 @@ var (
 var workdir string
 
 func Init(ctx context.Context, dc_file_path string) error {
-	workdir = fmt.Sprintf("/tmp/dc-top-files-%s", utils.RandSeq(6))
+	workdir = fmt.Sprintf("%s/dc-top-files-%s", utils.TempFolderPath(), utils.RandSeq(6))
 
-	os.RemoveAll(workdir)
 	err := os.Mkdir(workdir, 0755)
 	if err != nil {
 		return err
 	}
+	defer os.RemoveAll(workdir)
 
 	_, err = os.Stat(dc_file_path)
 	if err != nil {
@@ -50,6 +50,11 @@ func Init(ctx context.Context, dc_file_path string) error {
 
 	if !ValidateYaml(ctx) {
 		return fmt.Errorf("failed to validate docker-compose yaml: '%s'. (run docker-compose config)", dc_file_path)
+	}
+
+	err = UpdateContainerFilters(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to get initialize filters: '%s", err)
 	}
 
 	workdir_path = workdir

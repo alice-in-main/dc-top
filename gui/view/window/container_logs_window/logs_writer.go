@@ -100,6 +100,7 @@ func (writer *logsWriter) Write(logs_batch []byte) (int, error) {
 func (writer *logsWriter) logPrinter() {
 	writer.drawer_semaphore.Acquire(writer.ctx, 1)
 	defer writer.drawer_semaphore.Release(1)
+	writer.redraw()
 	for {
 		select {
 		case <-writer.lookup_request:

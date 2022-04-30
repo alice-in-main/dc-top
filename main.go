@@ -9,6 +9,7 @@ import (
 	"dc-top/logger"
 	"flag"
 	"fmt"
+	"os"
 )
 
 func main() {
@@ -23,8 +24,10 @@ func main() {
 	if *dc_file_path != "" {
 		if err = compose.Init(context.Background(), *dc_file_path); err != nil {
 			fmt.Println(err)
-			out, _ := compose.Config(context.Background())
-			fmt.Print(string(out))
+			if _, err := os.Stat(*dc_file_path); err == nil {
+				out, _ := compose.Config(context.Background())
+				fmt.Print(string(out))
+			}
 			return
 		}
 	}

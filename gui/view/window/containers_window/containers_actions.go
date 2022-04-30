@@ -15,7 +15,9 @@ func (w *ContainersWindow) handleDelete(ctx context.Context, table_state *tableS
 	go func(id_to_delete string) {
 		if err := docker.DeleteContainer(ctx, id_to_delete); err != nil {
 			log.Printf("Got error '%s' when trying to container delete %s", err, id_to_delete)
-			if !strings.Contains(err.Error(), "is already in progress") && !strings.Contains(err.Error(), "No such container") {
+			if !strings.Contains(err.Error(), "is already in progress") &&
+				!strings.Contains(err.Error(), "No such container") &&
+				!strings.Contains(err.Error(), "context canceled") {
 				panic(err)
 			}
 		}
@@ -35,7 +37,8 @@ func (w *ContainersWindow) handlePause(ctx context.Context, id string) {
 				}
 			} else if !strings.Contains(err.Error(), "is already in progress") &&
 				!strings.Contains(err.Error(), "No such container") &&
-				!strings.Contains(err.Error(), "is not running") {
+				!strings.Contains(err.Error(), "is not running") &&
+				!strings.Contains(err.Error(), "context canceled") {
 				panic(err)
 			}
 		}
@@ -46,7 +49,9 @@ func (w *ContainersWindow) handleStop(ctx context.Context, id string) {
 	go func(id_to_stop string) {
 		if err := docker.StopContainer(ctx, id_to_stop); err != nil {
 			log.Printf("Got error '%s' when trying to container delete %s", err, id_to_stop)
-			if !strings.Contains(err.Error(), "is already in progress") && !strings.Contains(err.Error(), "No such container") {
+			if !strings.Contains(err.Error(), "is already in progress") &&
+				!strings.Contains(err.Error(), "No such container") &&
+				!strings.Contains(err.Error(), "context canceled") {
 				panic(err)
 			}
 		}

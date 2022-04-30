@@ -134,10 +134,10 @@ func WidthHighlightDrawer(str string, substr string, default_style tcell.Style, 
 }
 
 func PercentageBarDrawer(description string, percentage float64, bar_len int, extra_info []rune) StringStyler {
+	const loading_bar_rune = '\u2584'
 	var high_percentage float64 = 80.0
 	var mid_percentage float64 = 50.0
 	var low_percentage float64 = 2.0
-	loading_bar_rune := '\u2584'
 	desc_len := len(description)
 	extra_info_len := len(extra_info)
 	if math.IsNaN(percentage) {
@@ -148,6 +148,9 @@ func PercentageBarDrawer(description string, percentage float64, bar_len int, ex
 			return rune(description[i]), tcell.StyleDefault
 		}
 		bar_percentage := 100.0 * float64(i-desc_len) / float64(bar_len)
+		if math.IsNaN(bar_percentage) {
+			bar_percentage = 0.0
+		}
 		switch {
 		case i > bar_len+len(description)-1:
 			if i < extra_info_len+bar_len+desc_len {

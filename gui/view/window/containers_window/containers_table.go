@@ -15,10 +15,10 @@ import (
 const (
 	id_cell_percent     = 0.02
 	state_cell_percent  = 0.06
-	name_cell_percent   = 0.12
-	image_cell_percent  = 0.24
-	memory_cell_percent = 0.28
-	cpu_cell_percent    = 0.28
+	name_cell_percent   = 0.20
+	image_cell_percent  = 0.28
+	memory_cell_percent = 0.24
+	cpu_cell_percent    = 0.20
 )
 
 var relative_cell_widths = []float64{

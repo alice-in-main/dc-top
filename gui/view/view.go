@@ -88,6 +88,8 @@ func (view *View) PauseWindows() {
 func (view *View) ResumeWindows() {
 	screen := window.GetScreen()
 	view.Enable()
-	screen.EnableMouse(view.mouse_settings)
+	if view.mouse_settings != 0 {
+		screen.EnableMouse(view.mouse_settings)
+	}
 	screen.Sync()
 }

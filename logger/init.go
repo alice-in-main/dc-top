@@ -7,13 +7,16 @@ import (
 	"os"
 )
 
-var log_file_name string
+var (
+	err           error
+	log_file_name string
+	log_file      *os.File
+)
 
 func Init() {
-	log_file_name = fmt.Sprintf("/tmp/dc-top-logs-%s.txt", utils.RandSeq(6))
-	// log_file_name = fmt.Sprintf("/tmp/dc-top-logs.txt")
+	log_file_name = fmt.Sprintf(`%s/dc-top-logs-%s.txt`, utils.TempFolderPath(), utils.RandSeq(6))
 	os.Remove(log_file_name)
-	log_file, err := os.OpenFile(log_file_name, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	log_file, err = os.OpenFile(log_file_name, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -22,5 +25,8 @@ func Init() {
 }
 
 func Cleanup() {
-	os.Remove(log_file_name)
+	log_file.Close()
+	if err = os.Remove(log_file_name); err != nil {
+		fmt.Printf("Failed to remove log file %s. Error: %s", log_file_name, err.Error())
+	}
 }

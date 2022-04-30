@@ -10,8 +10,9 @@ jobs:
       image: ubuntu-2004:current
     steps:
       - checkout
-      - run: docker run -d cimg/base:2021.04
-      - run: docker run -d cimg/base:2021.04
+      - run:
+          name: Start a container to allow testing
+          command: docker run -d cimg/base:2021.04 tail -f /dev/null
       - restore_cache:
           keys:
             - go-mod-v4-{{ checksum "go.sum" }}
