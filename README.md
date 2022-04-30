@@ -1,7 +1,7 @@
 # dc-top
 
 ## Intro
-Terminal based tool for monitoring local docker and docker-compose containers.
+Linux terminal based tool for monitoring local docker and docker-compose containers.
 
 Requires docker API version 1.41
 
