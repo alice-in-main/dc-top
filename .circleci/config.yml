@@ -10,7 +10,7 @@ jobs:
       image: ubuntu-2004:202010-01 # # recommended linux image - includes Ubuntu 20.04, docker 19.03.13, docker-compose 1.27.4
     steps:
       - checkout
-      - run: docker run nginx
+      - run: docker run -d nginx
       - restore_cache:
           keys:
             - go-mod-v4-{{ checksum "go.sum" }}
