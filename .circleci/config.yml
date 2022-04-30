@@ -7,7 +7,7 @@ version: 2.1
 jobs:
   build: # name of your job
     machine: # executor type
-      image: ubuntu-2004:202010-01
+      image: ubuntu-2004:current
     steps:
       - checkout
       - run: docker run -d cimg/base:2021.04
@@ -24,8 +24,6 @@ jobs:
       - run:
           name: gui test
           command: go test ./gui
-      - store_test_results:
-          path: /tmp/test-reports
 
 # Invoke jobs via workflows
 # See: https://circleci.com/docs/2.0/configuration-reference/#workflows
