@@ -75,6 +75,7 @@ func TestLeaksNoActions(t *testing.T) {
 
 func TestLeaksHelpWindow(t *testing.T) {
 	toggleHelp()
+	toggleHelp()
 }
 
 func TestLeaksInspect(t *testing.T) {
