@@ -23,18 +23,12 @@ var (
 	saveEdittorKey = tcell.NewEventKey(tcell.KeyCtrlS, '\x00', 0)
 	quitEdittorKey = tcell.NewEventKey(tcell.KeyCtrlQ, '\x00', 0)
 	lineDeleteKey  = tcell.NewEventKey(tcell.KeyCtrlD, '\x00', 0)
-	should_pause   = true
 )
 
 func _post_event_with_delay(ev *tcell.EventKey) {
+	time.Sleep(100 * time.Millisecond)
 	window.GetScreen().PostEvent(ev)
-	time.Sleep(20 * time.Millisecond)
-}
-
-func tryPause() {
-	if should_pause {
-		time.Sleep(500 * time.Millisecond)
-	}
+	time.Sleep(100 * time.Millisecond)
 }
 
 func sendUp() {

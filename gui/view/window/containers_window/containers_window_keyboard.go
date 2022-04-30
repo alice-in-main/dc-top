@@ -180,12 +180,14 @@ func (state *tableState) regularKeyPress(ev *tcell.EventKey, w *ContainersWindow
 		case '!':
 			state.is_reverse_sort = !state.is_reverse_sort
 		case 'f':
-			state.is_filter_enabled = !state.is_filter_enabled
-			if state.is_filter_enabled {
-				compose.UpdateContainerFilters(w.window_context)
-				bar_window.Info([]rune("Turning on docker-compose filters..."))
-			} else {
-				bar_window.Info([]rune("Turning off docker-compose filters..."))
+			if compose.DcModeEnabled() {
+				state.is_filter_enabled = !state.is_filter_enabled
+				if state.is_filter_enabled {
+					compose.UpdateContainerFilters(w.window_context)
+					bar_window.Info([]rune("Turning on docker-compose filters..."))
+				} else {
+					bar_window.Info([]rune("Turning off docker-compose filters..."))
+				}
 			}
 		}
 	case tcell.KeyF1:

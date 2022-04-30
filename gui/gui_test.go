@@ -20,8 +20,8 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	if docker_info.Info.Containers < 2 {
-		panic("Less than 2 containers exist, can't run tests")
+	if docker_info.Info.ContainersRunning < 1 {
+		panic("No running containers, can't run tests")
 	}
 	docker.Close()
 }
@@ -70,115 +70,88 @@ func afterEach(stop_signal chan interface{}) {
 }
 
 func TestLeaksNoActions(t *testing.T) {
-	tryPause()
+	time.Sleep(100 * time.Millisecond)
 }
 
 func TestLeaksHelpWindow(t *testing.T) {
 	toggleHelp()
-	tryPause()
 }
 
 func TestLeaksInspect(t *testing.T) {
 	sendDown()
-	tryPause()
 	toggleInspect()
-	tryPause()
 	toggleInspect()
-	tryPause()
 }
 
 func TestLeaksLogs(t *testing.T) {
 	sendUp()
-	tryPause()
 	toggleLogs()
-	tryPause()
 	toggleLogs()
-	tryPause()
 }
 
 func TestLeaksLogHelpWindow(t *testing.T) {
 	sendUp()
+	sendDown()
 	toggleLogs()
-	tryPause()
 	toggleHelp()
-	tryPause()
 	toggleHelp()
-	tryPause()
 	toggleLogs()
-	tryPause()
 }
 
 func TestLeaksEmptySearch(t *testing.T) {
 	sendUp()
 	startSearch()
-	tryPause()
 	typeString("!hello!") // the '!' makes sure all containers will be filtered out
-	tryPause()
 	enter()
-	tryPause()
 	sendUp()
-	tryPause()
 	clearSearch()
-	tryPause()
 }
 
 func TestLeaksLogSearch(t *testing.T) {
 	sendUp()
 	toggleLogs()
-	tryPause()
 	startSearch()
 	typeString("test")
 	enter()
-	tryPause()
 	nextSearchResult()
-	tryPause()
 	clearSearch()
-	tryPause()
 	toggleLogs()
-	tryPause()
 }
 
 func TestLeaksContainerSubshell(t *testing.T) {
 	sendUp()
 	enterSubshell()
-	tryPause()
 	typeString("ls")
 	enter()
-	tryPause()
 	sendEof()
-	tryPause()
 }
 
 func TestLeaksEdittorNoSave(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	compose.Init(ctx, "../example_dc.yaml")
+	if err := compose.Init(ctx, "../testutils/example_dc.yaml"); err != nil {
+		t.Error(err.Error())
+	}
 
-	tryPause()
 	enterEdittor()
-	enter()
 	typeString("Hello, world!")
 	enter()
-	tryPause()
 	quitEdittorWithoutSaving()
-	tryPause()
 
 	cancel()
 }
 
 func TestLeaksEdittorSave(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
-	compose.Init(ctx, "../example_dc.yaml")
+	if err := compose.Init(ctx, "../testutils/example_dc.yaml"); err != nil {
+		t.Error(err.Error())
+	}
 
-	tryPause()
 	enterEdittor()
-	tryPause()
 	typeString("Hello, world!")
 	enter()
-	tryPause()
 	sendUp()
 	deleteLineInEdittor()
 	saveEdittor()
-	tryPause()
 
 	cancel()
 }

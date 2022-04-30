@@ -21,7 +21,7 @@ func (searcher *ArrLogContainer) Put(str *singleLog, index int) {
 func (searcher *ArrLogContainer) Search(substr string) []int {
 	indices := make([]int, 0)
 	for i, _log := range searcher.logs {
-		if _log != nil && strings.Contains(_log.content, substr) {
+		if _log != nil && strings.Contains(strings.ToLower(_log.content), strings.ToLower(substr)) {
 			indices = append(indices, i)
 		}
 	}

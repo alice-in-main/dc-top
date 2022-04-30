@@ -103,10 +103,10 @@ func (w *DockerInfoWindow) main() {
 			}
 		case summary := <-w.new_stats_chan:
 			state.docker_resource_summary = summary
+			info, err := docker.GetDockerInfo(w.window_ctx)
+			window.ExitIfErr(err)
+			state.docker_info = info
 			if is_enabled {
-				info, err := docker.GetDockerInfo(w.window_ctx)
-				window.ExitIfErr(err)
-				state.docker_info = info
 				w.dockerInfoWindowDraw(state)
 			}
 		case <-tick.C:
